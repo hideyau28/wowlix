@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 
 export interface User {
   id: string;
-  phone: string;
+  phone: string | null;
   name: string | null;
   email: string | null;
   address: string | null;

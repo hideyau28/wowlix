@@ -17,13 +17,14 @@ const TOKEN_EXPIRY = "7d"; // 7 days
 
 export interface JWTPayload {
   userId: string;
-  phone: string;
+  // phone is nullable since email-only signups have no phone.
+  phone: string | null;
   [key: string]: unknown; // Required for jose JWTPayload compatibility
 }
 
 export interface SessionUser {
   id: string;
-  phone: string;
+  phone: string | null;
   name: string | null;
   email: string | null;
 }

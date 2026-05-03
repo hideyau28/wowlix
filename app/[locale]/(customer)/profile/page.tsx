@@ -131,7 +131,11 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center"><Phone size={18} className="text-zinc-500" /></div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">{t.phone}</div>
-                <div className="text-sm text-zinc-900 dark:text-zinc-100">{user.phone}</div>
+                <div className="text-sm text-zinc-900 dark:text-zinc-100">
+                  {user.phone || (
+                    <span className="text-zinc-400 dark:text-zinc-500">—</span>
+                  )}
+                </div>
               </div>
             </div>
 

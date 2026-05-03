@@ -195,7 +195,10 @@ export default function TopNav({
                   >
                     <User size={14} />
                     <span className="max-w-[80px] truncate">
-                      {user.name || user.phone.replace("+852", "")}
+                      {user.name ||
+                        user.phone?.replace("+852", "") ||
+                        user.email ||
+                        ""}
                     </span>
                     <ChevronDown
                       size={12}

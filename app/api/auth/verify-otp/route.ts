@@ -47,19 +47,16 @@ export async function POST(request: NextRequest) {
 
     const tenantId = await getTenantId(request);
 
-    // Find user by email; fall back to creating one if first-time login.
-    // User.phone is @unique + required — for email-only signups we mirror the
-    // email into the phone column so the constraint is satisfied. Legacy users
-    // created with real phones still log in via their phone (separate flow).
-    let user = await prisma.user.findFirst({
-      where: { email: normalizedEmail, tenantId },
+    // Find user by composite (email, tenantId) unique key. Phone is now
+    // nullable, so email-only signups no longer need the email-as-phone hack.
+    let user = await prisma.user.findUnique({
+      where: { email_tenantId: { email: normalizedEmail, tenantId } },
     });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
           email: normalizedEmail,
-          phone: normalizedEmail,
           tenantId,
         },
       });
