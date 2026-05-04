@@ -6,6 +6,8 @@ import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
 import { getProvider } from "@/lib/payments/registry";
 import { checkPlanLimit, hasFeature } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email/send";
+import OrderConfirmationEmail from "@/lib/email/templates/OrderConfirmationEmail";
 
 type DeliveryOption = {
   id: string;
@@ -469,6 +471,27 @@ export const POST = withApi(async (req) => {
 
     return created;
   });
+
+  // Fire-and-forget order confirmation email. Skip silently when no email
+  // captured. Tenant is already in scope so no extra DB hit needed.
+  if (order.email) {
+    void sendEmail({
+      to: order.email,
+      subject: `Order ${order.orderNumber || order.id} confirmed${
+        tenant.name ? ` · ${tenant.name}` : ""
+      }`,
+      template: OrderConfirmationEmail({
+        customerName: order.customerName,
+        orderNumber: order.orderNumber || order.id,
+        items: Array.isArray(order.items) ? (order.items as any[]) : [],
+        amounts: order.amounts as any,
+        awaitingConfirmation: !!payload.paymentProof,
+        brand: tenant.name ? { name: tenant.name } : undefined,
+      }),
+    }).catch((error) => {
+      console.error("[biolink order email] send failed:", error);
+    });
+  }
 
   // Build response
   const hasPaymentProof = !!payload.paymentProof;

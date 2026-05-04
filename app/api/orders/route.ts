@@ -6,6 +6,8 @@ import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { saveReceiptHtml } from "@/lib/email";
+import { sendEmail } from "@/lib/email/send";
+import OrderConfirmationEmail from "@/lib/email/templates/OrderConfirmationEmail";
 import { getTenantId } from "@/lib/tenant";
 import { checkPlanLimit } from "@/lib/plan";
 
@@ -711,6 +713,33 @@ export const POST = withApi(async (req) => {
   }).catch((error) => {
     console.error("Failed to save receipt:", error);
   });
+
+  // Fire-and-forget order confirmation email. Skip silently when no email
+  // captured. Never block the order response on delivery — Resend errors
+  // shouldn't surface to the customer at checkout time.
+  if (order.email) {
+    const tenantBrand = await prisma.tenant
+      .findUnique({
+        where: { id: tenantId },
+        select: { name: true },
+      })
+      .catch(() => null);
+    void sendEmail({
+      to: order.email,
+      subject: `Order ${order.orderNumber || order.id} confirmed${
+        tenantBrand?.name ? ` · ${tenantBrand.name}` : ""
+      }`,
+      template: OrderConfirmationEmail({
+        customerName: order.customerName,
+        orderNumber: order.orderNumber || order.id,
+        items: Array.isArray(order.items) ? (order.items as any[]) : [],
+        amounts: order.amounts as any,
+        brand: tenantBrand?.name ? { name: tenantBrand.name } : undefined,
+      }),
+    }).catch((error) => {
+      console.error("[order email] send failed:", error);
+    });
+  }
 
   await prisma.idempotencyKey.create({
     data: {
