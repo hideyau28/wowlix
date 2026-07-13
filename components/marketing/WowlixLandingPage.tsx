@@ -578,22 +578,22 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {t.featTitle}
           </h2>
 
-          <ul className="mt-14 grid grid-cols-1 gap-px overflow-hidden border border-wlx-mist bg-wlx-mist sm:grid-cols-2">
+          <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {FEATURES.map(({ key, Icon }) => {
               const title = t[`${key}Title` as keyof typeof t] as string;
               const desc = t[`${key}Desc` as keyof typeof t] as string;
               return (
                 <li
                   key={key}
-                  className="group relative bg-wlx-paper p-7 transition-colors duration-300 hover:bg-wlx-cream sm:p-10"
+                  className="group relative rounded-3xl border border-wlx-mist bg-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
                   style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                 >
                   <div className="flex items-center gap-4">
                     <span
-                      className="inline-flex h-11 w-11 items-center justify-center border border-wlx-mist bg-wlx-paper text-wlx-ink transition-all duration-300 group-hover:border-wlx-accent group-hover:bg-wlx-accent/10"
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-wlx-mist bg-wlx-cream text-wlx-accent transition-all duration-300 group-hover:border-wlx-accent group-hover:bg-wlx-accent group-hover:text-wlx-accent-fg"
                       style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                     >
-                      <Icon size={18} strokeWidth={1.5} />
+                      <Icon size={20} strokeWidth={1.75} />
                     </span>
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                       {title}
@@ -624,7 +624,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
           <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Free */}
-            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-ink/30 hover:shadow-[0_28px_55px_-30px_rgba(26,26,26,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
+            <article className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
               <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.pricingFreeName}
               </h3>
@@ -651,7 +651,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </ul>
               <Link
                 href={`/${locale}/start`}
-                className="mt-8 inline-block border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-colors duration-200 hover:bg-wlx-ink hover:text-wlx-paper"
+                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.pricingCta}
@@ -659,8 +659,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </article>
 
             {/* Lite — recommended */}
-            <article className="relative flex flex-col bg-wlx-ink p-8 text-wlx-paper shadow-[0_30px_60px_-25px_rgba(26,26,26,0.5)] lg:-my-2">
-              <div className="absolute -top-3 left-8 bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
+            <article className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2">
+              <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
                 {t.pricingLiteBadge}
               </div>
               <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
@@ -689,7 +689,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </ul>
               <Link
                 href={`/${locale}/start?plan=lite`}
-                className="mt-8 inline-block bg-wlx-paper py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-colors duration-200 hover:bg-wlx-paper/90"
+                className="mt-8 inline-block rounded-full bg-wlx-paper py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-paper/90 active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.pricingCta}
@@ -697,7 +697,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </article>
 
             {/* Pro */}
-            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-ink/30 hover:shadow-[0_28px_55px_-30px_rgba(26,26,26,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
+            <article className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
               <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.pricingProName}
               </h3>
@@ -724,7 +724,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </ul>
               <Link
                 href={`/${locale}/start?plan=pro`}
-                className="mt-8 inline-block border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-colors duration-200 hover:bg-wlx-ink hover:text-wlx-paper"
+                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.pricingCta}
@@ -832,7 +832,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={`/${locale}/start`}
-              className="group inline-flex items-center justify-center gap-2 bg-wlx-paper px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:bg-wlx-paper/90 hover:shadow-[0_18px_40px_-18px_rgba(248,246,242,0.5)]"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.ctaPrimary}
@@ -844,7 +844,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/maysshop`}
-              className="inline-flex items-center justify-center gap-1 px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper border border-wlx-paper/25 transition-colors duration-200 hover:border-wlx-paper"
+              className="inline-flex items-center justify-center gap-1 rounded-full px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper border border-wlx-paper/30 transition-colors duration-200 hover:border-wlx-paper"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.ctaSecondary}
