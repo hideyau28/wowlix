@@ -208,6 +208,8 @@ const FEATURES = [
 
 export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   const t = T[locale] || T.en;
+  // 同 T 一樣嘅 fallback：runtime 收到怪 locale（例如 middleware 冇 normalize 嘅 path segment）一律當 en
+  const lang: "zh-HK" | "en" = locale === "zh-HK" ? "zh-HK" : "en";
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
   const [scrolled, setScrolled] = useState(false);
 
@@ -681,7 +683,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 plan.id === "free"
                   ? `/${locale}/start`
                   : `/${locale}/start?plan=${plan.id}`;
-              const feats = plan.features[locale].slice(0, plan.teaserCount);
+              const feats = plan.features[lang].slice(0, plan.teaserCount);
 
               if (plan.recommended) {
                 return (
@@ -696,7 +698,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                       {plan.name}
                     </h3>
                     <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
-                      {plan.tagline[locale]}
+                      {plan.tagline[lang]}
                     </p>
                     <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                       ${plan.priceHKD}
@@ -737,7 +739,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     {plan.name}
                   </h3>
                   <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                    {plan.tagline[locale]}
+                    {plan.tagline[lang]}
                   </p>
                   <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                     ${plan.priceHKD}

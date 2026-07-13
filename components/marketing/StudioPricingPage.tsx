@@ -81,6 +81,8 @@ const T = {
 
 export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
   const t = T[locale] || T.en;
+  // 同 T 一樣嘅 fallback：runtime 收到怪 locale 一律當 en，plan lookup 先唔會炸
+  const lang: "zh-HK" | "en" = locale === "zh-HK" ? "zh-HK" : "en";
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
 
   // Scroll-reveal for sections marked with .studio-reveal.
@@ -205,7 +207,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                       {plan.name}
                     </h3>
                     <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
-                      {plan.tagline[locale]}
+                      {plan.tagline[lang]}
                     </p>
                     <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                       ${plan.priceHKD}
@@ -214,7 +216,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                       </span>
                     </p>
                     <ul className="mt-7 flex-1 space-y-3 text-sm">
-                      {plan.features[locale].map((f) => (
+                      {plan.features[lang].map((f) => (
                         <li key={f} className="flex items-start gap-2.5">
                           <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
                           <span>{f}</span>
@@ -241,14 +243,14 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                     {plan.name}
                   </h3>
                   <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                    {plan.tagline[locale]}
+                    {plan.tagline[lang]}
                   </p>
                   <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                     ${plan.priceHKD}
                     <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
                   </p>
                   <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
-                    {plan.features[locale].map((f) => (
+                    {plan.features[lang].map((f) => (
                       <li key={f} className="flex items-start gap-2.5">
                         <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
                         <span>{f}</span>
