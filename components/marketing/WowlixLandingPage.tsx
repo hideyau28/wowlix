@@ -14,6 +14,7 @@ import {
 import type { Locale } from "@/lib/i18n";
 import { marketingBrandVars } from "@/components/marketing/theme";
 import { MARKETING_PLANS } from "@/components/marketing/plans";
+import { fraunces, notoSerifHK } from "@/components/marketing/fonts";
 
 /* ─── i18n ─── */
 const T = {
@@ -258,7 +259,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   return (
     <div
       style={brandVars}
-      className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased"
+      className={`${fraunces.variable} ${notoSerifHK.variable} min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased`}
     >
       {/* ───────── Nav ───────── */}
       <header

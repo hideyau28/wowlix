@@ -160,13 +160,21 @@
      so they were falling to an accidental system font) now resolve to a DELIBERATE
      native-first stack — PingFang HK first (iOS/macOS, the HK audience's devices),
      then Windows JhengHei, then Noto as cross-platform fallback. No heavy CJK web
-     font download; the headline + body render in a crisp, intentional CJK face. */
+     font download; the headline + body render in a crisp, intentional CJK face.
+     --font-wlx-display / --font-wlx-serif also expose --wlx-font-*-latin /
+     --wlx-font-*-cjk runtime override hooks (as var() fallbacks) so a subtree —
+     e.g. marketing pages via style={} — can re-voice display/serif type with its
+     own fonts without touching --font-wlx-sans or any non-marketing surface;
+     undefined hooks fall through to today's exact defaults, byte-identical. */
   --font-wlx-cjk: "PingFang HK", "PingFang TC", "Microsoft JhengHei",
     "Noto Sans TC", sans-serif;
   --font-wlx-cjk-serif: "Songti TC", "Noto Serif TC", serif;
-  --font-wlx-display: var(--font-geist-sans), var(--font-wlx-cjk);
+  --font-wlx-display: var(--wlx-font-display-latin, var(--font-geist-sans)),
+    var(--wlx-font-display-cjk, "PingFang HK", "PingFang TC",
+      "Microsoft JhengHei", "Noto Sans TC", sans-serif);
   --font-wlx-sans: var(--font-geist-sans), var(--font-wlx-cjk);
-  --font-wlx-serif: var(--font-cormorant), var(--font-wlx-cjk-serif);
+  --font-wlx-serif: var(--wlx-font-serif-latin, var(--font-cormorant)),
+    var(--wlx-font-serif-cjk, "Songti TC", "Noto Serif TC", serif);
 
   /* ── Wowlix DS radius scale ── */
   --radius-wlx-sharp: 0;
