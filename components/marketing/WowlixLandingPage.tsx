@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -235,16 +235,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   const t = T[locale] || T.en;
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
   const [scrolled, setScrolled] = useState(false);
-  const heroRef = useRef<HTMLElement>(null);
 
   // Nav fills in once user scrolls past hero peak
   useEffect(() => {
-    // Flip the header to its paper bar only after the ink hero has scrolled past,
-    // so a translucent-paper header never sits murkily over the dark hero.
-    const onScroll = () => {
-      const heroH = heroRef.current?.offsetHeight ?? 600;
-      setScrolled(window.scrollY > heroH - 72);
-    };
+    const onScroll = () => setScrolled(window.scrollY > 32);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -282,15 +276,6 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     };
   }, []);
 
-  // The header sits transparent over the ink hero at the top, then gains a paper
-  // bar on scroll — so its contents flip light→dark accordingly.
-  const onDark = !scrolled;
-  const navLinkCls =
-    "text-[12px] uppercase tracking-[0.18em] transition-colors duration-200 " +
-    (onDark
-      ? "text-wlx-paper/75 hover:text-wlx-paper"
-      : "text-wlx-stone hover:text-wlx-ink");
-
   return (
     <div className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased">
       {/* ───────── Nav ───────── */}
@@ -298,42 +283,42 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         className={`sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
           scrolled
             ? "border-b border-wlx-mist bg-wlx-paper/85 backdrop-blur-md"
-            : "border-b border-transparent bg-wlx-ink"
+            : "border-b border-transparent bg-transparent"
         }`}
         style={{ transitionTimingFunction: "var(--wlx-ease)" }}
       >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
           <Link
             href={`/${locale}`}
-            className={`font-wlx-display text-lg tracking-tight transition-colors duration-200 ${onDark ? "text-wlx-paper" : "text-wlx-ink"}`}
+            className="font-wlx-display text-lg tracking-tight"
           >
             WoWlix
           </Link>
           <nav className="flex items-center gap-5 sm:gap-7">
             <Link
               href={`/${locale}/pricing`}
-              className={navLinkCls}
+              className="text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navPricing}
             </Link>
             <Link
               href={`/${otherLocale}`}
-              className={navLinkCls}
+              className="text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {locale === "zh-HK" ? "EN" : "繁"}
             </Link>
             <Link
               href={`/${locale}/admin/login`}
-              className={`hidden sm:inline ${navLinkCls}`}
+              className="hidden sm:inline text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navLogin}
             </Link>
             <Link
               href={`/${locale}/start`}
-              className={`group inline-flex items-center gap-1.5 px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] transition-all duration-200 active:scale-[0.97] will-change-transform ${onDark ? "bg-wlx-paper text-wlx-ink hover:bg-wlx-paper/90" : "bg-wlx-ink text-wlx-paper hover:bg-wlx-ink/90"}`}
+              className="group inline-flex items-center gap-1.5 bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navStart}
@@ -347,23 +332,20 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         </div>
       </header>
 
-      {/* ───────── Hero (ink-dominant — bookends the dark final CTA) ───────── */}
-      <section
-        ref={heroRef}
-        className="relative overflow-hidden bg-wlx-ink text-wlx-paper"
-      >
-        {/* Atmospheric background — warm gold glows on ink + subtle grain */}
+      {/* ───────── Hero ───────── */}
+      <section className="relative overflow-hidden">
+        {/* Atmospheric background — layered gradients + subtle grain */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <div
-            className="absolute inset-0 opacity-80"
+            className="absolute inset-0 opacity-70"
             style={{
               background:
-                "radial-gradient(55% 50% at 12% 22%, rgba(201,169,97,0.22) 0%, transparent 60%), radial-gradient(50% 55% at 92% 82%, rgba(201,169,97,0.10) 0%, transparent 65%), radial-gradient(80% 70% at 50% 0%, rgba(45,42,38,0.9) 0%, transparent 55%)",
+                "radial-gradient(60% 50% at 20% 30%, rgba(201,169,97,0.18) 0%, transparent 60%), radial-gradient(50% 60% at 85% 70%, rgba(26,26,26,0.06) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(248,246,242,1) 0%, rgba(251,250,247,0) 60%)",
             }}
           />
-          {/* SVG grain — soft noise overlay (lightens the ink surface) */}
+          {/* SVG grain — soft noise overlay */}
           <svg
-            className="absolute inset-0 h-full w-full opacity-[0.06] mix-blend-overlay"
+            className="absolute inset-0 h-full w-full opacity-[0.035] mix-blend-multiply"
             xmlns="http://www.w3.org/2000/svg"
           >
             <filter id="wlx-grain">
@@ -392,11 +374,11 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div>
             {/* Announcement pill */}
             <div
-              className="wlx-fade-up inline-flex items-center gap-2 border border-wlx-paper/20 bg-wlx-paper/[0.06] px-3 py-1.5 backdrop-blur-sm"
+              className="wlx-fade-up inline-flex items-center gap-2 border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
               style={{ animationDelay: "60ms" }}
             >
               <Sparkles size={12} className="text-wlx-accent" />
-              <span className="text-[11px] uppercase tracking-[0.18em] text-wlx-paper">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-wlx-ink">
                 {t.heroPill}
               </span>
             </div>
@@ -418,7 +400,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
             {/* Sub */}
             <p
-              className="wlx-fade-up mt-7 max-w-[44ch] text-base leading-relaxed text-wlx-paper/70 sm:text-lg"
+              className="wlx-fade-up mt-7 max-w-[44ch] text-base leading-relaxed text-wlx-stone sm:text-lg"
               style={{ animationDelay: "220ms" }}
             >
               {t.heroSub}
@@ -431,7 +413,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <Link
                 href={`/${locale}/start`}
-                className="group inline-flex items-center justify-center gap-2 bg-wlx-paper px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:bg-wlx-paper/90 hover:shadow-[0_18px_44px_-16px_rgba(248,246,242,0.45)] active:scale-[0.98] will-change-transform"
+                className="group inline-flex items-center justify-center gap-2 bg-wlx-ink px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper transition-all duration-300 hover:bg-wlx-ink/90 hover:shadow-[0_18px_40px_-18px_rgba(26,26,26,0.6)] active:scale-[0.98] will-change-transform"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.heroCta}
@@ -443,7 +425,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </Link>
               <Link
                 href={`/${locale}/admin/login`}
-                className="inline-flex items-center justify-center gap-1 px-2 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper/70 transition-colors duration-200 hover:text-wlx-paper sm:px-4"
+                className="inline-flex items-center justify-center gap-1 px-2 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-stone transition-colors duration-200 hover:text-wlx-ink sm:px-4"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.heroSecondary}
@@ -453,7 +435,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
             {/* Trust line */}
             <p
-              className="wlx-fade-up mt-8 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/60"
+              className="wlx-fade-up mt-8 text-[12px] uppercase tracking-[0.18em] text-wlx-stone"
               style={{ animationDelay: "380ms" }}
             >
               {t.heroTrust}
@@ -479,7 +461,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               />
 
               {/* Phone outer frame (bezel) */}
-              <div className="relative w-[300px] rounded-[44px] bg-[#0d0d0d] p-[10px] shadow-[0_40px_80px_-24px_rgba(0,0,0,0.7)] ring-1 ring-wlx-paper/15">
+              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_30px_60px_-20px_rgba(26,26,26,0.55)] ring-1 ring-wlx-ink/30">
                 {/* Notch */}
                 <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
 
