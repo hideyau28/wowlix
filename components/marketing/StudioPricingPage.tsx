@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import Link from "next/link";
+import { ArrowRight, Check } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
 type Props = { locale?: Locale };
@@ -153,14 +154,22 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
   const t = T[locale] || T.en;
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
 
+  // Scroll-reveal for sections marked with .studio-reveal.
+  // Robustness: content is visible by DEFAULT (see CSS). Only after JS confirms it
+  // can run do we add `studio-js` (which enables the hidden→animate state), so a
+  // stalled observer or JS failure can never ship a blank page. A failsafe timer
+  // also force-reveals everything if the observer never fires.
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("studio-js");
     const els = document.querySelectorAll<HTMLElement>(".studio-reveal");
     if (!els.length) return;
+    const reveal = (el: Element) => el.classList.add("is-visible");
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            e.target.classList.add("is-visible");
+            reveal(e.target);
             obs.unobserve(e.target);
           }
         }
@@ -168,13 +177,35 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       { threshold: 0.12, rootMargin: "120px" },
     );
     els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
+    // Failsafe: if anything is still hidden after 2.5s (observer stalled, tab was
+    // backgrounded on load, headless render), reveal it anyway.
+    const failsafe = window.setTimeout(() => els.forEach(reveal), 2500);
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(failsafe);
+    };
   }, []);
 
+  // Creator-first warm palette — scoped to THIS page only via CSS-var overrides,
+  // mirroring WowlixLandingPage.tsx so /pricing stays visually consistent with
+  // the landing without bleeding into the shared --wlx-* tokens elsewhere.
+  const brandVars = {
+    "--wlx-cream": "#F6ECE2",
+    "--wlx-paper": "#FBF4EC",
+    "--wlx-ink": "#2C201C",
+    "--wlx-stone": "#77645A",
+    "--wlx-mist": "#EBDFD3",
+    "--wlx-accent": "#C25A4E",
+    "--wlx-accent-fg": "#FFFFFF",
+  } as CSSProperties;
+
   return (
-    <div className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans">
+    <div
+      style={brandVars}
+      className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased"
+    >
       {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-wlx-mist bg-wlx-paper/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-wlx-mist bg-wlx-paper/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
           <Link
             href={`/${locale}`}
@@ -199,10 +230,15 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/start`}
-              className="hidden sm:inline-block bg-wlx-ink px-5 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-colors duration-200"
+              className="group hidden sm:inline-flex items-center gap-1.5 rounded-full bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navStart}
+              <ArrowRight
+                size={14}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              />
             </Link>
           </nav>
         </div>
@@ -214,7 +250,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
             {t.eyebrow}
           </p>
-          <h1 className="mt-6 font-wlx-display text-[clamp(36px,7vw,72px)] tracking-tight leading-[1.05]">
+          <h1 className="mt-6 font-wlx-display text-[clamp(36px,7vw,72px)] font-bold leading-[1.05] tracking-[-0.02em] text-balance">
             {t.title}
           </h1>
           <p className="mt-5 max-w-[48ch] text-base sm:text-lg text-wlx-stone">
@@ -224,31 +260,32 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* Plan cards */}
-      <section className="border-b border-wlx-mist">
-        <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
+      <section className="studio-reveal border-b border-wlx-mist">
+        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Free */}
-            <article className="flex flex-col border border-wlx-mist p-8">
-              <h2 className="font-wlx-display text-xl tracking-tight">
+            <article className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
+              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.free.name}
-              </h2>
+              </h3>
               <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                 {t.free.desc}
               </p>
-              <p className="mt-7 text-5xl tabular-nums">
+              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                 {t.free.price}
-                <span className="ml-1 text-sm text-wlx-stone">{t.period}</span>
+                <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
               </p>
-              <ul className="mt-7 flex-1 space-y-2 text-sm text-wlx-ink">
+              <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
                 {t.free.feats.map((f) => (
-                  <li key={f} className="border-t border-wlx-mist pt-2">
-                    {f}
+                  <li key={f} className="flex items-start gap-2.5">
+                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href={`/${locale}/start`}
-                className="mt-8 inline-block border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] hover:bg-wlx-ink hover:text-wlx-paper transition-colors duration-200"
+                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.free.cta}
@@ -256,27 +293,28 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
             </article>
 
             {/* Lite */}
-            <article className="flex flex-col border border-wlx-mist p-8">
-              <h2 className="font-wlx-display text-xl tracking-tight">
+            <article className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
+              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.lite.name}
-              </h2>
+              </h3>
               <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                 {t.lite.desc}
               </p>
-              <p className="mt-7 text-5xl tabular-nums">
+              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                 {t.lite.price}
-                <span className="ml-1 text-sm text-wlx-stone">{t.period}</span>
+                <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
               </p>
-              <ul className="mt-7 flex-1 space-y-2 text-sm text-wlx-ink">
+              <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
                 {t.lite.feats.map((f) => (
-                  <li key={f} className="border-t border-wlx-mist pt-2">
-                    {f}
+                  <li key={f} className="flex items-start gap-2.5">
+                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href={`/${locale}/start?plan=lite`}
-                className="mt-8 inline-block border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] hover:bg-wlx-ink hover:text-wlx-paper transition-colors duration-200"
+                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.lite.cta}
@@ -284,32 +322,33 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
             </article>
 
             {/* Pro */}
-            <article className="relative flex flex-col bg-wlx-ink p-8 text-wlx-paper">
-              <div className="absolute -top-3 left-8 bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
+            <article className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2">
+              <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
                 {t.popular}
               </div>
-              <h2 className="font-wlx-display text-xl tracking-tight">
+              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.pro.name}
-              </h2>
+              </h3>
               <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
                 {t.pro.desc}
               </p>
-              <p className="mt-7 text-5xl tabular-nums">
+              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
                 {t.pro.price}
-                <span className="ml-1 text-sm text-wlx-paper/70">
+                <span className="ml-1 text-sm font-normal text-wlx-paper/70">
                   {t.period}
                 </span>
               </p>
-              <ul className="mt-7 flex-1 space-y-2 text-sm">
+              <ul className="mt-7 flex-1 space-y-3 text-sm">
                 {t.pro.feats.map((f) => (
-                  <li key={f} className="border-t border-wlx-paper/15 pt-2">
-                    {f}
+                  <li key={f} className="flex items-start gap-2.5">
+                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href={`/${locale}/start?plan=pro`}
-                className="mt-8 inline-block bg-wlx-paper py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink hover:bg-wlx-paper/90 transition-colors duration-200"
+                className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.pro.cta}
@@ -328,7 +367,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           <dl className="mt-12 divide-y divide-wlx-mist">
             {t.faq.map((item) => (
               <div key={item.q} className="grid grid-cols-1 gap-4 py-8 sm:grid-cols-3">
-                <dt className="font-wlx-display text-base sm:text-lg tracking-tight sm:col-span-1">
+                <dt className="font-wlx-display text-base sm:text-lg font-semibold tracking-tight sm:col-span-1">
                   {item.q}
                 </dt>
                 <dd className="text-sm leading-relaxed text-wlx-stone sm:col-span-2">
@@ -341,7 +380,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-wlx-ink">
+      <section className="studio-reveal bg-wlx-ink">
         <div className="mx-auto max-w-[900px] px-5 py-24 sm:px-8 sm:py-32 text-center">
           <h2 className="font-wlx-display text-[clamp(36px,6vw,64px)] tracking-tight leading-[1.05] text-wlx-paper">
             {t.ctaTitle}
@@ -351,7 +390,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           </p>
           <Link
             href={`/${locale}/start`}
-            className="mt-10 inline-block bg-wlx-paper px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink hover:bg-wlx-paper/90 transition-colors duration-200"
+            className="group mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
             style={{ transitionTimingFunction: "var(--wlx-ease)" }}
           >
             {t.ctaBtn}
@@ -367,6 +406,32 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           </p>
         </div>
       </footer>
+
+      {/* Scroll-reveal animation: `studio-reveal` is visible by default; only
+          once JS confirms it can run do we hide-then-reveal on scroll. */}
+      <style jsx global>{`
+        .studio-reveal {
+          opacity: 1;
+          transform: none;
+        }
+        .studio-js .studio-reveal {
+          opacity: 0;
+          transform: translateY(40px);
+          transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+            transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .studio-js .studio-reveal.is-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .studio-reveal {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
