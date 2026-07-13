@@ -305,7 +305,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/start`}
-              className="group inline-flex items-center gap-1.5 bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200"
+              className="group inline-flex items-center gap-1.5 bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navStart}
@@ -400,13 +400,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <Link
                 href={`/${locale}/start`}
-                className="group inline-flex items-center justify-center gap-2 bg-wlx-ink px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper transition-all duration-300 hover:bg-wlx-ink/90 hover:shadow-[0_18px_40px_-18px_rgba(26,26,26,0.6)]"
+                className="group inline-flex items-center justify-center gap-2 bg-wlx-ink px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper transition-all duration-300 hover:bg-wlx-ink/90 hover:shadow-[0_18px_40px_-18px_rgba(26,26,26,0.6)] active:scale-[0.98] will-change-transform"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.heroCta}
                 <ArrowRight
                   size={14}
-                  className="transition-transform duration-300 group-hover:translate-x-1"
+                  className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-px group-hover:scale-110"
                   style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                 />
               </Link>
@@ -614,7 +614,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
           <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Free */}
-            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-colors duration-300 hover:border-wlx-ink/30">
+            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-ink/30 hover:shadow-[0_28px_55px_-30px_rgba(26,26,26,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
               <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.pricingFreeName}
               </h3>
@@ -687,7 +687,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </article>
 
             {/* Pro */}
-            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-colors duration-300 hover:border-wlx-ink/30">
+            <article className="group relative flex flex-col border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-ink/30 hover:shadow-[0_28px_55px_-30px_rgba(26,26,26,0.35)] will-change-transform" style={{ transitionTimingFunction: "var(--wlx-ease)" }}>
               <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                 {t.pricingProName}
               </h3>
