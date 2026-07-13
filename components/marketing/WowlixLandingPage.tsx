@@ -318,7 +318,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/start`}
-              className="group inline-flex items-center gap-1.5 bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
+              className="group inline-flex items-center gap-1.5 rounded-full bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navStart}
@@ -337,10 +337,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         {/* Atmospheric background — layered gradients + subtle grain */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <div
-            className="absolute inset-0 opacity-70"
+            className="absolute inset-0 opacity-80"
             style={{
               background:
-                "radial-gradient(60% 50% at 20% 30%, rgba(201,169,97,0.18) 0%, transparent 60%), radial-gradient(50% 60% at 85% 70%, rgba(26,26,26,0.06) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(248,246,242,1) 0%, rgba(251,250,247,0) 60%)",
+                "radial-gradient(60% 50% at 18% 28%, rgba(194,90,78,0.16) 0%, transparent 60%), radial-gradient(52% 58% at 88% 72%, rgba(224,178,160,0.28) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(251,244,236,1) 0%, rgba(251,244,236,0) 60%)",
             }}
           />
           {/* SVG grain — soft noise overlay */}
@@ -364,7 +364,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(201,169,97,0.35), transparent)",
+                "radial-gradient(closest-side, rgba(194,90,78,0.30), transparent)",
             }}
           />
         </div>
@@ -386,7 +386,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {/* Headline — titleA on its own line; accent + titleB stay
                 together on line 2 so the italic word never mid-word-splits. */}
             <h1
-              className="wlx-fade-up mt-6 font-wlx-display text-[clamp(44px,8vw,88px)] font-bold leading-[1.0] tracking-[-0.025em]"
+              className="wlx-fade-up mt-6 font-wlx-display text-[clamp(42px,6.6vw,74px)] font-bold leading-[1.04] tracking-[-0.02em] text-balance"
               style={{ animationDelay: "140ms" }}
             >
               <span className="block">{t.heroTitleA}</span>
@@ -413,7 +413,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <Link
                 href={`/${locale}/start`}
-                className="group inline-flex items-center justify-center gap-2 bg-wlx-ink px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper transition-all duration-300 hover:bg-wlx-ink/90 hover:shadow-[0_18px_40px_-18px_rgba(26,26,26,0.6)] active:scale-[0.98] will-change-transform"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.6)] active:scale-[0.98] will-change-transform"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.heroCta}
