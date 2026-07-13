@@ -24,11 +24,11 @@ const T = {
     navStart: "免費開店",
 
     heroPill: "新功能：電郵驗證碼登入",
-    heroTitleA: "香港 IG 小店嘅",
-    heroTitleAccent: "一站式",
-    heroTitleB: "開店平台",
+    heroTitleA: "一條 link，",
+    heroTitleAccent: "follower",
+    heroTitleB: "變現。",
     heroSub:
-      "由商品上架到訂單追蹤，由客戶管理到多語言支援。一條 link 開始，最快 2 分鐘上線。",
+      "專為香港 IG 小店而設 —— 上架、收款、訂單、客戶，一個位搞掂，最快 2 分鐘上線。",
     heroCta: "免費開店",
     heroSecondary: "已有帳戶？登入",
     heroTrust: "0% 佣金 · 唔使信用卡 · 即開即用",
@@ -63,12 +63,13 @@ const T = {
     feat4Desc: "繁中 / 英文同步切換，海外客人都睇得明。SEO 自動處理。",
 
     pricingEyebrow: "定價",
-    pricingTitle: "簡單透明，0% 佣金。",
-    pricingSub: "你賺幾多就係幾多。冇隱藏收費。",
+    pricingTitle: "你賺嘅，全部落你袋。",
+    pricingSub: "0% 平台佣金，冇隱藏收費。我哋靠月費營運 —— 賣幾多都唔抽你一蚊。",
     pricingPeriod: "／月",
     pricingLiteBadge: "推薦",
     pricingCta: "選擇方案",
     pricingFullLink: "查看完整定價",
+    pricingTrust: "月繳、隨時取消，唔鎖約 · 你嘅數據，隨時屬於你。",
 
     howEyebrow: "三步開店",
     howTitle: "由 link 到生意，最快兩分鐘。",
@@ -95,7 +96,7 @@ const T = {
     voice3Type: "波鞋代購",
 
     ctaEyebrow: "你 ready，我哋就 ready。",
-    ctaTitle: "由今日起，唔使再喺 DM 度做生意。",
+    ctaTitle: "係時候，唔再靠 DM 同截圖做生意。",
     ctaSub: "最快 2 分鐘開店 · 0% 佣金 · 唔使信用卡。",
     ctaPrimary: "免費開店",
     ctaSecondary: "睇示範",
@@ -111,11 +112,11 @@ const T = {
     navStart: "Start free",
 
     heroPill: "New: sign in with email code",
-    heroTitleA: "The all-in-one",
-    heroTitleAccent: "storefront",
-    heroTitleB: "for HK IG shops.",
+    heroTitleA: "Turn your",
+    heroTitleAccent: "followers",
+    heroTitleB: "into a business.",
     heroSub:
-      "From products to orders, customers to multi-language — one link to start, live in as fast as 2 minutes.",
+      "Built for Hong Kong IG shops — listings, payments, orders and customers in one place. Live in as fast as 2 minutes.",
     heroCta: "Start free",
     heroSecondary: "Have an account? Login",
     heroTrust: "0% commission · No credit card · Live instantly",
@@ -151,12 +152,13 @@ const T = {
       "Bilingual zh-HK / EN out of the box. Overseas customers welcomed. SEO handled.",
 
     pricingEyebrow: "Pricing",
-    pricingTitle: "Simple, transparent, 0% commission.",
-    pricingSub: "What you earn is what you keep. No hidden fees.",
+    pricingTitle: "What you earn, you keep.",
+    pricingSub: "0% platform commission, no hidden fees. We run on subscriptions — never a cut of your sales.",
     pricingPeriod: "/mo",
     pricingLiteBadge: "Recommended",
     pricingCta: "Choose plan",
     pricingFullLink: "See full pricing",
+    pricingTrust: "Monthly, cancel anytime, no lock-in · Your data always stays yours.",
 
     howEyebrow: "Three steps",
     howTitle: "From link to live in two minutes.",
@@ -771,9 +773,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             })}
           </div>
 
+          <p className="mt-10 max-w-[52ch] text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
+            {t.pricingTrust}
+          </p>
           <Link
             href={`/${locale}/pricing`}
-            className="mt-10 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.22em] text-wlx-stone transition-colors duration-200 hover:text-wlx-ink"
+            className="mt-4 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.22em] text-wlx-stone transition-colors duration-200 hover:text-wlx-ink"
             style={{ transitionTimingFunction: "var(--wlx-ease)" }}
           >
             {t.pricingFullLink}
