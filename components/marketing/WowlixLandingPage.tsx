@@ -31,6 +31,7 @@ const T = {
     heroTrust: "0% 佣金 · 唔使信用卡 · 即開即用",
 
     statsEyebrow: "我哋承諾",
+    statsHeading: "開店之前，先講清楚。",
     stat1Num: "0",
     stat1Suffix: "%",
     stat1Label: "佣金",
@@ -40,9 +41,9 @@ const T = {
     stat3Num: "$0",
     stat3Suffix: "",
     stat3Label: "免費開始",
-    stat4Num: "新",
+    stat4Num: "0",
     stat4Suffix: "",
-    stat4Label: "首批商戶招募中",
+    stat4Label: "長約 · 隨時取消",
 
     featEyebrow: "為小店而設",
     featTitle: "你需要嘅一切，都喺呢度。",
@@ -89,7 +90,8 @@ const T = {
     howStep3: "上架開賣",
     howStep3Desc: "影相上架，即刻收單",
 
-    voiceEyebrow: "首批商戶真實回饋",
+    voiceEyebrow: "首批商戶回饋",
+    voiceHeading: "佢哋已經開咗店。",
     voice1Quote: "訂單自動入 system，付款狀態一目了然，慳返好多時間。",
     voice1Name: "May",
     voice1Shop: "@maysshop · 飾物店",
@@ -127,6 +129,7 @@ const T = {
     heroTrust: "0% commission · No credit card · Live instantly",
 
     statsEyebrow: "What we promise",
+    statsHeading: "Straight terms, before you start.",
     stat1Num: "0",
     stat1Suffix: "%",
     stat1Label: "Commission",
@@ -136,9 +139,9 @@ const T = {
     stat3Num: "$0",
     stat3Suffix: "",
     stat3Label: "Free to start",
-    stat4Num: "New",
+    stat4Num: "0",
     stat4Suffix: "",
-    stat4Label: "Onboarding now",
+    stat4Label: "lock-in · cancel anytime",
 
     featEyebrow: "Built for small shops",
     featTitle: "Everything you need, nothing you don't.",
@@ -196,7 +199,8 @@ const T = {
     howStep3: "List & sell",
     howStep3Desc: "Photos up, orders in",
 
-    voiceEyebrow: "Founding merchants",
+    voiceEyebrow: "From our first merchants",
+    voiceHeading: "They're already selling.",
     voice1Quote:
       "Orders auto-track and payment status is crystal clear — saves me hours.",
     voice1Name: "May",
@@ -559,11 +563,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* ───────── Stats ───────── */}
-      <section className="wlx-reveal border-y border-wlx-mist bg-wlx-cream/50">
+      <section className="wlx-reveal border-y border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
           <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
             {t.statsEyebrow}
           </p>
+          <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
+            {t.statsHeading}
+          </h2>
           <dl className="mt-8 grid grid-cols-2 gap-y-8 sm:gap-x-8 lg:grid-cols-4">
             {[
               { num: t.stat1Num, suf: t.stat1Suffix, label: t.stat1Label },
@@ -626,8 +633,67 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         </div>
       </section>
 
-      {/* ───────── Pricing ───────── */}
+      {/* ───────── How it works ───────── */}
+      <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
+        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+            {t.howEyebrow}
+          </p>
+          <h2 className="mt-5 max-w-[28ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-tight tracking-[-0.02em]">
+            {t.howTitle}
+          </h2>
+          <ol className="mt-14 grid grid-cols-1 gap-12 sm:grid-cols-3">
+            {[
+              { n: "01", h: t.howStep1, d: t.howStep1Desc },
+              { n: "02", h: t.howStep2, d: t.howStep2Desc },
+              { n: "03", h: t.howStep3, d: t.howStep3Desc },
+            ].map((step, i) => (
+              <li key={i} className="border-t border-wlx-mist pt-6">
+                <span className="font-wlx-serif text-3xl italic text-wlx-stone">
+                  {step.n}
+                </span>
+                <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-tight">
+                  {step.h}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-wlx-stone">
+                  {step.d}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ───────── Testimonials ───────── */}
       <section className="wlx-reveal border-b border-wlx-mist">
+        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+            {t.voiceEyebrow}
+          </p>
+          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
+            {t.voiceHeading}
+          </h2>
+          <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
+            {[
+              { q: t.voice1Quote, n: t.voice1Name, s: t.voice1Shop },
+              { q: t.voice2Quote, n: t.voice2Name, s: t.voice2Shop },
+              { q: t.voice3Quote, n: t.voice3Name, s: t.voice3Shop },
+            ].map((v, i) => (
+              <figure key={i} className="border-t border-wlx-mist pt-6">
+                <blockquote className="font-wlx-serif text-lg italic leading-relaxed text-wlx-ink">
+                  &ldquo;{v.q}&rdquo;
+                </blockquote>
+                <figcaption className="mt-5 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
+                  {v.n} <span className="mx-1">·</span> {v.s}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ───────── Pricing ───────── */}
+      <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
           <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
             {t.pricingEyebrow}
@@ -757,62 +823,6 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {t.pricingFullLink}
             <ArrowRight size={12} />
           </Link>
-        </div>
-      </section>
-
-      {/* ───────── How it works ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
-            {t.howEyebrow}
-          </p>
-          <h2 className="mt-5 max-w-[28ch] font-wlx-display text-[clamp(28px,4.5vw,44px)] font-semibold leading-tight tracking-[-0.02em]">
-            {t.howTitle}
-          </h2>
-          <ol className="mt-14 grid grid-cols-1 gap-12 sm:grid-cols-3">
-            {[
-              { n: "01", h: t.howStep1, d: t.howStep1Desc },
-              { n: "02", h: t.howStep2, d: t.howStep2Desc },
-              { n: "03", h: t.howStep3, d: t.howStep3Desc },
-            ].map((step, i) => (
-              <li key={i} className="border-t border-wlx-mist pt-6">
-                <span className="font-wlx-serif text-3xl italic text-wlx-stone">
-                  {step.n}
-                </span>
-                <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-tight">
-                  {step.h}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-wlx-stone">
-                  {step.d}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* ───────── Testimonials ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
-            {t.voiceEyebrow}
-          </p>
-          <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
-            {[
-              { q: t.voice1Quote, n: t.voice1Name, s: t.voice1Shop },
-              { q: t.voice2Quote, n: t.voice2Name, s: t.voice2Shop },
-              { q: t.voice3Quote, n: t.voice3Name, s: t.voice3Shop },
-            ].map((v, i) => (
-              <figure key={i} className="border-t border-wlx-mist pt-6">
-                <blockquote className="font-wlx-serif text-lg italic leading-relaxed text-wlx-ink">
-                  &ldquo;{v.q}&rdquo;
-                </blockquote>
-                <figcaption className="mt-5 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                  {v.n} <span className="mx-1">·</span> {v.s}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
         </div>
       </section>
 
