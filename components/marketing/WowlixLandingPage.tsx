@@ -89,7 +89,7 @@ const T = {
     howStep3: "上架開賣",
     howStep3Desc: "影相上架，即刻收單",
 
-    voiceEyebrow: "商戶心聲",
+    voiceEyebrow: "首批商戶真實回饋",
     voice1Quote: "訂單自動入 system，付款狀態一目了然，慳返好多時間。",
     voice1Name: "May",
     voice1Shop: "@maysshop · 飾物店",
@@ -196,7 +196,7 @@ const T = {
     howStep3: "List & sell",
     howStep3Desc: "Photos up, orders in",
 
-    voiceEyebrow: "Merchant stories",
+    voiceEyebrow: "Founding merchants",
     voice1Quote:
       "Orders auto-track and payment status is crystal clear — saves me hours.",
     voice1Name: "May",
@@ -244,15 +244,22 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Scroll-reveal for sections marked with .wlx-reveal
+  // Scroll-reveal for sections marked with .wlx-reveal.
+  // Robustness: content is visible by DEFAULT (see CSS). Only after JS confirms it
+  // can run do we add `wlx-js` (which enables the hidden→animate state), so a
+  // stalled observer or JS failure can never ship a blank page. A failsafe timer
+  // also force-reveals everything if the observer never fires.
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("wlx-js");
     const els = document.querySelectorAll<HTMLElement>(".wlx-reveal");
     if (!els.length) return;
+    const reveal = (el: Element) => el.classList.add("is-visible");
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            e.target.classList.add("is-visible");
+            reveal(e.target);
             obs.unobserve(e.target);
           }
         }
@@ -260,7 +267,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       { threshold: 0.12, rootMargin: "80px" },
     );
     els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
+    // Failsafe: if anything is still hidden after 2.5s (observer stalled, tab was
+    // backgrounded on load, headless render), reveal it anyway.
+    const failsafe = window.setTimeout(() => els.forEach(reveal), 2500);
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(failsafe);
+    };
   }, []);
 
   return (
@@ -356,7 +369,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           />
         </div>
 
-        <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-5 pb-20 pt-24 sm:px-8 sm:pb-32 sm:pt-32 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
+        <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-6 px-5 pb-20 pt-24 sm:gap-12 sm:px-8 sm:pb-32 sm:pt-32 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
           {/* ── Left: copy ── */}
           <div>
             {/* Announcement pill */}
@@ -422,7 +435,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
             {/* Trust line */}
             <p
-              className="wlx-fade-up mt-8 text-[12px] uppercase tracking-[0.18em] text-wlx-stone/80"
+              className="wlx-fade-up mt-8 text-[12px] uppercase tracking-[0.18em] text-wlx-stone"
               style={{ animationDelay: "380ms" }}
             >
               {t.heroTrust}
@@ -433,14 +446,11 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               Mini storefront preview drawn entirely with CSS — no images,
               uses the same wlx-* tokens so it tracks tenant-overridden accent. */}
           <div
-            className="wlx-fade-up hidden lg:flex lg:justify-center"
+            className="wlx-fade-up flex justify-center"
             style={{ animationDelay: "460ms" }}
             aria-hidden
           >
-            <div
-              className="relative"
-              style={{ transform: "rotate(-2deg)" }}
-            >
+            <div className="relative origin-top -rotate-2 scale-[0.82] sm:scale-90 lg:scale-100">
               {/* Soft halo behind the phone */}
               <div
                 className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
@@ -833,7 +843,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               />
             </Link>
             <Link
-              href={`/${locale}/solemena-test`}
+              href={`/${locale}/maysshop`}
               className="inline-flex items-center justify-center gap-1 px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper border border-wlx-paper/25 transition-colors duration-200 hover:border-wlx-paper"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
@@ -886,13 +896,19 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           opacity: 0;
           animation: wlxFadeUp 700ms var(--wlx-ease) forwards;
         }
+        /* Visible by default (no JS / observer stall = content still shows). */
         .wlx-reveal {
+          opacity: 1;
+          transform: none;
+        }
+        /* Only once JS confirms it can run do we hide-then-reveal on scroll. */
+        .wlx-js .wlx-reveal {
           opacity: 0;
           transform: translateY(40px);
           transition: opacity 700ms var(--wlx-ease),
             transform 700ms var(--wlx-ease);
         }
-        .wlx-reveal.is-visible {
+        .wlx-js .wlx-reveal.is-visible {
           opacity: 1;
           transform: translateY(0);
         }
