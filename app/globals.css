@@ -13,15 +13,16 @@
 :root {
   /* Wowlix palette — 4 neutrals + 1 default brand accent.
      Tenants override --wlx-accent at runtime. */
-  /* Creator-first warm palette — terracotta-rose accent on warm cream/espresso.
-     Tenants override --wlx-accent at runtime for their own storefront. */
-  --wlx-cream: #F6ECE2;
-  --wlx-paper: #FBF4EC;
-  --wlx-ink: #2C201C;
-  --wlx-stone: #77645A;
-  --wlx-mist: #EBDFD3;
-  --wlx-accent: #C25A4E;
-  --wlx-accent-fg: #FFFFFF;
+  /* Wowlix shared base palette — used by the biolink "studio" tenant template too,
+     so it must stay stable. The marketing LANDING scopes its own creator-first warm
+     palette on its own root (see WowlixLandingPage), overriding these locally only. */
+  --wlx-cream: #F8F6F2;
+  --wlx-paper: #FBFAF7;
+  --wlx-ink: #1A1A1A;
+  --wlx-stone: #6F6A63;
+  --wlx-mist: #E8E5DE;
+  --wlx-accent: #C9A961;
+  --wlx-accent-fg: #1A1A1A;
 
   /* Motion */
   --wlx-ease: cubic-bezier(0.16, 1, 0.3, 1);

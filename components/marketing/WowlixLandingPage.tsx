@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -276,8 +276,24 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     };
   }, []);
 
+  // Creator-first warm palette — scoped to THIS landing only via CSS-var overrides,
+  // so it never bleeds into the shared --wlx-* tokens the biolink "studio" tenant
+  // template also consumes. Tenant storefronts keep the base palette.
+  const brandVars = {
+    "--wlx-cream": "#F6ECE2",
+    "--wlx-paper": "#FBF4EC",
+    "--wlx-ink": "#2C201C",
+    "--wlx-stone": "#77645A",
+    "--wlx-mist": "#EBDFD3",
+    "--wlx-accent": "#C25A4E",
+    "--wlx-accent-fg": "#FFFFFF",
+  } as CSSProperties;
+
   return (
-    <div className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased">
+    <div
+      style={brandVars}
+      className="min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased"
+    >
       {/* ───────── Nav ───────── */}
       <header
         className={`sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
