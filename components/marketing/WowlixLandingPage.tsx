@@ -386,7 +386,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {/* Headline — titleA on its own line; accent + titleB stay
                 together on line 2 so the italic word never mid-word-splits. */}
             <h1
-              className="wlx-fade-up mt-7 font-wlx-display text-[clamp(40px,6.4vw,68px)] font-semibold leading-[1.05] tracking-[-0.02em]"
+              className="wlx-fade-up mt-6 font-wlx-display text-[clamp(44px,8vw,88px)] font-bold leading-[1.0] tracking-[-0.025em]"
               style={{ animationDelay: "140ms" }}
             >
               <span className="block">{t.heroTitleA}</span>
