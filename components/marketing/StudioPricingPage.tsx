@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, type CSSProperties } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
+import { marketingBrandVars } from "@/components/marketing/theme";
+import { MARKETING_PLANS } from "@/components/marketing/plans";
 
 type Props = { locale?: Locale };
 
@@ -15,46 +17,9 @@ const T = {
     title: "簡單透明，0% 佣金。",
     sub: "你賺幾多就係幾多。月繳、隨時取消，唔需要長合約。",
     period: "／月",
-    popular: "最受歡迎",
-    free: {
-      name: "Free",
-      price: "$0",
-      desc: "零成本試水溫",
-      feats: ["10 件商品", "每月 50 張訂單", "全部收款方式（FPS · PayMe · 信用卡）", "1 款店鋪主題"],
-      cta: "免費開始",
-    },
-    lite: {
-      name: "Lite",
-      price: "$78",
-      desc: "認真副業",
-      feats: [
-        "50 件商品",
-        "無限訂單",
-        "全部主題",
-        "WhatsApp 預填訊息",
-        "折扣碼",
-        "訂單 CSV 匯出",
-        "基本數據分析",
-      ],
-      cta: "選擇 Lite",
-    },
-    pro: {
-      name: "Pro",
-      price: "$198",
-      desc: "全職生意",
-      feats: [
-        "無限商品",
-        "無限訂單",
-        "全部主題",
-        "進階數據分析 + 熱賣排行",
-        "棄單挽回",
-        "CRM 客戶庫",
-        "優先客服",
-        "移除 WoWlix branding",
-        "自訂域名（即將推出）",
-      ],
-      cta: "選擇 Pro",
-    },
+    badge: "推薦",
+    ctaFree: "免費開始",
+    ctaChoose: "選擇",
     faqEyebrow: "常見問題",
     faq: [
       {
@@ -85,46 +50,9 @@ const T = {
     title: "Simple, transparent, 0% commission.",
     sub: "What you earn is what you keep. Monthly, cancel anytime, no contracts.",
     period: "/mo",
-    popular: "Most popular",
-    free: {
-      name: "Free",
-      price: "$0",
-      desc: "Zero cost to start",
-      feats: ["10 products", "50 orders / mo", "All payment methods (FPS · PayMe · card)", "1 store theme"],
-      cta: "Start free",
-    },
-    lite: {
-      name: "Lite",
-      price: "$78",
-      desc: "Serious side hustle",
-      feats: [
-        "50 products",
-        "Unlimited orders",
-        "All themes",
-        "WhatsApp prefill",
-        "Discount codes",
-        "Order CSV export",
-        "Basic analytics",
-      ],
-      cta: "Choose Lite",
-    },
-    pro: {
-      name: "Pro",
-      price: "$198",
-      desc: "Full-time business",
-      feats: [
-        "Unlimited products",
-        "Unlimited orders",
-        "All themes",
-        "Advanced analytics + bestsellers",
-        "Abandoned cart recovery",
-        "CRM customer database",
-        "Priority support",
-        "Remove WoWlix branding",
-        "Custom domain (coming soon)",
-      ],
-      cta: "Choose Pro",
-    },
+    badge: "Recommended",
+    ctaFree: "Start free",
+    ctaChoose: "Choose",
     faqEyebrow: "FAQ",
     faq: [
       {
@@ -189,15 +117,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
   // Creator-first warm palette — scoped to THIS page only via CSS-var overrides,
   // mirroring WowlixLandingPage.tsx so /pricing stays visually consistent with
   // the landing without bleeding into the shared --wlx-* tokens elsewhere.
-  const brandVars = {
-    "--wlx-cream": "#F6ECE2",
-    "--wlx-paper": "#FBF4EC",
-    "--wlx-ink": "#2C201C",
-    "--wlx-stone": "#77645A",
-    "--wlx-mist": "#EBDFD3",
-    "--wlx-accent": "#C25A4E",
-    "--wlx-accent-fg": "#FFFFFF",
-  } as CSSProperties;
+  const brandVars = marketingBrandVars;
 
   return (
     <div
@@ -263,97 +183,87 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       <section className="studio-reveal border-b border-wlx-mist">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Free */}
-            <article className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
-              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
-                {t.free.name}
-              </h3>
-              <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                {t.free.desc}
-              </p>
-              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
-                {t.free.price}
-                <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
-              </p>
-              <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
-                {t.free.feats.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={`/${locale}/start`}
-                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              >
-                {t.free.cta}
-              </Link>
-            </article>
+            {MARKETING_PLANS.map((plan) => {
+              const href =
+                plan.id === "free"
+                  ? `/${locale}/start`
+                  : `/${locale}/start?plan=${plan.id}`;
+              const cta =
+                plan.id === "free" ? t.ctaFree : `${t.ctaChoose} ${plan.name}`;
 
-            {/* Lite */}
-            <article className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
-              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
-                {t.lite.name}
-              </h3>
-              <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                {t.lite.desc}
-              </p>
-              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
-                {t.lite.price}
-                <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
-              </p>
-              <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
-                {t.lite.feats.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={`/${locale}/start?plan=lite`}
-                className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              >
-                {t.lite.cta}
-              </Link>
-            </article>
+              if (plan.recommended) {
+                return (
+                  <article
+                    key={plan.id}
+                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                  >
+                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
+                      {t.badge}
+                    </div>
+                    <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                      {plan.name}
+                    </h3>
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
+                      {plan.tagline[locale]}
+                    </p>
+                    <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                      ${plan.priceHKD}
+                      <span className="ml-1 text-sm font-normal text-wlx-paper/70">
+                        {t.period}
+                      </span>
+                    </p>
+                    <ul className="mt-7 flex-1 space-y-3 text-sm">
+                      {plan.features[locale].map((f) => (
+                        <li key={f} className="flex items-start gap-2.5">
+                          <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href={href}
+                      className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
+                      style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                    >
+                      {cta}
+                    </Link>
+                  </article>
+                );
+              }
 
-            {/* Pro */}
-            <article className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2">
-              <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
-                {t.popular}
-              </div>
-              <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
-                {t.pro.name}
-              </h3>
-              <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
-                {t.pro.desc}
-              </p>
-              <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
-                {t.pro.price}
-                <span className="ml-1 text-sm font-normal text-wlx-paper/70">
-                  {t.period}
-                </span>
-              </p>
-              <ul className="mt-7 flex-1 space-y-3 text-sm">
-                {t.pro.feats.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={`/${locale}/start?plan=pro`}
-                className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              >
-                {t.pro.cta}
-              </Link>
-            </article>
+              return (
+                <article
+                  key={plan.id}
+                  className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]"
+                >
+                  <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                    {plan.name}
+                  </h3>
+                  <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
+                    {plan.tagline[locale]}
+                  </p>
+                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                    ${plan.priceHKD}
+                    <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
+                  </p>
+                  <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
+                    {plan.features[locale].map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={href}
+                    className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
+                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                  >
+                    {cta}
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
