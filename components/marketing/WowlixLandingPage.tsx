@@ -287,6 +287,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     "--wlx-mist": "#EBDFD3",
     "--wlx-accent": "#C25A4E",
     "--wlx-accent-fg": "#FFFFFF",
+    "--wlx-blush": "#E0B2A0",
   } as CSSProperties;
 
   return (
@@ -356,7 +357,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute inset-0 opacity-80"
             style={{
               background:
-                "radial-gradient(60% 50% at 18% 28%, rgba(194,90,78,0.16) 0%, transparent 60%), radial-gradient(52% 58% at 88% 72%, rgba(224,178,160,0.28) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(251,244,236,1) 0%, rgba(251,244,236,0) 60%)",
+                "radial-gradient(60% 50% at 18% 28%, rgba(194,90,78,0.16) 0%, transparent 60%), radial-gradient(52% 58% at 88% 72%, color-mix(in srgb, var(--wlx-blush) 28%, transparent) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(251,244,236,1) 0%, rgba(251,244,236,0) 60%)",
             }}
           />
           {/* SVG grain — soft noise overlay */}
@@ -390,7 +391,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div>
             {/* Announcement pill */}
             <div
-              className="wlx-fade-up inline-flex items-center gap-2 border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
+              className="wlx-fade-up inline-flex items-center gap-2 rounded-full border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
               style={{ animationDelay: "60ms" }}
             >
               <Sparkles size={12} className="text-wlx-accent" />
@@ -429,7 +430,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <Link
                 href={`/${locale}/start`}
-                className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.6)] active:scale-[0.98] will-change-transform"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98] will-change-transform"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 {t.heroCta}
@@ -472,12 +473,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
                 style={{
                   background:
-                    "radial-gradient(closest-side, rgba(201,169,97,0.35), transparent 70%)",
+                    "radial-gradient(closest-side, rgba(194,90,78,0.35), transparent 70%)",
                 }}
               />
 
               {/* Phone outer frame (bezel) */}
-              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_30px_60px_-20px_rgba(26,26,26,0.55)] ring-1 ring-wlx-ink/30">
+              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_30px_60px_-20px_rgba(44,32,28,0.55)] ring-1 ring-wlx-ink/30">
                 {/* Notch */}
                 <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
 
@@ -522,7 +523,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                             style={{
                               background:
                                 i % 2 === 0
-                                  ? "radial-gradient(circle at 35% 40%, rgba(201,169,97,0.4), transparent 55%)"
+                                  ? "radial-gradient(circle at 35% 40%, rgba(194,90,78,0.4), transparent 55%)"
                                   : "radial-gradient(circle at 60% 60%, rgba(111,106,99,0.3), transparent 55%)",
                             }}
                           />
@@ -547,7 +548,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </div>
 
               {/* Floating accent badge */}
-              <div className="absolute -left-6 top-12 hidden rotate-[8deg] border border-wlx-mist bg-wlx-paper px-3 py-1.5 shadow-md xl:block">
+              <div className="absolute -left-6 top-12 hidden rotate-[8deg] rounded-full border border-wlx-mist bg-wlx-paper px-3 py-1.5 shadow-md xl:block">
                 <span className="text-[10px] uppercase tracking-[0.18em] text-wlx-ink">
                   0% commission
                 </span>
@@ -823,14 +824,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute -left-24 -top-24 h-[360px] w-[360px] rounded-full opacity-40 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(201,169,97,0.6), transparent)",
+                "radial-gradient(closest-side, rgba(194,90,78,0.6), transparent)",
             }}
           />
           <div
             className="absolute -bottom-32 -right-16 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(248,246,242,0.4), transparent)",
+                "radial-gradient(closest-side, rgba(251,244,236,0.4), transparent)",
             }}
           />
         </div>
