@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -307,6 +307,47 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     };
   }, []);
 
+  // Wave 4: magnetic pull on the primary CTAs. Desktop-pointer only — guarded
+  // by matchMedia so touch devices and reduced-motion users never attach
+  // listeners at all (not just visually no-op). Sets --mx/--my custom
+  // properties consumed by the .wlx-magnetic CSS rule; the transform lives on
+  // a wrapper span, never on the Link itself, so it can't fight the Link's
+  // own Tailwind `active:scale-[0.98]` press effect.
+  useEffect(() => {
+    const canHover = window.matchMedia("(pointer:fine)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+    if (!canHover || reduced) return;
+
+    const MAX_PULL = 14;
+    const STRENGTH = 0.18;
+    const els = document.querySelectorAll<HTMLElement>(".wlx-magnetic");
+    if (!els.length) return;
+
+    const cleanups = Array.from(els).map((el) => {
+      const onMove = (e: PointerEvent) => {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const mx = Math.max(-MAX_PULL, Math.min(MAX_PULL, (e.clientX - cx) * STRENGTH));
+        const my = Math.max(-MAX_PULL, Math.min(MAX_PULL, (e.clientY - cy) * STRENGTH));
+        el.style.setProperty("--mx", String(mx));
+        el.style.setProperty("--my", String(my));
+      };
+      const onLeave = () => {
+        el.style.setProperty("--mx", "0");
+        el.style.setProperty("--my", "0");
+      };
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerleave", onLeave);
+      return () => {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerleave", onLeave);
+      };
+    });
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, []);
+
   // Creator-first warm palette — scoped to THIS landing only via CSS-var overrides,
   // so it never bleeds into the shared --wlx-* tokens the biolink "studio" tenant
   // template also consumes. Tenant storefronts keep the base palette.
@@ -349,7 +390,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
       {/* ───────── Nav ───────── */}
       <header
-        className={`sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
+        className={`relative sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
           scrolled
             ? "border-b border-wlx-mist bg-wlx-paper/85 backdrop-blur-md"
             : "border-b border-transparent bg-transparent"
@@ -396,6 +437,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </Link>
           </nav>
         </div>
+        <span
+          aria-hidden
+          className="wlx-progress pointer-events-none absolute bottom-0 left-0 h-px w-full origin-left bg-wlx-ink/70"
+        />
       </header>
 
       {/* ───────── Hero ───────── */}
@@ -489,15 +534,17 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               className="wlx-fade-up mt-10 flex flex-col gap-3 sm:flex-row sm:items-center"
               style={{ animationDelay: "300ms" }}
             >
-              <Link
-                href={`/${locale}/start`}
-                className="group inline-flex items-center gap-3 rounded-full bg-wlx-accent py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(26,24,21,0.5)] active:scale-[0.98] will-change-transform"
-              >
-                {t.heroCta}
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-paper/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
-                  <ArrowRight size={15} strokeWidth={1.5} />
-                </span>
-              </Link>
+              <span className="wlx-magnetic">
+                <Link
+                  href={`/${locale}/start`}
+                  className="group inline-flex items-center gap-3 rounded-full bg-wlx-accent py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(26,24,21,0.5)] active:scale-[0.98] will-change-transform"
+                >
+                  {t.heroCta}
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-paper/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                    <ArrowRight size={15} strokeWidth={1.5} />
+                  </span>
+                </Link>
+              </span>
               <Link
                 href={`/${locale}/admin/login`}
                 className="inline-flex items-center justify-center gap-1 px-2 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-stone transition-colors duration-200 hover:text-wlx-ink sm:px-4"
@@ -523,7 +570,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               pinned top-right, tuned so it crashes the clear space rather
               than the (max-w-64%) headline column itself. */}
           <div
-            className="wlx-fade-up flex justify-center lg:block lg:absolute lg:right-0 lg:top-8 lg:z-20 lg:w-[38%] lg:-mt-0"
+            className="wlx-fade-up wlx-hero-parallax flex justify-center lg:block lg:absolute lg:right-0 lg:top-8 lg:z-20 lg:w-[38%] lg:-mt-0"
             style={{ animationDelay: "460ms" }}
             aria-hidden
           >
@@ -604,7 +651,11 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               { num: t.stat3Num, suf: t.stat3Suffix, label: t.stat3Label },
               { num: t.stat4Num, suf: t.stat4Suffix, label: t.stat4Label },
             ].map((s, i) => (
-              <div key={i} className="border-l border-wlx-mist pl-5 sm:pl-6">
+              <div
+                key={i}
+                className="wlx-stagger border-l border-wlx-mist pl-5 sm:pl-6"
+                style={{ "--i": i } as CSSProperties}
+              >
                 <dt className="wlx-stat-num font-wlx-display text-[clamp(44px,8vw,88px)] font-[830] [font-variation-settings:'opsz'_144] tabular-nums leading-none tracking-tight text-wlx-ink">
                   {s.num}
                   <span className="text-wlx-accent">{s.suf}</span>
@@ -649,7 +700,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 <div
                   key={i}
                   data-shop={i}
-                  className="flex flex-col justify-center py-12 lg:min-h-[72vh] lg:py-0"
+                  className="wlx-stagger flex flex-col justify-center py-12 lg:min-h-[72vh] lg:py-0"
+                  style={{ "--i": i } as CSSProperties}
                 >
                   <span className="text-[12px] uppercase tracking-[0.2em] text-wlx-stone">
                     {s.tag}
@@ -764,8 +816,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <li
                     key={key}
-                    className="group relative overflow-hidden rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
-                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                    className="wlx-stagger group relative overflow-hidden rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
+                    style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": index } as CSSProperties}
                   >
                     {body}
                     <Image
@@ -783,7 +835,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               return (
                 <li
                   key={key}
-                  className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                  className="wlx-stagger rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                  style={{ "--i": index } as CSSProperties}
                 >
                   <div
                     className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
@@ -877,8 +930,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div className="mt-12 grid gap-6 lg:grid-cols-12">
             {/* Hero pull-quote — the widest, largest-type card */}
             <figure
-              className="group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform lg:col-span-7"
-              style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform lg:col-span-7"
+              style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": 0 } as CSSProperties}
             >
               <span
                 aria-hidden
@@ -914,8 +967,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               {restVoices.map((v, i) => (
                 <figure
                   key={i}
-                  className="group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
-                  style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                  className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
+                  style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": i + 1 } as CSSProperties}
                 >
                   <span
                     aria-hidden
@@ -980,7 +1033,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           </p>
 
           <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {MARKETING_PLANS.map((plan) => {
+            {MARKETING_PLANS.map((plan, i) => {
               const href =
                 plan.id === "free"
                   ? `/${locale}/start`
@@ -991,7 +1044,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <div
                     key={plan.id}
-                    className="rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    className="wlx-stagger rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    style={{ "--i": i } as CSSProperties}
                   >
                     <article className="relative flex h-full flex-col rounded-[21px] bg-[#232019] p-8 text-wlx-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
                       <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
@@ -1036,7 +1090,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               return (
                 <div
                   key={plan.id}
-                  className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                  className="wlx-stagger rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                  style={{ "--i": i } as CSSProperties}
                 >
                   <article
                     className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform"
@@ -1124,15 +1179,17 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {t.ctaSub}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href={`/${locale}/start`}
-              className="group inline-flex items-center gap-3 rounded-full bg-wlx-paper py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(244,241,234,0.3)] active:scale-[0.98] will-change-transform"
-            >
-              {t.ctaPrimary}
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-ink/10 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
-                <ArrowRight size={15} strokeWidth={1.5} />
-              </span>
-            </Link>
+            <span className="wlx-magnetic">
+              <Link
+                href={`/${locale}/start`}
+                className="group inline-flex items-center gap-3 rounded-full bg-wlx-paper py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(244,241,234,0.3)] active:scale-[0.98] will-change-transform"
+              >
+                {t.ctaPrimary}
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-ink/10 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                  <ArrowRight size={15} strokeWidth={1.5} />
+                </span>
+              </Link>
+            </span>
             <Link
               href={`/${locale}/maysshop`}
               className="inline-flex items-center justify-center gap-1 rounded-full px-7 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-paper border border-wlx-paper/30 transition-colors duration-200 hover:border-wlx-paper"
@@ -1233,24 +1290,90 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         .wlx-drift {
           animation: wlxDrift 18s ease-in-out infinite alternate;
         }
+        /* Wave 4: hero phone depth parallax — Chromium-enhanced only. Gated
+           behind @supports (animation-timeline: view()) so Safari/Firefox
+           (and any browser without CSS scroll-timelines) simply keep the
+           static look already shipped; the lg:absolute positioning above
+           is untouched, this only layers a translate on top via animation. */
+        @supports (animation-timeline: view()) {
+          @media (prefers-reduced-motion: no-preference) {
+            /* Carry BOTH the mount fade-up (opacity, time-based) and the
+               scroll parallax (transform) so neither clobbers the other —
+               one animation shorthand alone would drop the fade-up and
+               leave the phone stuck at opacity 0. */
+            .wlx-hero-parallax {
+              animation:
+                wlxFadeUp 700ms var(--wlx-ease) both,
+                wlxRiseSlow linear both;
+              animation-timeline: auto, scroll(root);
+              animation-range: normal, 0 70vh;
+              will-change: transform;
+            }
+            @keyframes wlxRiseSlow {
+              to {
+                transform: translate3d(0, -40px, 0);
+              }
+            }
+          }
+        }
+        /* Wave 4: sticky-nav scroll-progress hairline — Chromium-enhanced
+           only, zero JS. Hidden entirely where animation-timeline: scroll()
+           is unsupported so it never ships as a static full-width bar. */
+        @supports (animation-timeline: scroll()) {
+          .wlx-progress {
+            transform: scaleX(0);
+            animation: wlxProgress linear both;
+            animation-timeline: scroll(root);
+          }
+          @keyframes wlxProgress {
+            to {
+              transform: scaleX(1);
+            }
+          }
+        }
+        @supports not (animation-timeline: scroll()) {
+          .wlx-progress {
+            display: none;
+          }
+        }
+        /* Wave 4: magnetic primary CTA — desktop pointer only. The pull is
+           applied to a wrapper span (not the Link itself) so it never fights
+           the Link's own Tailwind active:scale-[0.98] press effect; the two
+           transforms live on different elements and compose visually. */
+        .wlx-magnetic {
+          display: inline-block;
+          transform: translate3d(calc(var(--mx, 0) * 1px), calc(var(--my, 0) * 1px), 0);
+          transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        @media (prefers-reduced-motion: reduce), (pointer: coarse) {
+          .wlx-magnetic {
+            transform: none !important;
+          }
+        }
         /* Visible by default (no JS / observer stall = content still shows). */
         .wlx-reveal {
           opacity: 1;
           transform: none;
         }
-        /* Only once JS confirms it can run do we hide-then-reveal on scroll. */
+        /* Wave 4: the section itself no longer hides — only its mapped
+           children (.wlx-stagger) cascade in once .is-visible lands. The
+           IntersectionObserver still adds/removes is-visible on the
+           .wlx-reveal section exactly as before; this rule is intentionally
+           inert so the parent never goes blank. */
         .wlx-js .wlx-reveal {
-          opacity: 0;
-          transform: translateY(40px);
-          filter: blur(6px);
-          transition: opacity 700ms var(--wlx-ease),
-            transform 700ms var(--wlx-ease),
-            filter 700ms var(--wlx-ease);
         }
-        .wlx-js .wlx-reveal.is-visible {
+        .wlx-js .wlx-reveal .wlx-stagger {
+          opacity: 0;
+          transform: translateY(28px);
+          clip-path: inset(0 0 14% 0);
+          transition: opacity 0.7s var(--wlx-ease), transform 0.7s var(--wlx-ease),
+            clip-path 0.7s var(--wlx-ease);
+          transition-delay: calc(var(--i, 0) * 90ms);
+        }
+        .wlx-js .wlx-reveal.is-visible .wlx-stagger {
           opacity: 1;
-          transform: translateY(0);
-          filter: blur(0);
+          transform: none;
+          clip-path: none;
         }
         @media (prefers-reduced-motion: reduce) {
           .wlx-fade-up,
@@ -1270,6 +1393,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           }
           .wlx-stat-num {
             clip-path: none !important;
+          }
+          .wlx-stagger {
+            opacity: 1 !important;
+            transform: none !important;
+            clip-path: none !important;
+            transition: none !important;
           }
         }
       `}</style>
