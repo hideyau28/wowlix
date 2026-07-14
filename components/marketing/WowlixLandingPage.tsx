@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Boxes,
@@ -265,6 +266,26 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       style={brandVars}
       className={`${fraunces.variable} ${notoSerifHK.variable} min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased`}
     >
+      {/* Page-wide film grain — one consistent tactile layer over every section
+          (soft-light so it reads on both the cream and the dark CTA). */}
+      <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden>
+        <svg
+          className="h-full w-full opacity-[0.06] mix-blend-soft-light"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <filter id="wlx-grain-page">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.82"
+              numOctaves="2"
+              stitchTiles="stitch"
+            />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#wlx-grain-page)" />
+        </svg>
+      </div>
+
       {/* ───────── Nav ───────── */}
       <header
         className={`sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
@@ -440,80 +461,31 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             <div className="relative origin-top -rotate-2 scale-[0.82] sm:scale-90 lg:scale-100">
               {/* Soft halo behind the phone */}
               <div
-                className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
+                className="absolute -inset-16 -z-10 rounded-full opacity-70 blur-3xl"
                 style={{
                   background:
-                    "radial-gradient(closest-side, rgba(194,90,78,0.35), transparent 70%)",
+                    "radial-gradient(45% 45% at 60% 35%, rgba(194,90,78,0.42), transparent 70%), radial-gradient(50% 50% at 35% 75%, rgba(224,178,160,0.4), transparent 72%)",
                 }}
               />
 
               {/* Phone outer frame (bezel) */}
-              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_30px_60px_-20px_rgba(44,32,28,0.55)] ring-1 ring-wlx-ink/30">
+              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_44px_90px_-28px_rgba(44,32,28,0.62),0_18px_40px_-20px_rgba(194,90,78,0.28)] ring-1 ring-white/10">
                 {/* Notch */}
                 <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
 
-                {/* Inner screen */}
+                {/* Inner screen — a real WoWlix storefront (花語甜室 demo) so the
+                    hero shows the actual product, not a wireframe. */}
                 <div className="relative aspect-[9/19] w-full overflow-hidden rounded-[34px] bg-wlx-paper">
-                  {/* Top app bar */}
-                  <div className="flex items-center justify-between border-b border-wlx-mist px-4 pb-3 pt-9">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-wlx-accent to-wlx-stone" />
-                      <span className="font-wlx-display text-[13px] font-semibold tracking-tight text-wlx-ink">
-                        @maysshop
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-wlx-accent" />
-                      <span className="text-[9px] uppercase tracking-[0.18em] text-wlx-stone">
-                        Live
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Banner */}
-                  <div className="mx-3 mt-3 flex h-16 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-wlx-cream via-wlx-mist to-wlx-paper">
-                    <span className="font-wlx-serif text-xs italic text-wlx-stone">
-                      Spring drop
-                    </span>
-                  </div>
-
-                  {/* Product grid 2×2 */}
-                  <div className="mx-3 mt-3 grid grid-cols-2 gap-2">
-                    {[
-                      { name: "Hoop ring", price: "$ 280" },
-                      { name: "Pearl set", price: "$ 480" },
-                      { name: "Charm bracelet", price: "$ 360" },
-                      { name: "Mini studs", price: "$ 180" },
-                    ].map((p, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="aspect-square overflow-hidden rounded-md border border-wlx-mist bg-wlx-cream">
-                          {/* Tiny abstract motif so cards aren't visually empty */}
-                          <div
-                            className="h-full w-full"
-                            style={{
-                              background:
-                                i % 2 === 0
-                                  ? "radial-gradient(circle at 35% 40%, rgba(194,90,78,0.4), transparent 55%)"
-                                  : "radial-gradient(circle at 60% 60%, rgba(111,106,99,0.3), transparent 55%)",
-                            }}
-                          />
-                        </div>
-                        <div className="truncate text-[9px] text-wlx-ink">
-                          {p.name}
-                        </div>
-                        <div className="text-[10px] font-semibold tabular-nums text-wlx-ink">
-                          {p.price}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Sticky cart bar */}
-                  <div className="absolute inset-x-0 bottom-0 border-t border-wlx-mist bg-wlx-paper/95 px-3 py-3 backdrop-blur">
-                    <div className="rounded bg-wlx-ink py-2 text-center text-[10px] uppercase tracking-[0.18em] text-wlx-paper">
-                      View cart · 2
-                    </div>
-                  </div>
+                  <Image
+                    src="/demos/petitfleur.png"
+                    alt=""
+                    fill
+                    sizes="300px"
+                    className="object-cover object-top"
+                    priority
+                  />
+                  {/* soft screen gloss for realism */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-wlx-ink/5" />
                 </div>
               </div>
 
@@ -575,7 +547,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               return (
                 <li
                   key={key}
-                  className="group relative rounded-3xl border border-wlx-mist bg-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
+                  className="group relative rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
                   style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                 >
                   <div className="flex items-center gap-4">
@@ -639,26 +611,43 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
             {t.voiceHeading}
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
+          <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
             {[
               { q: t.voice1Quote, n: t.voice1Name, h: t.voice1Handle, ty: t.voice1Type },
               { q: t.voice2Quote, n: t.voice2Name, h: t.voice2Handle, ty: t.voice2Type },
               { q: t.voice3Quote, n: t.voice3Name, h: t.voice3Handle, ty: t.voice3Type },
             ].map((v, i) => (
-              <figure key={i} className="border-t border-wlx-mist pt-6">
-                <blockquote className="font-wlx-serif text-lg italic leading-relaxed text-wlx-ink">
-                  &ldquo;{v.q}&rdquo;
+              <figure
+                key={i}
+                className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-cream/60 p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
+                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              >
+                <span
+                  aria-hidden
+                  className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-accent/25"
+                >
+                  &ldquo;
+                </span>
+                <blockquote className="mt-2 font-wlx-serif text-lg italic leading-relaxed text-wlx-ink">
+                  {v.q}
                 </blockquote>
-                <figcaption className="mt-5 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                  {v.n}
-                  {v.h && v.h !== v.n && (
-                    <>
-                      {" "}
-                      <span className="mx-1">·</span> {v.h}
-                    </>
-                  )}
-                  {" "}
-                  <span className="mx-1">·</span> {v.ty}
+                <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-mist pt-6">
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wlx-accent font-wlx-display text-base font-semibold text-wlx-accent-fg">
+                    {v.n.charAt(0)}
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="font-wlx-display text-sm font-semibold text-wlx-ink">
+                      {v.n}
+                      {v.h && v.h !== v.n && (
+                        <span className="ml-1.5 font-normal text-wlx-stone">
+                          {v.h}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-wlx-stone">
+                      {v.ty}
+                    </span>
+                  </span>
                 </figcaption>
               </figure>
             ))}
