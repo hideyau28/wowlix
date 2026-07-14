@@ -193,75 +193,79 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
 
               if (plan.recommended) {
                 return (
-                  <article
+                  <div
                     key={plan.id}
-                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] lg:-my-2"
+                    className="rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
                   >
-                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
-                      {t.badge}
-                    </div>
+                    <article className="relative flex h-full flex-col rounded-[21px] bg-[#232019] p-8 text-wlx-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+                      <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
+                        {t.badge}
+                      </div>
+                      <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                        {plan.name}
+                      </h3>
+                      <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
+                        {plan.tagline[lang]}
+                      </p>
+                      <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
+                        ${plan.priceHKD}
+                        <span className="ml-1 text-sm font-normal text-wlx-paper/70">
+                          {t.period}
+                        </span>
+                      </p>
+                      <ul className="mt-7 flex-1 space-y-3 text-sm">
+                        {plan.features[lang].map((f) => (
+                          <li key={f} className="flex items-start gap-2.5">
+                            <Check size={16} className="mt-0.5 shrink-0 text-wlx-paper" aria-hidden />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link
+                        href={href}
+                        className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
+                        style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                      >
+                        {cta}
+                      </Link>
+                    </article>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={plan.id}
+                  className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                >
+                  <article className="relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                       {plan.name}
                     </h3>
-                    <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                       {plan.tagline[lang]}
                     </p>
                     <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                       ${plan.priceHKD}
-                      <span className="ml-1 text-sm font-normal text-wlx-paper/70">
-                        {t.period}
-                      </span>
+                      <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
                     </p>
-                    <ul className="mt-7 flex-1 space-y-3 text-sm">
+                    <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
                       {plan.features[lang].map((f) => (
                         <li key={f} className="flex items-start gap-2.5">
-                          <Check size={16} className="mt-0.5 shrink-0 text-wlx-paper" aria-hidden />
+                          <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
                           <span>{f}</span>
                         </li>
                       ))}
                     </ul>
                     <Link
                       href={href}
-                      className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
+                      className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                       style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                     >
                       {cta}
                     </Link>
                   </article>
-                );
-              }
-
-              return (
-                <article
-                  key={plan.id}
-                  className="flex flex-col rounded-3xl border border-wlx-mist p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]"
-                >
-                  <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
-                    {plan.name}
-                  </h3>
-                  <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                    {plan.tagline[lang]}
-                  </p>
-                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
-                    ${plan.priceHKD}
-                    <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
-                  </p>
-                  <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
-                    {plan.features[lang].map((f) => (
-                      <li key={f} className="flex items-start gap-2.5">
-                        <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={href}
-                    className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
-                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-                  >
-                    {cta}
-                  </Link>
-                </article>
+                </div>
               );
             })}
           </div>

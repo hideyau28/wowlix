@@ -239,6 +239,16 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     },
   ];
 
+  // Testimonials: split into a hero pull-quote + a stacked pair, for the
+  // asymmetric 7/5 dark-editorial layout (Wave 3). New arrays only — never
+  // mutates the underlying `t` copy.
+  const voices = [
+    { q: t.voice1Quote, n: t.voice1Name, h: t.voice1Handle, ty: t.voice1Type },
+    { q: t.voice2Quote, n: t.voice2Name, h: t.voice2Handle, ty: t.voice2Type },
+    { q: t.voice3Quote, n: t.voice3Name, h: t.voice3Handle, ty: t.voice3Type },
+  ];
+  const [heroVoice, ...restVoices] = voices;
+
   useEffect(() => {
     const captions = document.querySelectorAll<HTMLElement>("[data-shop]");
     if (!captions.length) return;
@@ -595,7 +605,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               { num: t.stat4Num, suf: t.stat4Suffix, label: t.stat4Label },
             ].map((s, i) => (
               <div key={i} className="border-l border-wlx-mist pl-5 sm:pl-6">
-                <dt className="font-wlx-display text-[clamp(32px,5vw,48px)] font-semibold leading-none tabular-nums tracking-tight text-wlx-ink">
+                <dt className="wlx-stat-num font-wlx-display text-[clamp(44px,8vw,88px)] font-[830] [font-variation-settings:'opsz'_144] tabular-nums leading-none tracking-tight text-wlx-ink">
                   {s.num}
                   <span className="text-wlx-accent">{s.suf}</span>
                 </dt>
@@ -724,16 +734,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             {t.featTitle}
           </h2>
 
-          <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {FEATURES.map(({ key, Icon }) => {
+          <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-[minmax(190px,auto)]">
+            {FEATURES.map(({ key, Icon }, index) => {
               const title = t[`${key}Title` as keyof typeof t] as string;
               const desc = t[`${key}Desc` as keyof typeof t] as string;
-              return (
-                <li
-                  key={key}
-                  className="group relative rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
-                  style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-                >
+              const body = (
+                <>
                   <div className="flex items-center gap-4">
                     <span
                       className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-wlx-mist bg-wlx-cream text-wlx-accent transition-all duration-300 group-hover:border-wlx-accent group-hover:bg-wlx-accent group-hover:text-wlx-accent-fg"
@@ -748,6 +754,43 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                   <p className="mt-5 text-[15px] leading-[1.65] [text-wrap:pretty] text-wlx-stone">
                     {desc}
                   </p>
+                </>
+              );
+
+              // Bento break: 商品管理 spans 2×2 on desktop and bleeds a real
+              // screenshot bottom-right — a single refined frame (skips the
+              // double-bezel wrap below) so the bleed isn't clipped.
+              if (index === 0) {
+                return (
+                  <li
+                    key={key}
+                    className="group relative overflow-hidden rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
+                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                  >
+                    {body}
+                    <Image
+                      src="/demos/hypedrops.png"
+                      alt=""
+                      width={520}
+                      height={640}
+                      className="pointer-events-none absolute -bottom-10 -right-8 hidden w-[52%] rotate-2 rounded-2xl shadow-[0_40px_80px_-30px_rgba(26,24,21,0.5)] grayscale-[0.2] transition duration-700 group-hover:grayscale-0 lg:block"
+                    />
+                  </li>
+                );
+              }
+
+              // Double-bezel (Doppelrand): concentric outer frame + inner card.
+              return (
+                <li
+                  key={key}
+                  className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                >
+                  <div
+                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
+                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                  >
+                    {body}
+                  </div>
                 </li>
               );
             })}
@@ -785,86 +828,125 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               { n: "02", h: t.howStep2, d: t.howStep2Desc },
               { n: "03", h: t.howStep3, d: t.howStep3Desc },
             ].map((step, i) => (
-              <li key={i} className="border-t border-wlx-mist pt-6">
-                <span className="font-wlx-serif text-3xl italic text-wlx-stone">
+              <li key={i} className="relative border-t border-wlx-mist pt-6">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -top-8 right-0 font-wlx-serif italic leading-none text-[clamp(90px,12vw,150px)] tabular-nums text-wlx-ink/[0.05]"
+                >
                   {step.n}
                 </span>
-                <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-[-0.01em]">
-                  {step.h}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-wlx-stone">
-                  {step.d}
-                </p>
+                <div className="relative z-10">
+                  <span className="font-wlx-serif text-3xl italic text-wlx-stone">
+                    {step.n}
+                  </span>
+                  <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-[-0.01em]">
+                    {step.h}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-wlx-stone">
+                    {step.d}
+                  </p>
+                </div>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      {/* ───────── Testimonials ───────── */}
-      <section className="wlx-reveal relative">
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
-        />
+      {/* ───────── Testimonials — dark editorial ledger ───────── */}
+      <section className="wlx-reveal relative bg-wlx-ink text-wlx-paper">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-wlx-paper/10" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-wlx-paper/10" />
         <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-paper/[0.05]"
           >
             「
           </span>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-paper/50 tabular-nums">
               04
             </span>
-            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+            <p className="inline-flex items-center rounded-full border border-wlx-paper/20 bg-transparent px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-paper/70">
               {t.voiceEyebrow}
             </p>
           </div>
           <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.voiceHeading}
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {[
-              { q: t.voice1Quote, n: t.voice1Name, h: t.voice1Handle, ty: t.voice1Type },
-              { q: t.voice2Quote, n: t.voice2Name, h: t.voice2Handle, ty: t.voice2Type },
-              { q: t.voice3Quote, n: t.voice3Name, h: t.voice3Handle, ty: t.voice3Type },
-            ].map((v, i) => (
-              <figure
-                key={i}
-                className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-cream/60 p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+          <div className="mt-12 grid gap-6 lg:grid-cols-12">
+            {/* Hero pull-quote — the widest, largest-type card */}
+            <figure
+              className="group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform lg:col-span-7"
+              style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+            >
+              <span
+                aria-hidden
+                className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
               >
-                <span
-                  aria-hidden
-                  className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-accent/25"
-                >
-                  &ldquo;
+                &ldquo;
+              </span>
+              <blockquote className="mt-2 font-wlx-serif italic [text-wrap:pretty] text-wlx-paper text-[clamp(22px,3vw,34px)] leading-[1.3]">
+                {heroVoice.q}
+              </blockquote>
+              <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-paper/12 pt-6">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wlx-paper font-wlx-display text-base font-semibold text-wlx-ink">
+                  {heroVoice.n.charAt(0)}
                 </span>
-                <blockquote className="mt-2 font-wlx-serif text-lg italic leading-[1.65] [text-wrap:pretty] text-wlx-ink">
-                  {v.q}
-                </blockquote>
-                <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-mist pt-6">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wlx-accent font-wlx-display text-base font-semibold text-wlx-accent-fg">
-                    {v.n.charAt(0)}
+                <span className="flex flex-col">
+                  <span className="font-wlx-display text-sm font-semibold text-wlx-paper">
+                    {heroVoice.n}
+                    {heroVoice.h && heroVoice.h !== heroVoice.n && (
+                      <span className="ml-1.5 font-normal text-wlx-paper/60">
+                        {heroVoice.h}
+                      </span>
+                    )}
                   </span>
-                  <span className="flex flex-col">
-                    <span className="font-wlx-display text-sm font-semibold text-wlx-ink">
-                      {v.n}
-                      {v.h && v.h !== v.n && (
-                        <span className="ml-1.5 font-normal text-wlx-stone">
-                          {v.h}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-wlx-stone">
-                      {v.ty}
-                    </span>
+                  <span className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-wlx-paper/60">
+                    {heroVoice.ty}
                   </span>
-                </figcaption>
-              </figure>
-            ))}
+                </span>
+              </figcaption>
+            </figure>
+
+            {/* Stacked pair — smaller, quieter column */}
+            <div className="flex flex-col gap-6 lg:col-span-5">
+              {restVoices.map((v, i) => (
+                <figure
+                  key={i}
+                  className="group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
+                  style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                >
+                  <span
+                    aria-hidden
+                    className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
+                  >
+                    &ldquo;
+                  </span>
+                  <blockquote className="mt-2 font-wlx-serif text-lg italic leading-[1.65] [text-wrap:pretty] text-wlx-paper">
+                    {v.q}
+                  </blockquote>
+                  <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-paper/12 pt-6">
+                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wlx-paper font-wlx-display text-base font-semibold text-wlx-ink">
+                      {v.n.charAt(0)}
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="font-wlx-display text-sm font-semibold text-wlx-paper">
+                        {v.n}
+                        {v.h && v.h !== v.n && (
+                          <span className="ml-1.5 font-normal text-wlx-paper/60">
+                            {v.h}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-wlx-paper/60">
+                        {v.ty}
+                      </span>
+                    </span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -907,32 +989,78 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
               if (plan.recommended) {
                 return (
-                  <article
+                  <div
                     key={plan.id}
-                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] lg:-my-2"
+                    className="rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
                   >
-                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
-                      {t.pricingLiteBadge}
-                    </div>
+                    <article className="relative flex h-full flex-col rounded-[21px] bg-[#232019] p-8 text-wlx-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+                      <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
+                        {t.pricingLiteBadge}
+                      </div>
+                      <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
+                        {plan.name}
+                      </h3>
+                      <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
+                        {plan.tagline[lang]}
+                      </p>
+                      <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
+                        ${plan.priceHKD}
+                        <span className="ml-1 text-sm font-normal text-wlx-paper/70">
+                          {t.pricingPeriod}
+                        </span>
+                      </p>
+                      <ul className="mt-7 flex-1 space-y-3 text-sm">
+                        {feats.map((f) => (
+                          <li key={f} className="flex items-start gap-2">
+                            <Check
+                              size={16}
+                              strokeWidth={1.5}
+                              className="mt-0.5 shrink-0 text-wlx-paper"
+                            />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link
+                        href={href}
+                        className="mt-8 inline-block rounded-full bg-wlx-paper py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-paper/90 active:scale-[0.98]"
+                        style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                      >
+                        {t.pricingCta}
+                      </Link>
+                    </article>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={plan.id}
+                  className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                >
+                  <article
+                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform"
+                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                  >
                     <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
                       {plan.name}
                     </h3>
-                    <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                       {plan.tagline[lang]}
                     </p>
                     <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                       ${plan.priceHKD}
-                      <span className="ml-1 text-sm font-normal text-wlx-paper/70">
+                      <span className="ml-1 text-sm font-normal text-wlx-stone">
                         {t.pricingPeriod}
                       </span>
                     </p>
-                    <ul className="mt-7 flex-1 space-y-3 text-sm">
+                    <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
                       {feats.map((f) => (
                         <li key={f} className="flex items-start gap-2">
                           <Check
                             size={16}
                             strokeWidth={1.5}
-                            className="mt-0.5 shrink-0 text-wlx-paper"
+                            className="mt-0.5 shrink-0 text-wlx-ink"
                           />
                           <span>{f}</span>
                         </li>
@@ -940,53 +1068,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     </ul>
                     <Link
                       href={href}
-                      className="mt-8 inline-block rounded-full bg-wlx-paper py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-paper/90 active:scale-[0.98]"
+                      className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
                       style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                     >
                       {t.pricingCta}
                     </Link>
                   </article>
-                );
-              }
-
-              return (
-                <article
-                  key={plan.id}
-                  className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform"
-                  style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-                >
-                  <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
-                    {plan.name}
-                  </h3>
-                  <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
-                    {plan.tagline[lang]}
-                  </p>
-                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
-                    ${plan.priceHKD}
-                    <span className="ml-1 text-sm font-normal text-wlx-stone">
-                      {t.pricingPeriod}
-                    </span>
-                  </p>
-                  <ul className="mt-7 flex-1 space-y-3 text-sm text-wlx-ink">
-                    {feats.map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <Check
-                          size={16}
-                          strokeWidth={1.5}
-                          className="mt-0.5 shrink-0 text-wlx-ink"
-                        />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={href}
-                    className="mt-8 inline-block rounded-full border border-wlx-ink py-3 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-200 hover:bg-wlx-ink hover:text-wlx-paper active:scale-[0.98]"
-                    style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-                  >
-                    {t.pricingCta}
-                  </Link>
-                </article>
+                </div>
               );
             })}
           </div>
@@ -1089,6 +1177,23 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           font-optical-sizing: auto;
           font-feature-settings: 'ss01', 'dlig', 'kern';
         }
+        /* Oversized stat numerals — progressive-enhancement wipe driven by
+           scroll (view()-timeline). Gated behind @supports + .wlx-js so
+           unsupported browsers (and no-JS) always show the number fully
+           visible; nothing here can hide content permanently. */
+        @supports (animation-timeline: view()) {
+          .wlx-js .wlx-stat-num {
+            clip-path: inset(0 100% 0 0);
+            animation: wlxWipe linear both;
+            animation-timeline: view();
+            animation-range: entry 10% cover 40%;
+          }
+        }
+        @keyframes wlxWipe {
+          to {
+            clip-path: inset(0 0 0 0);
+          }
+        }
         @keyframes wlxFadeUp {
           from {
             opacity: 0;
@@ -1162,6 +1267,9 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           }
           .wlx-drift {
             animation: none !important;
+          }
+          .wlx-stat-num {
+            clip-path: none !important;
           }
         }
       `}</style>
