@@ -170,7 +170,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.eyebrow}
           </p>
-          <h1 className="mt-6 font-wlx-display text-[clamp(36px,7vw,72px)] font-bold leading-[1.05] tracking-[-0.02em] text-balance">
+          <h1 className="mt-6 font-wlx-display text-[clamp(36px,7vw,72px)] font-bold leading-[0.98] tracking-[-0.035em] text-balance">
             {t.title}
           </h1>
           <p className="mt-5 max-w-[48ch] text-base sm:text-lg text-wlx-stone">
@@ -206,7 +206,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                     <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
                       {plan.tagline[lang]}
                     </p>
-                    <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                    <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                       ${plan.priceHKD}
                       <span className="ml-1 text-sm font-normal text-wlx-paper/70">
                         {t.period}
@@ -242,7 +242,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                   <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                     {plan.tagline[lang]}
                   </p>
-                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                     ${plan.priceHKD}
                     <span className="ml-1 text-sm font-normal text-wlx-stone">{t.period}</span>
                   </p>

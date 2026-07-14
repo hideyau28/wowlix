@@ -216,6 +216,47 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
   const [scrolled, setScrolled] = useState(false);
 
+  // Signature "real stores" section: a pinned phone cross-fades through three
+  // real storefronts as you scroll past their captions. `activeShop` is driven
+  // by an IntersectionObserver (works in every browser, unlike Chromium-only
+  // CSS scroll-timelines).
+  const [activeShop, setActiveShop] = useState(0);
+  const shops = [
+    {
+      img: "/demos/petitfleur.png",
+      tag: lang === "zh-HK" ? "甜品 · 花語甜室" : "Dessert · Petit Fleur",
+      line: lang === "zh-HK" ? "手工甜品店。" : "A patisserie.",
+    },
+    {
+      img: "/demos/hypedrops.png",
+      tag: lang === "zh-HK" ? "街頭 · HYPEDROPS" : "Streetwear · Hypedrops",
+      line: lang === "zh-HK" ? "波鞋潮流舖。" : "A sneaker drop.",
+    },
+    {
+      img: "/demos/greenday.png",
+      tag: lang === "zh-HK" ? "有機 · 綠日" : "Organic · Green Day",
+      line: lang === "zh-HK" ? "有機生活店。" : "An organic grocer.",
+    },
+  ];
+
+  useEffect(() => {
+    const captions = document.querySelectorAll<HTMLElement>("[data-shop]");
+    if (!captions.length) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            const idx = Number((e.target as HTMLElement).dataset.shop);
+            if (!Number.isNaN(idx)) setActiveShop(idx);
+          }
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: 0 },
+    );
+    captions.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
   // Nav fills in once user scrolls past hero peak
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 32);
@@ -264,7 +305,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   return (
     <div
       style={brandVars}
-      className={`${fraunces.variable} ${notoSerifHK.variable} min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased`}
+      className={`${fraunces.variable} ${notoSerifHK.variable} min-h-screen bg-wlx-paper text-wlx-ink font-wlx-sans antialiased [font-feature-settings:'kern','liga','calt'] [text-rendering:optimizeLegibility]`}
     >
       {/* Page-wide film grain — one consistent tactile layer over every section
           (soft-light so it reads on both the cream and the dark CTA). */}
@@ -285,6 +326,16 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <rect width="100%" height="100%" filter="url(#wlx-grain-page)" />
         </svg>
       </div>
+      {/* Fixed vignette — gently deepens the ink toward the top edge across
+          every section, reinforcing the editorial "printed page" feel. */}
+      <div
+        className="pointer-events-none fixed inset-0 z-[1]"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(120% 100% at 50% 0%, transparent 55%, rgba(26,24,21,0.06) 100%)",
+        }}
+      />
 
       {/* ───────── Nav ───────── */}
       <header
@@ -366,7 +417,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           </svg>
           {/* Faint accent glow ring */}
           <div
-            className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl"
+            className="wlx-drift absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl"
             style={{
               background:
                 "radial-gradient(closest-side, color-mix(in srgb, var(--wlx-blush) 55%, transparent), transparent)",
@@ -374,38 +425,50 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           />
         </div>
 
-        <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-6 px-5 pb-20 pt-24 sm:gap-12 sm:px-8 sm:pb-32 sm:pt-32 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
-          {/* ── Left: copy ── */}
-          <div>
-            {/* Announcement pill */}
-            <div
-              className="wlx-fade-up inline-flex items-center gap-2 rounded-full border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
-              style={{ animationDelay: "60ms" }}
-            >
-              <Sparkles size={12} className="text-wlx-accent" />
-              <span className="text-[11px] uppercase tracking-[0.18em] text-wlx-ink">
-                {t.heroPill}
-              </span>
-            </div>
+        <div className="relative mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-8 sm:pb-32 sm:pt-32">
+          {/* Announcement pill */}
+          <div
+            className="wlx-fade-up inline-flex items-center gap-2 rounded-full border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
+            style={{ animationDelay: "60ms" }}
+          >
+            <Sparkles size={12} className="text-wlx-accent" />
+            <span className="text-[11px] uppercase tracking-[0.18em] text-wlx-ink">
+              {t.heroPill}
+            </span>
+          </div>
 
-            {/* Headline — titleA on its own line; accent + titleB stay
-                together on line 2 so the italic word never mid-word-splits. */}
-            <h1
-              className="wlx-fade-up mt-6 font-wlx-display text-[clamp(42px,6.6vw,74px)] font-bold leading-[1.04] tracking-[-0.02em] text-balance"
-              style={{ animationDelay: "140ms" }}
-            >
-              <span className="block">{t.heroTitleA}</span>
-              <span className="block">
-                <span className="font-wlx-serif text-wlx-accent italic font-normal">
+          {/* Headline — titleA on its own line; accent + titleB stay together
+              on line 2 so the italic word never mid-word-splits. Constrained
+              to a narrow measure so the big type wraps tight and leaves the
+              right whitespace clear for the phone to bleed into. Each line
+              is masked (overflow-hidden) with an inner .wlx-line span that
+              clip-path wipes in on mount, staggered so the italic accent
+              resolves last. */}
+          <h1
+            className="wlx-fade-up mt-6 max-w-[16ch] font-wlx-display text-[clamp(46px,10vw,128px)] font-bold leading-[0.96] tracking-[-0.04em] [hanging-punctuation:first] text-balance lg:max-w-[64%]"
+            style={{ animationDelay: "140ms" }}
+          >
+            <span className="block overflow-hidden">
+              <span className="block wlx-line" style={{ animationDelay: "120ms" }}>
+                {t.heroTitleA}
+              </span>
+            </span>
+            <span className="block overflow-hidden">
+              <span className="block wlx-line" style={{ animationDelay: "260ms" }}>
+                <span className="font-wlx-serif text-wlx-accent italic font-normal [font-variation-settings:'opsz'_144,'SOFT'_28] text-[1.06em]">
                   {t.heroTitleAccent}
                 </span>{" "}
                 {t.heroTitleB}
               </span>
-            </h1>
+            </span>
+          </h1>
 
+          {/* Sub + CTAs + trust line — narrow measured column beneath the
+              masthead, an editorial support-copy width. */}
+          <div className="max-w-[40ch]">
             {/* Sub */}
             <p
-              className="wlx-fade-up mt-7 max-w-[44ch] text-base leading-relaxed text-wlx-stone sm:text-lg"
+              className="wlx-fade-up mt-7 text-base leading-[1.65] [text-wrap:pretty] text-wlx-stone sm:text-lg"
               style={{ animationDelay: "220ms" }}
             >
               {t.heroSub}
@@ -444,11 +507,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </p>
           </div>
 
-          {/* ── Right: phone mockup (lg+ only) ──
-              Mini storefront preview drawn entirely with CSS — no images,
-              uses the same wlx-* tokens so it tracks tenant-overridden accent. */}
+          {/* ── Phone mockup ── Mini storefront preview. Below lg it sits in
+              normal centered flow under the copy. From lg it breaks out of
+              flow and bleeds up over the headline's right whitespace —
+              pinned top-right, tuned so it crashes the clear space rather
+              than the (max-w-64%) headline column itself. */}
           <div
-            className="wlx-fade-up flex justify-center"
+            className="wlx-fade-up flex justify-center lg:block lg:absolute lg:right-0 lg:top-8 lg:z-20 lg:w-[38%] lg:-mt-0"
             style={{ animationDelay: "460ms" }}
             aria-hidden
           >
@@ -495,12 +560,31 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* ───────── Stats ───────── */}
-      <section className="wlx-reveal border-y border-wlx-mist bg-wlx-cream">
-        <div className="mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
-          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-            {t.statsEyebrow}
-          </p>
-          <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
+      <section className="wlx-reveal relative bg-wlx-cream">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+          >
+            0
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+              01
+            </span>
+            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+              {t.statsEyebrow}
+            </p>
+          </div>
+          <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl [text-wrap:balance]">
             {t.statsHeading}
           </h2>
           <dl className="mt-8 grid grid-cols-2 gap-y-8 sm:gap-x-8 lg:grid-cols-4">
@@ -524,13 +608,119 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         </div>
       </section>
 
+      {/* ───────── Signature: real stores (pinned cross-fade) ───────── */}
+      <section id="stores" className="wlx-reveal relative bg-wlx-paper">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative mx-auto max-w-[1240px] px-5 sm:px-8">
+          {/* intro */}
+          <div className="pt-24 sm:pt-32">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] tracking-[0.24em] text-wlx-stone">
+                ✦
+              </span>
+              <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+                {lang === "zh-HK" ? "真實店舖" : "Real stores"}
+              </p>
+            </div>
+            <h2 className="mt-5 max-w-[15ch] font-wlx-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
+              {lang === "zh-HK"
+                ? "同一個 WoWlix，乜嘢店都撐得起。"
+                : "One WoWlix. Any kind of shop."}
+            </h2>
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_0.82fr] lg:gap-12">
+            {/* LEFT — scroll track of captions */}
+            <div>
+              {shops.map((s, i) => (
+                <div
+                  key={i}
+                  data-shop={i}
+                  className="flex flex-col justify-center py-12 lg:min-h-[72vh] lg:py-0"
+                >
+                  <span className="text-[12px] uppercase tracking-[0.2em] text-wlx-stone">
+                    {s.tag}
+                  </span>
+                  <p className="mt-3 font-wlx-display text-[clamp(34px,6vw,72px)] font-semibold leading-[1] tracking-[-0.03em]">
+                    {s.line}
+                  </p>
+                  {/* mobile inline store shot (the sticky phone is desktop-only) */}
+                  <div className="mt-8 overflow-hidden rounded-[28px] border border-wlx-mist shadow-[0_30px_60px_-30px_rgba(26,24,21,0.4)] lg:hidden">
+                    <Image
+                      src={s.img}
+                      alt=""
+                      width={786}
+                      height={880}
+                      className="h-auto w-full object-cover object-top"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* RIGHT — pinned phone that cross-fades through the stores */}
+            <div className="hidden lg:block">
+              <div className="sticky top-[14vh] flex h-[72vh] flex-col items-center justify-center gap-6">
+                <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_50px_100px_-30px_rgba(26,24,21,0.6)] ring-1 ring-white/10">
+                  <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
+                  <div className="relative aspect-[9/19] w-full overflow-hidden rounded-[34px] bg-wlx-paper">
+                    {shops.map((s, i) => (
+                      <Image
+                        key={i}
+                        src={s.img}
+                        alt=""
+                        fill
+                        sizes="300px"
+                        className="object-cover object-top transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                        style={{ opacity: activeShop === i ? 1 : 0 }}
+                      />
+                    ))}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-wlx-ink/5" />
+                  </div>
+                </div>
+                <div className="flex gap-1.5" aria-hidden>
+                  {shops.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        activeShop === i
+                          ? "w-6 bg-wlx-ink"
+                          : "w-1.5 bg-wlx-ink/25"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ───────── Features ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-            {t.featEyebrow}
-          </p>
-          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
+      <section className="wlx-reveal relative">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+          >
+            ＋
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+              02
+            </span>
+            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+              {t.featEyebrow}
+            </p>
+          </div>
+          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.featTitle}
           </h2>
 
@@ -551,11 +741,11 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     >
                       <Icon size={20} strokeWidth={1.4} />
                     </span>
-                    <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                    <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
                       {title}
                     </h3>
                   </div>
-                  <p className="mt-5 text-[15px] leading-relaxed text-wlx-stone">
+                  <p className="mt-5 text-[15px] leading-[1.65] [text-wrap:pretty] text-wlx-stone">
                     {desc}
                   </p>
                 </li>
@@ -566,12 +756,27 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* ───────── How it works ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-            {t.howEyebrow}
-          </p>
-          <h2 className="mt-5 max-w-[28ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-tight tracking-[-0.02em]">
+      <section className="wlx-reveal relative bg-wlx-cream">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-20">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+          >
+            →
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+              03
+            </span>
+            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+              {t.howEyebrow}
+            </p>
+          </div>
+          <h2 className="mt-5 max-w-[28ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.howTitle}
           </h2>
           <ol className="mt-14 grid grid-cols-1 gap-12 sm:grid-cols-3">
@@ -584,7 +789,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 <span className="font-wlx-serif text-3xl italic text-wlx-stone">
                   {step.n}
                 </span>
-                <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-tight">
+                <h3 className="mt-3 font-wlx-display text-xl font-semibold tracking-[-0.01em]">
                   {step.h}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-wlx-stone">
@@ -597,12 +802,27 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* ───────── Testimonials ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-            {t.voiceEyebrow}
-          </p>
-          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
+      <section className="wlx-reveal relative">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+          >
+            「
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+              04
+            </span>
+            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+              {t.voiceEyebrow}
+            </p>
+          </div>
+          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.voiceHeading}
           </h2>
           <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -622,7 +842,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 >
                   &ldquo;
                 </span>
-                <blockquote className="mt-2 font-wlx-serif text-lg italic leading-relaxed text-wlx-ink">
+                <blockquote className="mt-2 font-wlx-serif text-lg italic leading-[1.65] [text-wrap:pretty] text-wlx-ink">
                   {v.q}
                 </blockquote>
                 <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-mist pt-6">
@@ -650,15 +870,30 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       </section>
 
       {/* ───────── Pricing ───────── */}
-      <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-            {t.pricingEyebrow}
-          </p>
-          <h2 className="mt-5 max-w-[26ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
+      <section className="wlx-reveal relative bg-wlx-cream">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
+        />
+        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+          >
+            $
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.24em] text-wlx-stone tabular-nums">
+              05
+            </span>
+            <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
+              {t.pricingEyebrow}
+            </p>
+          </div>
+          <h2 className="mt-5 max-w-[26ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.pricingTitle}
           </h2>
-          <p className="mt-3 max-w-[44ch] text-base leading-relaxed text-wlx-stone sm:text-lg">
+          <p className="mt-3 max-w-[44ch] text-base leading-relaxed [text-wrap:pretty] text-wlx-stone sm:text-lg">
             {t.pricingSub}
           </p>
 
@@ -679,13 +914,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
                       {t.pricingLiteBadge}
                     </div>
-                    <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                    <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
                       {plan.name}
                     </h3>
                     <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-paper/70">
                       {plan.tagline[lang]}
                     </p>
-                    <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                    <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                       ${plan.priceHKD}
                       <span className="ml-1 text-sm font-normal text-wlx-paper/70">
                         {t.pricingPeriod}
@@ -720,13 +955,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                   className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-paper p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform"
                   style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                 >
-                  <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
+                  <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
                     {plan.name}
                   </h3>
                   <p className="mt-1 text-[12px] uppercase tracking-[0.18em] text-wlx-stone">
                     {plan.tagline[lang]}
                   </p>
-                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight">
+                  <p className="mt-7 font-wlx-display text-4xl font-semibold tabular-nums tracking-tight [font-feature-settings:'tnum','lnum']">
                     ${plan.priceHKD}
                     <span className="ml-1 text-sm font-normal text-wlx-stone">
                       {t.pricingPeriod}
@@ -794,7 +1029,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <p className="inline-flex items-center rounded-full border border-wlx-paper/20 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-paper/60">
             {t.ctaEyebrow}
           </p>
-          <h2 className="mt-5 font-wlx-display text-[clamp(36px,7vw,72px)] font-semibold leading-[1.05] tracking-[-0.02em] text-wlx-paper">
+          <h2 className="mt-5 font-wlx-display text-[clamp(36px,7vw,72px)] font-semibold leading-[1.05] tracking-[-0.02em] text-wlx-paper [text-wrap:balance]">
             {t.ctaTitle}
           </h2>
           <p className="mx-auto mt-6 max-w-[44ch] text-base text-wlx-paper/70 sm:text-lg">
@@ -850,6 +1085,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* Animations — `wlx-fade-up` is a one-shot on mount; `wlx-reveal`
           uses IntersectionObserver to add `is-visible` when scrolled into view. */}
       <style jsx global>{`
+        .font-wlx-display {
+          font-optical-sizing: auto;
+          font-feature-settings: 'ss01', 'dlig', 'kern';
+        }
         @keyframes wlxFadeUp {
           from {
             opacity: 0;
@@ -863,6 +1102,31 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         .wlx-fade-up {
           opacity: 0;
           animation: wlxFadeUp 700ms var(--wlx-ease) forwards;
+        }
+        /* Kinetic masthead reveal — each h1 line sits in an overflow-hidden
+           mask; the inner .wlx-line wipes its clip-path open on mount. Runs
+           alongside (not instead of) the h1's own wlx-fade-up opacity. */
+        .wlx-line {
+          clip-path: inset(0 105% 0 0);
+          transform: translateY(0.1em);
+          animation: wlxLineWipe 900ms var(--wlx-ease) forwards;
+        }
+        @keyframes wlxLineWipe {
+          to {
+            clip-path: inset(0 -2% 0 0);
+            transform: translateY(0);
+          }
+        }
+        @keyframes wlxDrift {
+          from {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          to {
+            transform: translate3d(12px, 10px, 0) scale(1.05);
+          }
+        }
+        .wlx-drift {
+          animation: wlxDrift 18s ease-in-out infinite alternate;
         }
         /* Visible by default (no JS / observer stall = content still shows). */
         .wlx-reveal {
@@ -890,6 +1154,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             transform: none !important;
             animation: none !important;
             transition: none !important;
+          }
+          .wlx-line {
+            clip-path: none !important;
+            transform: none !important;
+            animation: none !important;
+          }
+          .wlx-drift {
+            animation: none !important;
           }
         }
       `}</style>
