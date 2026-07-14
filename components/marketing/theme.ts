@@ -1,15 +1,17 @@
 import type { CSSProperties } from "react";
 
-/** Creator-first warm palette — scoped to marketing surfaces only (never tenant stores). */
+/** Ink & Bone — monochrome editorial palette, scoped to marketing surfaces
+ *  only (never tenant stores). Accent IS the ink (near-black); on dark
+ *  surfaces, elements invert to `paper` (bone) rather than using the accent. */
 export const marketingBrandVars = {
-  "--wlx-cream": "#F6ECE2",
-  "--wlx-paper": "#FBF4EC",
-  "--wlx-ink": "#2C201C",
-  "--wlx-stone": "#77645A",
-  "--wlx-mist": "#EBDFD3",
-  "--wlx-accent": "#C25A4E",
-  "--wlx-accent-fg": "#FFFFFF",
-  "--wlx-blush": "#E0B2A0",
+  "--wlx-cream": "#EBE5DB",
+  "--wlx-paper": "#F4F1EA",
+  "--wlx-ink": "#1A1815",
+  "--wlx-stone": "#6E6A60",
+  "--wlx-mist": "#DCD6CA",
+  "--wlx-accent": "#1A1815",
+  "--wlx-accent-fg": "#F4F1EA",
+  "--wlx-blush": "#D6CDBF",
 
   // Warm editorial type — re-voices --font-wlx-display / --font-wlx-serif
   // (see app/globals.css) with Fraunces (Latin) + Noto Serif HK (CJK) fonts

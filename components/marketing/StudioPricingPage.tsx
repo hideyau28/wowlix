@@ -153,15 +153,12 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/start`}
-              className="group hidden sm:inline-flex items-center gap-1.5 rounded-full bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
-              style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              className="group hidden sm:inline-flex items-center gap-2 rounded-full bg-wlx-ink py-1.5 pl-5 pr-1.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_16px_36px_-16px_rgba(26,24,21,0.5)] active:scale-[0.97] will-change-transform"
             >
               {t.navStart}
-              <ArrowRight
-                size={14}
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-wlx-paper/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                <ArrowRight size={13} strokeWidth={1.5} />
+              </span>
             </Link>
           </nav>
         </div>
@@ -170,7 +167,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       {/* Header */}
       <section className="border-b border-wlx-mist">
         <div className="mx-auto max-w-[1200px] px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-16">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.eyebrow}
           </p>
           <h1 className="mt-6 font-wlx-display text-[clamp(36px,7vw,72px)] font-bold leading-[1.05] tracking-[-0.02em] text-balance">
@@ -198,9 +195,9 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <article
                     key={plan.id}
-                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] lg:-my-2"
                   >
-                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
+                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
                       {t.badge}
                     </div>
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
@@ -218,14 +215,14 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                     <ul className="mt-7 flex-1 space-y-3 text-sm">
                       {plan.features[lang].map((f) => (
                         <li key={f} className="flex items-start gap-2.5">
-                          <Check size={16} className="mt-0.5 shrink-0 text-wlx-accent" aria-hidden />
+                          <Check size={16} className="mt-0.5 shrink-0 text-wlx-paper" aria-hidden />
                           <span>{f}</span>
                         </li>
                       ))}
                     </ul>
                     <Link
                       href={href}
-                      className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
+                      className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
                       style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                     >
                       {cta}
@@ -274,7 +271,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
       {/* FAQ */}
       <section className="studio-reveal border-b border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[860px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.faqEyebrow}
           </p>
           <dl className="mt-12 divide-y divide-wlx-mist">
@@ -303,7 +300,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           </p>
           <Link
             href={`/${locale}/start`}
-            className="group mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
+            className="group mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
             style={{ transitionTimingFunction: "var(--wlx-ease)" }}
           >
             {t.ctaBtn}
@@ -330,12 +327,15 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
         .studio-js .studio-reveal {
           opacity: 0;
           transform: translateY(40px);
+          filter: blur(6px);
           transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-            transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+            transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+            filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         .studio-js .studio-reveal.is-visible {
           opacity: 1;
           transform: translateY(0);
+          filter: blur(0);
         }
         @media (prefers-reduced-motion: reduce) {
           .studio-reveal {

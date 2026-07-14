@@ -270,7 +270,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           (soft-light so it reads on both the cream and the dark CTA). */}
       <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden>
         <svg
-          className="h-full w-full opacity-[0.06] mix-blend-soft-light"
+          className="h-full w-full opacity-[0.04] mix-blend-soft-light"
           xmlns="http://www.w3.org/2000/svg"
         >
           <filter id="wlx-grain-page">
@@ -326,15 +326,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </Link>
             <Link
               href={`/${locale}/start`}
-              className="group inline-flex items-center gap-1.5 rounded-full bg-wlx-ink px-4 py-2.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 transition-all duration-200 active:scale-[0.97] will-change-transform"
-              style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              className="group inline-flex items-center gap-2 rounded-full bg-wlx-ink py-1.5 pl-5 pr-1.5 text-[12px] uppercase tracking-[0.18em] text-wlx-paper transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_16px_36px_-16px_rgba(26,24,21,0.5)] active:scale-[0.97] will-change-transform"
             >
               {t.navStart}
-              <ArrowRight
-                size={14}
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-wlx-paper/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                <ArrowRight size={13} strokeWidth={1.5} />
+              </span>
             </Link>
           </nav>
         </div>
@@ -348,7 +345,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute inset-0 opacity-80"
             style={{
               background:
-                "radial-gradient(60% 50% at 18% 28%, rgba(194,90,78,0.16) 0%, transparent 60%), radial-gradient(52% 58% at 88% 72%, color-mix(in srgb, var(--wlx-blush) 28%, transparent) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(251,244,236,1) 0%, rgba(251,244,236,0) 60%)",
+                "radial-gradient(60% 50% at 18% 28%, rgba(26,24,21,0.05) 0%, transparent 60%), radial-gradient(52% 58% at 88% 72%, color-mix(in srgb, var(--wlx-blush) 45%, transparent) 0%, transparent 65%), radial-gradient(70% 80% at 50% 0%, rgba(244,241,234,1) 0%, rgba(244,241,234,0) 60%)",
             }}
           />
           {/* SVG grain — soft noise overlay */}
@@ -372,7 +369,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(194,90,78,0.30), transparent)",
+                "radial-gradient(closest-side, color-mix(in srgb, var(--wlx-blush) 55%, transparent), transparent)",
             }}
           />
         </div>
@@ -421,15 +418,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <Link
                 href={`/${locale}/start`}
-                className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98] will-change-transform"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+                className="group inline-flex items-center gap-3 rounded-full bg-wlx-accent py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(26,24,21,0.5)] active:scale-[0.98] will-change-transform"
               >
                 {t.heroCta}
-                <ArrowRight
-                  size={14}
-                  className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-px group-hover:scale-110"
-                  style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-                />
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-paper/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                  <ArrowRight size={15} strokeWidth={1.5} />
+                </span>
               </Link>
               <Link
                 href={`/${locale}/admin/login`}
@@ -464,12 +458,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 className="absolute -inset-16 -z-10 rounded-full opacity-70 blur-3xl"
                 style={{
                   background:
-                    "radial-gradient(45% 45% at 60% 35%, rgba(194,90,78,0.42), transparent 70%), radial-gradient(50% 50% at 35% 75%, rgba(224,178,160,0.4), transparent 72%)",
+                    "radial-gradient(45% 45% at 60% 35%, rgba(110,106,96,0.32), transparent 70%), radial-gradient(50% 50% at 35% 75%, rgba(150,142,128,0.3), transparent 72%)",
                 }}
               />
 
               {/* Phone outer frame (bezel) */}
-              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_44px_90px_-28px_rgba(44,32,28,0.62),0_18px_40px_-20px_rgba(194,90,78,0.28)] ring-1 ring-white/10">
+              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_44px_90px_-28px_rgba(44,32,28,0.62),0_18px_40px_-20px_rgba(110,106,96,0.22)] ring-1 ring-white/10">
                 {/* Notch */}
                 <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
 
@@ -503,7 +497,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* ───────── Stats ───────── */}
       <section className="wlx-reveal border-y border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.statsEyebrow}
           </p>
           <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
@@ -533,7 +527,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* ───────── Features ───────── */}
       <section className="wlx-reveal border-b border-wlx-mist">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.featEyebrow}
           </p>
           <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
@@ -547,7 +541,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               return (
                 <li
                   key={key}
-                  className="group relative rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
+                  className="group relative rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
                   style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                 >
                   <div className="flex items-center gap-4">
@@ -555,7 +549,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                       className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-wlx-mist bg-wlx-cream text-wlx-accent transition-all duration-300 group-hover:border-wlx-accent group-hover:bg-wlx-accent group-hover:text-wlx-accent-fg"
                       style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                     >
-                      <Icon size={20} strokeWidth={1.75} />
+                      <Icon size={20} strokeWidth={1.4} />
                     </span>
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                       {title}
@@ -574,7 +568,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* ───────── How it works ───────── */}
       <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.howEyebrow}
           </p>
           <h2 className="mt-5 max-w-[28ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-tight tracking-[-0.02em]">
@@ -605,7 +599,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* ───────── Testimonials ───────── */}
       <section className="wlx-reveal border-b border-wlx-mist">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.voiceEyebrow}
           </p>
           <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
@@ -619,7 +613,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             ].map((v, i) => (
               <figure
                 key={i}
-                className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-cream/60 p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
+                className="group relative flex flex-col rounded-3xl border border-wlx-mist bg-wlx-cream/60 p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
                 style={{ transitionTimingFunction: "var(--wlx-ease)" }}
               >
                 <span
@@ -658,7 +652,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* ───────── Pricing ───────── */}
       <section className="wlx-reveal border-b border-wlx-mist bg-wlx-cream">
         <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-stone">
+          <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
             {t.pricingEyebrow}
           </p>
           <h2 className="mt-5 max-w-[26ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.1] tracking-[-0.02em]">
@@ -680,9 +674,9 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <article
                     key={plan.id}
-                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    className="relative flex flex-col rounded-3xl bg-wlx-ink p-8 text-wlx-paper shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] lg:-my-2"
                   >
-                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-accent px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-accent-fg">
+                    <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
                       {t.pricingLiteBadge}
                     </div>
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
@@ -702,8 +696,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                         <li key={f} className="flex items-start gap-2">
                           <Check
                             size={16}
-                            strokeWidth={2}
-                            className="mt-0.5 shrink-0 text-wlx-accent"
+                            strokeWidth={1.5}
+                            className="mt-0.5 shrink-0 text-wlx-paper"
                           />
                           <span>{f}</span>
                         </li>
@@ -743,7 +737,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                       <li key={f} className="flex items-start gap-2">
                         <Check
                           size={16}
-                          strokeWidth={2}
+                          strokeWidth={1.5}
                           className="mt-0.5 shrink-0 text-wlx-ink"
                         />
                         <span>{f}</span>
@@ -784,20 +778,20 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             className="absolute -left-24 -top-24 h-[360px] w-[360px] rounded-full opacity-40 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(194,90,78,0.6), transparent)",
+                "radial-gradient(closest-side, rgba(214,205,191,0.5), transparent)",
             }}
           />
           <div
             className="absolute -bottom-32 -right-16 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(251,244,236,0.4), transparent)",
+                "radial-gradient(closest-side, rgba(244,241,234,0.4), transparent)",
             }}
           />
         </div>
 
         <div className="relative mx-auto max-w-[900px] px-5 py-24 text-center sm:px-8 sm:py-32">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-wlx-paper/60">
+          <p className="inline-flex items-center rounded-full border border-wlx-paper/20 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-paper/60">
             {t.ctaEyebrow}
           </p>
           <h2 className="mt-5 font-wlx-display text-[clamp(36px,7vw,72px)] font-semibold leading-[1.05] tracking-[-0.02em] text-wlx-paper">
@@ -809,15 +803,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={`/${locale}/start`}
-              className="group inline-flex items-center justify-center gap-2 rounded-full bg-wlx-accent px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-accent-fg transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(194,90,78,0.55)] active:scale-[0.98]"
-              style={{ transitionTimingFunction: "var(--wlx-ease)" }}
+              className="group inline-flex items-center gap-3 rounded-full bg-wlx-paper py-2 pl-7 pr-2 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_22px_50px_-18px_rgba(244,241,234,0.3)] active:scale-[0.98] will-change-transform"
             >
               {t.ctaPrimary}
-              <ArrowRight
-                size={14}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-                style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-              />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wlx-ink/10 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105">
+                <ArrowRight size={15} strokeWidth={1.5} />
+              </span>
             </Link>
             <Link
               href={`/${locale}/maysshop`}
@@ -882,12 +873,15 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         .wlx-js .wlx-reveal {
           opacity: 0;
           transform: translateY(40px);
+          filter: blur(6px);
           transition: opacity 700ms var(--wlx-ease),
-            transform 700ms var(--wlx-ease);
+            transform 700ms var(--wlx-ease),
+            filter 700ms var(--wlx-ease);
         }
         .wlx-js .wlx-reveal.is-visible {
           opacity: 1;
           transform: translateY(0);
+          filter: blur(0);
         }
         @media (prefers-reduced-motion: reduce) {
           .wlx-fade-up,
