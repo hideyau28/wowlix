@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { marketingBrandVars } from "@/components/marketing/theme";
+import MarketingTypeStyles from "@/components/marketing/TypeStyles";
 import { MARKETING_PLANS } from "@/components/marketing/plans";
 import { fraunces, notoSerifHK } from "@/components/marketing/fonts";
 
@@ -195,7 +196,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <div
                     key={plan.id}
-                    className="rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    className="rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(26,24,21,0.55)] lg:-my-2"
                   >
                     <article className="relative flex h-full flex-col rounded-[21px] bg-[#232019] p-8 text-wlx-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
                       <div className="absolute -top-3 left-8 rounded-full bg-wlx-paper px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-wlx-ink">
@@ -238,7 +239,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                   key={plan.id}
                   className="rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
                 >
-                  <article className="relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(44,32,28,0.35)]">
+                  <article className="relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(26,24,21,0.35)]">
                     <h3 className="font-wlx-display text-xl font-semibold tracking-tight">
                       {plan.name}
                     </h3>
@@ -323,6 +324,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
 
       {/* Scroll-reveal animation: `studio-reveal` is visible by default; only
           once JS confirms it can run do we hide-then-reveal on scroll. */}
+      <MarketingTypeStyles />
       <style jsx global>{`
         .studio-reveal {
           opacity: 1;

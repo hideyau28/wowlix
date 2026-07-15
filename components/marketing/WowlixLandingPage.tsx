@@ -15,6 +15,7 @@ import type { Locale } from "@/lib/i18n";
 import { marketingBrandVars } from "@/components/marketing/theme";
 import { MARKETING_PLANS } from "@/components/marketing/plans";
 import { fraunces, notoSerifHK } from "@/components/marketing/fonts";
+import MarketingTypeStyles from "@/components/marketing/TypeStyles";
 
 /* ─── i18n ─── */
 const T = {
@@ -1230,15 +1231,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
 
       {/* Animations — `wlx-fade-up` is a one-shot on mount; `wlx-reveal`
           uses IntersectionObserver to add `is-visible` when scrolled into view. */}
+      <MarketingTypeStyles />
       <style jsx global>{`
-        /* halt = half-width 約物。Noto Serif HK 跟港台慣例將全形標點置中擺喺
-           em 格入面 —— 內文啱，但 display 尺寸就變成一個 51px 嘅窿。halt 換半形
-           advance 收返實。呢個 property 係取代唔係 merge，所以 root 嘅
-           kern/liga/calt 要喺度重寫一次，唔係就會靜靜雞跌咗。 */
-        .font-wlx-display {
-          font-optical-sizing: auto;
-          font-feature-settings: 'kern', 'liga', 'calt', 'halt';
-        }
         /* Oversized stat numerals — progressive-enhancement wipe driven by
            scroll (view()-timeline). Gated behind @supports + .wlx-js so
            unsupported browsers (and no-JS) always show the number fully
