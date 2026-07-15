@@ -928,7 +928,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <div className="mt-12 grid gap-6 lg:grid-cols-12">
             {/* Hero pull-quote — the widest, largest-type card */}
             <figure
-              className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform lg:col-span-7"
+              className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[inset_0_1px_0_rgba(244,241,234,0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-wlx-paper/20 hover:bg-wlx-paper/[0.06] will-change-transform lg:col-span-7"
               style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": 0 } as CSSProperties}
             >
               <span
@@ -968,7 +968,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               {restVoices.map((v, i) => (
                 <figure
                   key={i}
-                  className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_18px_38px_-28px_rgba(44,32,28,0.3),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_28px_52px_-26px_rgba(44,32,28,0.36)] will-change-transform"
+                  className="wlx-stagger group relative flex flex-col rounded-3xl border border-wlx-paper/10 bg-wlx-paper/[0.04] p-8 shadow-[inset_0_1px_0_rgba(244,241,234,0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-wlx-paper/20 hover:bg-wlx-paper/[0.06] will-change-transform"
                   style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": i + 1 } as CSSProperties}
                 >
                   <span
@@ -1367,13 +1367,25 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
            inert so the parent never goes blank. */
         .wlx-js .wlx-reveal {
         }
+        /* 呢條 rule 收窄咗 transition-property，而佢係 unlayered，Tailwind 啲
+           utility 喺 @layer utilities —— unlayered 硬食 layered，所以卡自己嘅
+           transition-all + duration-300 會輸。四張大卡（bento 2x2、pull-quote、
+           兩張口碑卡）同一個元素上面兩者都有 → hover 嘅 translate / box-shadow
+           唔喺 list 入面就 0ms 硬跳。所以 hover 嗰啲 property 要喺呢度一齊報
+           name，用 per-property delay（唔可以用 blanket transition-delay，
+           否則 hover 都會孭埋個 stagger delay）。§8 坑 2 喺 transition 上重演。 */
         .wlx-js .wlx-reveal .wlx-stagger {
           opacity: 0;
           transform: translateY(28px);
           clip-path: inset(0 0 14% 0);
-          transition: opacity 0.7s var(--wlx-ease), transform 0.7s var(--wlx-ease),
-            clip-path 0.7s var(--wlx-ease);
-          transition-delay: calc(var(--i, 0) * 90ms);
+          transition:
+            opacity 0.7s var(--wlx-ease) calc(var(--i, 0) * 90ms),
+            transform 0.7s var(--wlx-ease) calc(var(--i, 0) * 90ms),
+            clip-path 0.7s var(--wlx-ease) calc(var(--i, 0) * 90ms),
+            translate 0.3s var(--wlx-ease) 0s,
+            box-shadow 0.3s var(--wlx-ease) 0s,
+            background-color 0.3s var(--wlx-ease) 0s,
+            border-color 0.3s var(--wlx-ease) 0s;
         }
         .wlx-js .wlx-reveal.is-visible .wlx-stagger {
           opacity: 1;
