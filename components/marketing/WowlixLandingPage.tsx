@@ -624,10 +624,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
         />
-        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
+        <div className="relative overflow-clip mx-auto max-w-[1200px] px-5 py-12 sm:px-8 sm:py-16">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
           >
             0
           </span>
@@ -708,13 +708,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     {s.line}
                   </p>
                   {/* mobile inline store shot (the sticky phone is desktop-only) */}
-                  <div className="mt-8 overflow-hidden rounded-[28px] border border-wlx-mist shadow-[0_30px_60px_-30px_rgba(26,24,21,0.4)] lg:hidden">
+                  <div className="mt-8 overflow-clip rounded-[28px] border border-wlx-mist shadow-[0_30px_60px_-30px_rgba(26,24,21,0.4)] lg:hidden">
                     <Image
                       src={s.img}
                       alt=""
                       width={786}
                       height={880}
-                      className="h-auto w-full object-cover object-top"
+                      className="wlx-shot h-auto w-full object-cover object-top"
                     />
                   </div>
                 </div>
@@ -765,10 +765,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
         />
-        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
+        <div className="relative overflow-clip mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
           >
             ＋
           </span>
@@ -814,7 +814,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <li
                     key={key}
-                    className="wlx-stagger group relative overflow-hidden rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
+                    className="wlx-stagger group relative overflow-clip rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
                     style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": index } as CSSProperties}
                   >
                     {body}
@@ -823,7 +823,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                       alt=""
                       width={520}
                       height={640}
-                      className="pointer-events-none absolute -bottom-10 -right-8 hidden w-[52%] rotate-2 rounded-2xl shadow-[0_40px_80px_-30px_rgba(26,24,21,0.5)] grayscale-[0.2] transition duration-700 group-hover:grayscale-0 lg:block"
+                      className="wlx-bleed pointer-events-none absolute -bottom-10 -right-8 hidden w-[52%] rotate-2 rounded-2xl shadow-[0_40px_80px_-30px_rgba(26,24,21,0.5)] grayscale-[0.2] transition duration-700 group-hover:grayscale-0 lg:block"
                     />
                   </li>
                 );
@@ -855,10 +855,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
         />
-        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-20">
+        <div className="relative overflow-clip mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-20">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
           >
             →
           </span>
@@ -907,10 +907,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       <section className="wlx-reveal relative bg-wlx-ink text-wlx-paper">
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-wlx-paper/10" />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-wlx-paper/10" />
-        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
+        <div className="relative overflow-clip mx-auto max-w-[1200px] px-5 py-24 sm:px-8 sm:py-40">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-paper/[0.05]"
+            className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-paper/[0.05]"
           >
             「
           </span>
@@ -1011,10 +1011,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--wlx-mist)_12%,var(--wlx-mist)_88%,transparent)]"
         />
-        <div className="relative overflow-hidden mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+        <div className="relative overflow-clip mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
           >
             $
           </span>
@@ -1242,7 +1242,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         /* Oversized stat numerals — progressive-enhancement wipe driven by
            scroll (view()-timeline). Gated behind @supports + .wlx-js so
            unsupported browsers (and no-JS) always show the number fully
-           visible; nothing here can hide content permanently. */
+           visible; nothing here can hide content permanently.
+           ⚠️ 呢個 wipe 一直凍死喺「已完成」個樣，因為個 section wrapper 用緊
+           overflow-hidden —— hidden 會製造 scroll container，view() 就攞佢做
+           scrollport，而佢自己永遠唔 scroll → progress 卡住唔郁。全部帶
+           view() 嘅祖先都要用 overflow-clip（唔製造 scroll container，剪裁
+           效果一模一樣）。唔好改返 overflow-hidden。 */
         @supports (animation-timeline: view()) {
           .wlx-js .wlx-stat-num {
             clip-path: inset(0 100% 0 0);
@@ -1254,6 +1259,61 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         @keyframes wlxWipe {
           to {
             clip-path: inset(0 0 0 0);
+          }
+        }
+        /* 連續 scroll-coupling。之前成版 8.6 屏得 nav 進度線同 hero phone
+           兩個元素係真 scroll-linked，其餘全部係 IntersectionObserver 一次性
+           reveal —— is-visible 一加就永遠靜止，所以 Features 之後五個 section
+           完全冇嘢郁。呢批令 scroll 過程持續有回應。
+           規矩：只郁 transform（§5）、@supports + .wlx-js 雙重 gate（Safari/FF
+           見到靜態 = 今日個樣，零倒退）、全部目標都冇 .wlx-stagger（嗰啲元素
+           個 reveal 用緊 transform，喺度再 animate transform 會蓋死佢 = §8 坑 2）。 */
+        @supports (animation-timeline: view()) {
+          /* 巨型 watermark 同內容唔同速 → 深度。pointer-events-none + aria-hidden，
+             郁佢唔影響任何內容。只 translateY，唔會整出橫向捲動。 */
+          .wlx-js .wlx-mark {
+            animation: wlxMarkDrift linear both;
+            animation-timeline: view();
+            animation-range: entry 0% exit 100%;
+          }
+          /* Bento 大 tile 個真店截圖 bleed 出角 —— 隨 scroll 升。rotate-2 係
+             Tailwind v4 嘅獨立 rotate property（實測 transform:none / rotate:2deg），
+             同 transform 疊加，唔會撞。 */
+          .wlx-js .wlx-bleed {
+            animation: wlxBleedRise linear both;
+            animation-timeline: view();
+            animation-range: entry 0% exit 100%;
+          }
+          /* 手機版真店截圖喺自己個 overflow-hidden 框入面收定 —— 過場嗰陣
+             由 1.12 落返 1，似菲林入格。 */
+          .wlx-js .wlx-shot {
+            animation: wlxShotSettle linear both;
+            animation-timeline: view();
+            animation-range: entry 0% cover 70%;
+          }
+        }
+        @keyframes wlxMarkDrift {
+          from {
+            transform: translateY(-10%);
+          }
+          to {
+            transform: translateY(10%);
+          }
+        }
+        @keyframes wlxBleedRise {
+          from {
+            transform: translateY(8%) scale(1.03);
+          }
+          to {
+            transform: translateY(-8%) scale(1.03);
+          }
+        }
+        @keyframes wlxShotSettle {
+          from {
+            transform: scale(1.12);
+          }
+          to {
+            transform: scale(1);
           }
         }
         @keyframes wlxFadeUp {
@@ -1416,6 +1476,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             transform: none !important;
             clip-path: none !important;
             transition: none !important;
+          }
+          .wlx-mark,
+          .wlx-bleed,
+          .wlx-shot {
+            animation: none !important;
+            transform: none !important;
           }
         }
       `}</style>
