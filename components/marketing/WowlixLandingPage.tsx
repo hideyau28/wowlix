@@ -584,7 +584,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               />
 
               {/* Phone outer frame (bezel) */}
-              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_44px_90px_-28px_rgba(44,32,28,0.62),0_18px_40px_-20px_rgba(110,106,96,0.22)] ring-1 ring-white/10">
+              <div className="relative w-[300px] rounded-[44px] bg-wlx-ink p-[10px] shadow-[0_44px_90px_-28px_rgba(26,24,21,0.62),0_18px_40px_-20px_rgba(110,106,96,0.22)] ring-1 ring-white/10">
                 {/* Notch */}
                 <div className="absolute left-1/2 top-[10px] z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-wlx-ink" />
 
@@ -815,7 +815,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <li
                     key={key}
-                    className="wlx-stagger group relative overflow-clip rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
+                    className="wlx-stagger group relative overflow-clip rounded-3xl border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(26,24,21,0.03),0_16px_34px_-26px_rgba(26,24,21,0.28),inset_0_1px_0_rgba(255,255,255,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(26,24,21,0.05),0_26px_46px_-24px_rgba(26,24,21,0.34)] will-change-transform sm:p-9 lg:col-span-2 lg:row-span-2"
                     style={{ transitionTimingFunction: "var(--wlx-ease)", "--i": index } as CSSProperties}
                   >
                     {body}
@@ -838,7 +838,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                   style={{ "--i": index } as CSSProperties}
                 >
                   <div
-                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(44,32,28,0.03),0_16px_34px_-26px_rgba(44,32,28,0.28),inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(44,32,28,0.05),0_26px_46px_-24px_rgba(44,32,28,0.34)] will-change-transform sm:p-9"
+                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(26,24,21,0.03),0_16px_34px_-26px_rgba(26,24,21,0.28),inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(26,24,21,0.05),0_26px_46px_-24px_rgba(26,24,21,0.34)] will-change-transform sm:p-9"
                     style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                   >
                     {body}
@@ -1046,7 +1046,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 return (
                   <div
                     key={plan.id}
-                    className="wlx-stagger rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(44,32,28,0.55)] lg:-my-2"
+                    className="wlx-stagger rounded-[26px] bg-wlx-ink p-[5px] shadow-[0_36px_66px_-28px_rgba(26,24,21,0.55)] lg:-my-2"
                     style={{ "--i": i } as CSSProperties}
                   >
                     <article className="relative flex h-full flex-col rounded-[21px] bg-[#232019] p-8 text-wlx-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -1096,7 +1096,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                   style={{ "--i": i } as CSSProperties}
                 >
                   <article
-                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(44,32,28,0.35)] will-change-transform"
+                    className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-wlx-paper p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-500 hover:-translate-y-1.5 hover:border-wlx-accent/40 hover:shadow-[0_28px_55px_-30px_rgba(26,24,21,0.35)] will-change-transform"
                     style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                   >
                     <h3 className="font-wlx-display text-xl font-semibold tracking-[-0.01em]">
