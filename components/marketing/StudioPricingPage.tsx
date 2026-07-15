@@ -330,19 +330,24 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           opacity: 1;
           transform: none;
         }
+        /* filter: blur 拆咗 —— §5 只准 animate transform / opacity。blur 每
+           frame 要重新光柵化成個 section，中價 HK 手機捱唔住，而且個效果喺
+           700ms 入面根本睇唔真。 */
         .studio-js .studio-reveal {
           opacity: 0;
           transform: translateY(40px);
-          filter: blur(6px);
           transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-            transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
-            filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+            transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         .studio-js .studio-reveal.is-visible {
           opacity: 1;
           transform: translateY(0);
-          filter: blur(0);
         }
+        /* 試過用 view() 俾三張 plan 卡加連續 scroll 視差（同 landing 一樣），
+           結論係唔 work，唔好再試：/pricing 係短頁，卡 docTop = 515px，即係
+           一 load 就已經喺畫面入面，entry 階段過晒 —— 實測三張卡 translateY
+           全程 0、currentTime 係 null（timeline 根本冇 active）。view() 要
+           元素由 fold 以下捲入嚟先有嘢做。呢版靠 .studio-reveal 個入場就夠。 */
         @media (prefers-reduced-motion: reduce) {
           .studio-reveal {
             opacity: 1 !important;
