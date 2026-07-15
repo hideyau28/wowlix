@@ -1,375 +1,174 @@
-# WoWlix Landing Page — Design System & Build Guide
+# WoWlix Marketing — DESIGN.md（Ink & Bone）
 
-> 此文件係 Claude Code 嘅設計指引。每次修改 landing page 任何 section，都必須參考呢份文件。
-
----
-
-## 1. Brand Identity
-
-### Core Values
-- **產品：** WoWlix — 香港 IG 小店一站式開店平台
-- **Target：** 香港 Instagram 商戶（賣飾品、衫褲、手作、代購等）
-- **語氣：** 親切、直接、有活力、講廣東話口語
-- **核心賣點：** 0% 平台抽成 · $0 起免費開店 · 2 分鐘搞掂 · 一條 Link 搞掂落單收款庫存
-
-### Color Palette
-```css
-:root {
-  /* Primary — Bold Orange (品牌主色，用於 CTA、重要數字、highlight) */
-  --color-primary: #FF9500;
-  --color-primary-dark: #E68600;
-  --color-primary-light: #FFF3E0;
-  --color-primary-glow: rgba(255, 149, 0, 0.15);
-
-  /* Neutrals — Warm Gray (唔好用純黑純白) */
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #6B7280;
-  --color-text-muted: #9CA3AF;
-  --color-bg-white: #FAFAFA;
-  --color-bg-warm: #FFF8F0;
-  --color-bg-section-alt: #F5F1EB;
-
-  /* Accents — 用於痛點/對比 section */
-  --color-danger: #EF4444;
-  --color-danger-light: #FEE2E2;
-  --color-success: #10B981;
-  --color-success-light: #D1FAE5;
-}
-```
-
-### 色彩規則
-- **Primary Orange** 只用於 CTA buttons、重要數字、badge、highlight — 唔好大面積鋪色
-- **背景交替：** 白 → warm cream → 白 → light section，保持節奏
-- **痛點 section** 用 danger-light 背景 + danger icon
-- **解決方案 section** 用 success-light 背景
-- **絕對唔好用：** 紫色漸變、藍灰配色、任何 generic AI slop 配色
-
-### Typography
-```css
-/* Display — 用於大標題、Hero headline */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap');
-/* 中文粗體用 Noto Sans TC Black/Bold */
-
-/* Body — 用於正文、描述 */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap');
-
-/* English Display — 用於英文標題、品牌名 */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-
-/* Monospace — 用於數字、定價 */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
-```
-
-### 字體規則
-- **中文標題：** Noto Sans TC 700/900，size 32-48px mobile / 48-72px desktop
-- **英文標題：** Plus Jakarta Sans 700/800
-- **正文：** Noto Sans TC 400/500，16-18px，line-height 1.6-1.8
-- **數字/定價：** JetBrains Mono 700（$78、$198、0%）
-- **字距：** 中文 letter-spacing 0.02em，英文 -0.02em
-- **NEVER use：** Inter, Roboto, Arial, system-ui, sans-serif fallback only
+> **呢份係 landing + /pricing 嘅唯一設計真相。** 改任何 marketing 版面之前必讀。
+> 出面睇到嘅嘢 = 呢份文件寫嘅嘢。如果兩者唔一致，**係文件要更新**，唔係照舊文件改 code。
+>
+> Surfaces：`/[locale]`（landing）同 `/[locale]/pricing`。**唔包租戶店**（見 §2 scoping）。
 
 ---
 
-## 2. Layout Principles
+## 0. North Star（改嘢之前讀呢段）
 
-### Spacing System
-```
-4px  — micro (icon gap)
-8px  — xs (inline elements)
-16px — sm (between related items)
-24px — md (card padding, between cards)
-32px — lg (between groups)
-48px — xl (between sub-sections)
-80px — 2xl (between major sections — mobile)
-120px — 3xl (between major sections — desktop)
-```
+呢版係**「一件印刷級 editorial 物件，啱好係一個 SaaS landing」** —— 唔係 template。
 
-### Grid
-- Mobile: 單欄，padding 20px 左右
-- Tablet: 最大 2 欄
-- Desktop: max-width 1200px，居中，padding 40px
+- **嚴格黑白**（Ink & Bone）。顏色只由**真實商戶截圖**提供。
+- **有意識嘅不對稱** —— 唔好乜都置中對稱。
+- **一個 tonal descent**：奶白 → 深墨（口碑島）→ 奶白 → 深墨（尾 CTA）。
+- **一個 signature moment**（§6）—— 用「示範」而唔係「描述」產品。
+- Motion 係**編排**過，唔係周圍撒。
 
-### 排版原則
-- **Mobile-first：** 所有 section 先設計 375px，再 scale up
-- **Hero：** 居中排版（參考 Popcorn），文字上 + phone mockup 下
-- **唔好左右並排** 喺 mobile（Hero 唔好用 grid-cols-2）
-- **大量留白：** section 之間 80-120px
-- **Card gap：** 16-24px
-- **每個 section 唔超過 1.5 個螢幕高度**（mobile）
+### ⛔ 絕對唔好（會即刻打回 generic AI 味）
+- ❌ 加返任何**彩色主色**（尤其橙 `#FF9500` —— 舊 doc 遺物，已廢除）
+- ❌ 用 **Inter / Roboto / Arial / system-ui / Plus Jakarta / JetBrains Mono / Noto Sans TC**
+- ❌ 紫色漸變、藍灰 SaaS 配色、任何 generic AI slop
+- ❌ 灰色 placeholder 圖（一定要用 `public/demos/` 嘅真實店舖截圖）
+- ❌ 加 animation library（Framer/GSAP）—— 全部用 CSS + IntersectionObserver
+- ❌ 郁 `app/globals.css` 嘅 base `:root` token（租戶店靠佢，見 §2）
 
 ---
 
-## 3. Component Patterns
+## 1. 系統住喺邊（File Map）
 
-### Buttons
-```
-Primary CTA:    bg-[#FF9500] text-white rounded-xl px-8 py-4 text-lg font-bold
-                hover: scale-[1.02] shadow-lg transition-all
-                Active 狀態: bg-[#E68600]
+| 檔案 | 職責 |
+|---|---|
+| `components/marketing/theme.ts` | **`marketingBrandVars`** — 成套色 + font override token。**改色只改呢度。** |
+| `components/marketing/fonts.ts` | Fraunces + Noto Serif HK 嘅 `next/font` 註冊（marketing 專用） |
+| `components/marketing/plans.ts` | **`MARKETING_PLANS`** — 定價唯一真相（見 §7） |
+| `components/marketing/WowlixLandingPage.tsx` | 成個 landing（單檔，含 `<style jsx global>`） |
+| `components/marketing/StudioPricingPage.tsx` | `/pricing` |
+| `app/globals.css`（`@theme inline`） | `--font-wlx-*` token + `--wlx-font-*` override hook |
+| `public/demos/*.png` | 真實店舖截圖（唯一圖像來源） |
 
-Secondary CTA:  border-2 border-[#FF9500] text-[#FF9500] rounded-xl px-8 py-4
-                hover: bg-[#FFF3E0]
-
-Ghost:          text-[#6B7280] underline hover:text-[#1A1A1A]
-```
-
-### Cards
-```
-Standard:       bg-white rounded-2xl p-6 shadow-sm border border-gray-100
-                hover: shadow-md translate-y-[-2px] transition-all
-
-Highlight:      bg-[#FFF3E0] rounded-2xl p-6 border-2 border-[#FF9500]
-
-Pain Point:     bg-[#FEE2E2] rounded-2xl p-6 (紅色系)
-
-Solution:       bg-[#D1FAE5] rounded-2xl p-6 (綠色系)
-```
-
-### Icons
-- 用 Lucide React icons 或 emoji
-- Icon size: 24-32px，配合 48x48 圓形淺色背景
-- 痛點 section: ❌ 🔴 配紅色背景
-- 功能 section: ✅ 🟢 配綠色/橙色背景
+> **已刪除、唔好搵：** `LandingPage.tsx`、`PricingPage.tsx`、`sections/HeroSection.tsx`、`landing.css`。
+> **唔好改** `app/[locale]/(marketing)/layout.tsx` 嘅字體 —— 嗰 4 隻死 import 已移除，landing 根本唔喺嗰個 route group。
 
 ---
 
-## 4. Phone Mockup 規格
+## 2. 色 — Ink & Bone（單色）
 
-### CSS iPhone Frame
-```css
-.phone-frame {
-  /* iPhone 15 Pro 比例 */
-  width: 280px;           /* mobile */
-  width: 320px;           /* desktop */
-  aspect-ratio: 9/19.5;
-  border-radius: 44px;
-  border: 6px solid #1A1A1A;
-  background: #000;
-  overflow: hidden;
-  box-shadow:
-    0 25px 60px rgba(0,0,0,0.15),
-    0 4px 12px rgba(0,0,0,0.08),
-    inset 0 0 0 2px rgba(255,255,255,0.1);
-  position: relative;
-}
+全部喺 `theme.ts` 嘅 `marketingBrandVars`：
 
-/* Dynamic Island */
-.phone-frame::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 34px;
-  background: #000;
-  border-radius: 20px;
-  z-index: 10;
-}
-
-/* 入面嘅內容 */
-.phone-frame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top;
-}
+```ts
+"--wlx-paper":     "#F4F1EA",  // 暖米白底
+"--wlx-cream":     "#EBE5DB",  // 交替 band
+"--wlx-ink":       "#1A1815",  // 近黑（文字 / 深色面）
+"--wlx-stone":     "#6E6A60",  // 次要文字
+"--wlx-mist":      "#DCD6CA",  // 邊框 / hairline
+"--wlx-accent":    "#1A1815",  // ⚠️ accent == ink（單色）
+"--wlx-accent-fg": "#F4F1EA",
+"--wlx-blush":     "#D6CDBF",  // 中性暖灰，只用於氛圍光暈
 ```
 
-### Mockup 內容
-- **截圖 maysshop biolink 頁面**（真實產品畫面）
-- 如果冇截圖，用 iframe: `<iframe src="/maysshop" />`
-- Desktop: 可以微傾斜 `transform: perspective(1000px) rotateY(-5deg)`
-- 加 soft glow: `box-shadow: 0 0 60px rgba(255,149,0,0.1)`
+### 🚨 最重要一條規則：`accent == ink`
+單色底下 accent 就係近黑。所以：
+
+> **任何 `bg-wlx-accent` / `text-wlx-accent` 擺喺深色面（`bg-wlx-ink`）都會黑撞黑、完全隱形。**
+> 深色面上一律**反白**：`bg-wlx-paper` + `text-wlx-ink`（掣/badge）、`text-wlx-paper`（剔、文字）。
+
+已經反白咗嘅位（**唔好改返**）：尾 CTA 主掣、pricing 推薦（深色）卡嘅 badge / Check / 掣、深色口碑島全部元素。
+淺色面上 `bg-wlx-accent`（黑掣喺米白底）**係啱嘅**，唔好郁。
+
+### 🔒 Scoping（唔可以妥協）
+`marketingBrandVars` 只 apply 喺 **landing / pricing 個 root div 嘅 `style={}`**。
+Base `:root`（`app/globals.css`）保持金色 —— **租戶店靠佢**。呢個係特登嘅（commit `c6464b0`）。
+**永遠唔好**為咗方便而改 base token。
 
 ---
 
-## 5. Section Structure & 設計方向
+## 3. 字體
 
-### Section 1: Hero
-**參考：** Popcorn（居中、phone 在下）
-```
-[Badge] 專為香港 IG 小店而設
-[Headline] 一條 Link
-          將 Follower 變成生意
-[Subtitle] 0% 平台抽成 · $0 起 · 2 分鐘開店
-           落單、收款、庫存，一個 Link 搞掂晒
-[CTA] 免費開店 →     [Secondary] 睇定價
-[Phone Mockup - centered below, showing maysshop]
-```
-- 居中排版，mobile 單欄
-- Phone mockup 喺 CTA 下面
-- 背景: subtle warm gradient 或 soft blur shapes
-- Badge 用 pill shape，橙色文字 + 橙色淺底
+| 角色 | 字體 | 註冊喺 |
+|---|---|---|
+| 中文大標題 | **Noto Serif HK**（500/700/900） | `fonts.ts` |
+| 英文 display + serif accent | **Fraunces**（variable，有真斜體，用 `opsz`/`SOFT` 軸） | `fonts.ts` |
+| 內文 | Geist（沿用 base） | `app/layout.tsx` |
 
-### Section 2: Social Proof Stats（可選）
-**參考：** Aave 大數字
-```
-[3 stats in a row]
-XX+ 間店已開通 | XXXX+ 訂單已處理 | 0% 平台抽成
-```
-- 數字用 JetBrains Mono，超大 48-64px
-- Mobile: stack 垂直，每個 stat 一行
-- 簡短描述用 muted text
+機制：`globals.css` 嘅 `--font-wlx-display` / `--font-wlx-serif` 有 `var(--wlx-font-*-latin/cjk, <原值>)` fallback hook；`marketingBrandVars` 覆寫嗰啲 hook。**即係 marketing 換字體，其他 surface 一個 byte 都唔變。**
 
-### Section 3: Pain Points 痛點
-**標題：** 做生意，可以唔使咁辛苦
-```
-[Card 1] ❌ 入數截圖對唔到單？ — 漏單、錯單、客人嬲
-[Card 2] 💬 DM 問價問到爆？ — 回覆慢就走客
-[Card 3] ⚠️ 顏色尺碼一亂就超賣？ — 退款道歉冇停過
-[Solution Banner] ✅ WoWlix 將落單、付款、庫存集中一個位
-                    你只需要專心賣嘢同出貨
-```
-- Pain cards: 紅色淺底 + 紅色 icon
-- Solution banner: 綠色淺底，bold
-- Mobile: 垂直堆疊，gap 16px
-- **每張 card 高度 auto，唔好設 min-height**
-
-### Section 4: How It Works 三步開店
-**標題：** 真係 2 分鐘，三步就開到店
-```
-[Step 1] 📸 影相上架 — 手機影相，填個價，30 秒搞掂
-[Step 2] 💳 設定收款 — FPS · PayMe · AlipayHK 即刻用
-[Step 3] 🔗 放入 IG Bio — 一條 Link，客人即刻落單
-```
-- 每步有 number badge（1, 2, 3）橙色圓形
-- Icon 用 48x48 圓形暖色背景
-- Mobile: 垂直排列，gap 24px
-- **每步 card 最高 100-120px，唔好撐開**
-
-### Section 5: Features / 點解揀 WoWlix
-```
-[Feature cards in bento grid]
-- 購物車 + 即時庫存
-- 多種付款方式
-- 訂單管理
-- 客戶 CRM
-- 自訂域名
-- 手機 responsive
-```
-- Bento grid: desktop 2x3，mobile 1 欄
-- 每個 card 有 icon + 標題 + 一句描述
-- 交替淺色背景
-
-### Section 6: Pricing 定價
-**參考：** LiveChat（大數字 + highlight plan）
-```
-[Free]  $0/月 — 10 SKU, 50 orders
-[Lite]  $78/月 — 50 SKU（推薦 badge）
-[Pro]   $198/月 — Unlimited, CRM, 自訂域名
-```
-- 推薦 plan 用 orange border + "最受歡迎" badge
-- 價錢數字用 JetBrains Mono，超大
-- Feature list 用 checkmark
-- Mobile: 垂直堆疊 或 horizontal scroll
-
-### Section 7: Trust Signals
-```
-[3 items]
-💬 WhatsApp 客服 — 工作日 2 小時內回覆
-🛡️ 0% 平台抽成 — 靠月費營運，唔抽成
-🔑 數據屬於你 — 隨時匯出，唔鎖你
-```
-- Compact layout: icon + 標題 + 一行描述
-- Mobile: 垂直排列，gap 16px
-- **每個 item 最高 80-100px**
-
-### Section 8: CTA Banner
-```
-[Full-width warm background]
-準備好開你嘅網店？
-[CTA] 免費開店 →
-```
-
-### Section 9: Footer
-```
-[Logo] [Links] [Social Icons] [Copyright]
-```
+規則：`.font-wlx-display{font-optical-sizing:auto}`；標題 size-bound tracking（hero `-0.035em`、h2 `-0.025em`）；h2 加 `[text-wrap:balance]`；內文 `leading-[1.65] [text-wrap:pretty]`；價錢 `[font-feature-settings:'tnum','lnum']`。
 
 ---
 
-## 6. Animation & Motion
+## 4. 版面 / 構圖
 
-### Page Load
-```css
-/* 所有 section 用 stagger fade-in */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.section { animation: fadeInUp 0.6s ease-out both; }
-.section:nth-child(1) { animation-delay: 0s; }
-.section:nth-child(2) { animation-delay: 0.1s; }
-/* ... */
-```
-
-### Scroll Reveal
-- 用 Intersection Observer 觸發 fade-in
-- 唔好用 heavy JS library
-
-### Hover Effects
-```css
-/* Cards */
-.card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
-
-/* CTA Button */
-.cta:hover { transform: scale(1.02); }
-
-/* Phone Mockup */
-.phone-frame:hover { transform: translateY(-8px); }
-```
-
-### 動畫原則
-- Subtle > Dramatic
-- Duration: 200-400ms
-- Easing: ease-out 或 cubic-bezier(0.33, 1, 0.68, 1)
-- 唔好每個元素都加動畫，focus on high-impact moments
+- **Hero = 不對稱 masthead**：巨型 display（`clamp(46px,10vw,128px)`）佔左，phone `lg:absolute` 由右上 bleed 過嚟壓住排版右邊留白，support copy 收喺 `max-w-[40ch]` 窄欄。**唔好改返置中。**
+- **Features = bento**：`index===0` 係 2×2 大 tile + 真店截圖 bleed 出角；其餘細 tile。
+- **口碑 = 深色島**（`bg-wlx-ink`）+ 不對稱 ledger（大 pull-quote `lg:col-span-7` + 細卡 rail `lg:col-span-5`）。
+- **背景節奏**：paper → cream → paper → cream → **ink** → cream → **ink**。唔好搞到成版一片。
+- **留白對比**：Stats/How 收緊（`py-12`/`py-16`），Features/口碑放開（`py-24 sm:py-40`）。
+- **Editorial identity**（每個 section 都有）：角落巨型低調 watermark 字（`text-wlx-ink/[0.035]`，深色面用 `text-wlx-paper/[0.05]`）、`01–05` section 索引、eyebrow pill、fading hairline（唔用硬 `border-t`）。
+- **Card = double-bezel**：外框 `rounded-[26px] p-[5px]` + 內核 `rounded-[21px]`（26−5，同心）+ inset 高光。
+- **CTA = button-in-button**：箭咀嵌喺自己嘅圓圈入面，貼右內邊，`ease-[cubic-bezier(0.32,0.72,0,1)]`。
+- Mobile：全部 `lg:` 前綴嘅 bleed/absolute 都要塌返單欄，**body 唔准橫向捲動**。
 
 ---
 
-## 7. Anti-Patterns（唔好做嘅嘢）
+## 5. Motion（全部 progressive enhancement）
 
-❌ **唔好** 用 min-h-screen 喺 section（會撐開）
-❌ **唔好** 用 flex-1 令 items 平分高度（會拉長）
-❌ **唔好** 左右兩欄 grid 喺 mobile Hero
-❌ **唔好** 用 Inter / Roboto / Arial
-❌ **唔好** 用紫色漸變
-❌ **唔好** 用 placeholder 灰色圖（要用真實截圖）
-❌ **唔好** 每個 card 設固定高度（用 auto height）
-❌ **唔好** section 之間 gap 過大（mobile 最多 80px）
-❌ **唔好** 一次過 one-shot 整個 landing page（逐個 section 做）
+- **Reveal**：`.wlx-reveal` section 由 IntersectionObserver 加 `is-visible`；**子元素**帶 `.wlx-stagger` + `style={{"--i": i}}` 逐個 cascade（`calc(var(--i)*90ms)`）。
+- **只喺 `.wlx-js` 之下先隱藏** → **冇 JS = 全部照見**。呢個係硬規則。
+- **Scroll-timeline 效果**（hero 視差、nav 進度線、stats 數字 wipe）一律包 `@supports (animation-timeline: …)`；Safari/FF 見到嘅係靜態 fallback，**唔准爆**。
+- 只 animate `transform` / `opacity`。唔准 scroll listener（用 IO 或 scroll-timeline）。
+- 每個新 animation class 都要加入 `@media (prefers-reduced-motion: reduce)` 嘅 reset。
+- Magnetic CTA 只喺 `(pointer:fine)` + 非 reduced-motion 生效；transform 掛喺 **wrapper span**，唔好同 Link 嘅 `active:scale` 爭。
 
 ---
 
-## 8. File Structure
+## 6. Signature Moment（呢版嘅靈魂，唔好拆）
 
-```
-components/marketing/
-├── LandingPage.tsx          ← Main container
-├── sections/
-│   ├── HeroSection.tsx      ← Hero + phone mockup
-│   ├── StatsBar.tsx         ← Social proof numbers
-│   ├── PainPoints.tsx       ← 痛點 section
-│   ├── HowItWorks.tsx       ← 三步開店
-│   ├── Features.tsx         ← Bento grid features
-│   ├── Pricing.tsx          ← 定價 cards
-│   ├── TrustSignals.tsx     ← 信任指標
-│   ├── CtaBanner.tsx        ← Final CTA
-│   └── Footer.tsx           ← Footer
-├── PhoneMockup.tsx          ← Reusable phone frame component
-└── landing.css              ← Landing-specific styles + CSS vars
-```
+Stats 之後個 `#stores` section：**phone 釘住（`sticky`），3 間真店（petitfleur → hypedrops → greenday）隨住 caption scroll 過而喺螢幕內 cross-fade** —— 用「示範」證明「乜嘢店都撐得起」。
+
+- 靠 **IntersectionObserver + `activeShop` state**（跨瀏覽器），唔用 Chromium-only scroll-timeline。
+- Desktop：右欄 `hidden lg:block` + `sticky top-[14vh] h-[72vh]`；Mobile：每個 caption 下面直接排自己嘅店圖。
+- **⚠️ 呢個 section 唔准有 `overflow-hidden`** —— 會即刻整死 `position: sticky`（踩過）。
 
 ---
 
-## 9. Build Instructions for Claude Code
+## 7. 定價資料（單一真相）
 
-1. **每次只做一個 section** — 唔好一次過做晒
-2. **每個 section 開始前** — 讀返呢份 README 對應嘅 section 設計
-3. **做完每個 section** — 確認 mobile 375px 排版正常
-4. **用真實內容** — 唔好用 Lorem ipsum
-5. **CSS variables** — 所有色同 spacing 用 CSS custom properties
-6. **組件化** — 每個 section 獨立 component
-7. **Responsive breakpoints：** sm:640px md:768px lg:1024px xl:1280px
+`components/marketing/plans.ts` = **`MARKETING_PLANS`**，landing teaser 同 `/pricing` 兩邊都由佢 render。
+
+- 現行：**$0 / $78 / $198**，推薦 = **Lite**，badge = 「推薦 / Recommended」。
+- 必須同 `lib/stripe-subscription.ts`（真收費）+ `lib/plan.ts`（`PLAN_LIMITS` 真權限）對得上。
+- **唔好**喺任何 component 硬寫價錢。改價 → 改 `plans.ts` + 上面兩個 lib。
+- `plans.ts` **唔准 import `lib/plan.ts`**（嗰邊拉 prisma，呢邊係 client component）。
+
+---
+
+## 8. 踩過嘅坑（唔好再踩）
+
+1. **`accent == ink`** → accent 擺深色面 = 隱形。深色面一律反白。（見 §2）
+2. **同一個元素兩個 class 都set `animation`** → 後者覆蓋前者，另一個效果直接消失。曾經令 hero phone 卡死喺 `opacity:0`（parallax 食咗 fade-up）。要就合併成一個 `animation:` list + `animation-timeline: auto, scroll(root)`。
+3. **`overflow-hidden` 會整死 `position: sticky`**（signature section 踩過）。
+4. **`<style jsx global>` 係 template literal** → CSS comment 入面**唔准有 backtick**，會提前終止字串、build 直接爆。
+5. **Locale**：component 收到怪 locale 會炸 `plan.features[locale]` → 一律先 normalize `const lang = locale === "zh-HK" ? "zh-HK" : "en"`。
+6. **CI 個 `build` job 一路紅**（prisma migrate `relation "Tenant" does not exist`）—— 同 landing 無關，係另一條 P0 線。
+
+---
+
+## 9. 現行 Section 次序
+
+`Nav → Hero(masthead) → Stats(01) → ✦ 真實店舖 signature(#stores) → Features(02, bento) → How(03) → 口碑(04, 深色島) → Pricing(05) → 尾 CTA(深色) → Footer`
+
+> Pricing 特登排喺口碑之後、貼住尾 CTA —— 先建立慾望同信任，先講錢。**唔好搬返上去。**
+
+---
+
+## 10. 改完之後嘅檢查表
+
+- [ ] `npm run ci:build` 綠
+- [ ] 375px：冇橫向捲動、bleed/absolute 全部塌返單欄
+- [ ] 深色面（口碑島、尾 CTA、推薦卡）：**冇任何嘢黑撞黑**
+- [ ] 熄 JS：所有內容照見（`.wlx-js` 以外唔准隱藏）
+- [ ] `prefers-reduced-motion`：新 animation 有 reset
+- [ ] **租戶店**（`maysshop.localhost:3012`）字體同色**一個 pixel 都冇變**
+- [ ] 中英兩版都睇過
+
+---
+
+## 11. 誠實嘅天花板
+
+Code-only 大概去到 **~9/10**。剩低嗰段唔係前端做得到：
+1. 啲 demo 截圖係彩色真拍，同嚴格 mono 本質上打交 —— 真 10 要**訂造 mono/duotone 攝影或 art direction**。
+2. 最靚嗰浸 scroll motion 係 **Chromium-only**；要全平台一致就要孭 GSAP/Framer（我哋刻意唔孭）。
+3. 再上就係 WebGL / 訂造插畫 —— 唔屬於 refactor 範疇。
