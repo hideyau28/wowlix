@@ -639,7 +639,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               {t.statsEyebrow}
             </p>
           </div>
-          <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl [text-wrap:balance]">
+          <h2 className="mt-5 max-w-[24ch] font-wlx-display text-[clamp(28px,4.8vw,48px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
             {t.statsHeading}
           </h2>
           <dl className="mt-8 grid grid-cols-2 gap-y-8 sm:gap-x-8 lg:grid-cols-4">
@@ -935,9 +935,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 aria-hidden
                 className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
               >
-                &ldquo;
+                {lang === "zh-HK" ? "「" : "“"}
               </span>
-              <blockquote className="mt-2 font-wlx-serif italic [text-wrap:pretty] text-wlx-paper text-[clamp(22px,3vw,34px)] leading-[1.3]">
+              {/* font-synthesis-style:none — Noto Serif HK 冇 italic face，唔封住
+                  browser 會機械剪切出假斜體漢字。字體匹配係逐字符嘅，所以句入面
+                  嘅 Latin 照行 Fraunces 真斜體（font-synthesis 只管假 face）。 */}
+              <blockquote className="mt-2 font-wlx-serif italic [font-synthesis-style:none] [text-wrap:pretty] text-wlx-paper text-[clamp(22px,3vw,34px)] leading-[1.3]">
                 {heroVoice.q}
               </blockquote>
               <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-paper/12 pt-6">
@@ -972,9 +975,9 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     aria-hidden
                     className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
                   >
-                    &ldquo;
+                    {lang === "zh-HK" ? "「" : "“"}
                   </span>
-                  <blockquote className="mt-2 font-wlx-serif text-lg italic leading-[1.65] [text-wrap:pretty] text-wlx-paper">
+                  <blockquote className="mt-2 font-wlx-serif text-lg italic [font-synthesis-style:none] leading-[1.65] [text-wrap:pretty] text-wlx-paper">
                     {v.q}
                   </blockquote>
                   <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-paper/12 pt-6">
