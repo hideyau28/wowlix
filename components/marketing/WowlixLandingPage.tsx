@@ -9,7 +9,6 @@ import {
   Check,
   Languages,
   ListChecks,
-  Sparkles,
   Users,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
@@ -483,10 +482,9 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         <div className="relative mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-8 sm:pb-32 sm:pt-32">
           {/* Announcement pill */}
           <div
-            className="wlx-fade-up inline-flex items-center gap-2 rounded-full border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
+            className="wlx-fade-up inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/60 px-3 py-1.5 backdrop-blur-sm"
             style={{ animationDelay: "60ms" }}
           >
-            <Sparkles size={12} className="text-wlx-accent" />
             <span className="text-[11px] uppercase tracking-[0.18em] text-wlx-ink">
               {t.heroPill}
             </span>
@@ -510,7 +508,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             </span>
             <span className="block overflow-hidden">
               <span className="block wlx-line" style={{ animationDelay: "260ms" }}>
-                <span className="font-wlx-serif text-wlx-accent italic font-normal [font-variation-settings:'opsz'_144,'SOFT'_28] text-[1.06em]">
+                <span className="font-wlx-serif text-wlx-accent italic font-normal text-[1.06em]">
                   {t.heroTitleAccent}
                 </span>{" "}
                 {t.heroTitleB}
@@ -656,7 +654,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 className="wlx-stagger border-l border-wlx-mist pl-5 sm:pl-6"
                 style={{ "--i": i } as CSSProperties}
               >
-                <dt className="wlx-stat-num font-wlx-display text-[clamp(44px,8vw,88px)] font-[830] [font-variation-settings:'opsz'_144] tabular-nums leading-none tracking-tight text-wlx-ink">
+                <dt className="wlx-stat-num font-wlx-display text-[clamp(44px,8vw,88px)] font-[830] tabular-nums leading-none tracking-tight text-wlx-ink">
                   {s.num}
                   <span className="text-wlx-accent">{s.suf}</span>
                 </dt>
@@ -1230,9 +1228,13 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       {/* Animations — `wlx-fade-up` is a one-shot on mount; `wlx-reveal`
           uses IntersectionObserver to add `is-visible` when scrolled into view. */}
       <style jsx global>{`
+        /* halt = half-width 約物。Noto Serif HK 跟港台慣例將全形標點置中擺喺
+           em 格入面 —— 內文啱，但 display 尺寸就變成一個 51px 嘅窿。halt 換半形
+           advance 收返實。呢個 property 係取代唔係 merge，所以 root 嘅
+           kern/liga/calt 要喺度重寫一次，唔係就會靜靜雞跌咗。 */
         .font-wlx-display {
           font-optical-sizing: auto;
-          font-feature-settings: 'ss01', 'dlig', 'kern';
+          font-feature-settings: 'kern', 'liga', 'calt', 'halt';
         }
         /* Oversized stat numerals — progressive-enhancement wipe driven by
            scroll (view()-timeline). Gated behind @supports + .wlx-js so
