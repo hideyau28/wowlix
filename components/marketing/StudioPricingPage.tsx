@@ -38,7 +38,7 @@ const T = {
       },
       {
         q: "支援邊啲收款方式？",
-        a: "FPS 轉數快、PayMe、AlipayHK、信用卡（經 Stripe Connect）。所有 plan 都包。",
+        a: "FPS 轉數快、PayMe、AlipayHK、銀行轉帳 —— 客人直接過數入你自己戶口，WoWlix 一蚊佣金都唔收。所有 plan 都包。",
       },
     ],
     ctaTitle: "夠晒料？開始啦。",
@@ -71,7 +71,7 @@ const T = {
       },
       {
         q: "Which payment methods are supported?",
-        a: "FPS, PayMe, AlipayHK, and credit cards (via Stripe Connect). Available on all plans.",
+        a: "FPS, PayMe, AlipayHK and bank transfer — customers pay straight into your own account, and WoWlix takes zero commission. Available on all plans.",
       },
     ],
     ctaTitle: "Seen enough? Start building.",

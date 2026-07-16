@@ -31,13 +31,13 @@ export const MARKETING_PLANS: readonly MarketingPlan[] = [
       "zh-HK": [
         "10 件商品",
         "每月 50 張訂單",
-        "全部收款方式（FPS · PayMe · 信用卡）",
+        "全部收款方式（FPS · PayMe · AlipayHK · 銀行轉帳）",
         "1 款店鋪主題",
       ],
       en: [
         "10 products",
         "50 orders / mo",
-        "All payment methods (FPS · PayMe · card)",
+        "All payment methods (FPS · PayMe · AlipayHK · bank transfer)",
         "1 store theme",
       ],
     },

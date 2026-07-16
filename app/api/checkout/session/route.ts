@@ -21,6 +21,18 @@ type Body = {
 };
 
 export const POST = withApi(async (req) => {
+  // 卡收款暫時封盤（2026-07-16 商業決定）：呢條路而家用緊平台自己嘅
+  // STRIPE_SECRET_KEY 收客人錢，冇 Connect、冇 payout —— 真 live 嘅話
+  // 商戶啲錢會困死喺平台戶口。文案已經改晒淨賣 FPS/PayMe/AlipayHK/銀行轉帳。
+  // 第日重開一定要行 Stripe Connect direct charges + Standard account
+  //（錢直入商戶戶口，先撐得起「永遠 0% 佣金」）—— 詳見 docs/HANDOFF.md。
+  if (process.env.ENABLE_CARD_CHECKOUT !== "true") {
+    throw new ApiError(
+      503,
+      "FORBIDDEN",
+      "Card checkout is not available. Please pay by FPS / PayMe / AlipayHK / bank transfer.",
+    );
+  }
   const stripe = getStripe();
   const tenantId = await getTenantId(req);
 
