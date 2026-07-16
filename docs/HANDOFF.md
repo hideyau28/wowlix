@@ -18,7 +18,12 @@
    - **D-2 法律/內容頁上皮**：新 `components/marketing/MarketingLegalShell.tsx`（unlayered scoped CSS re-voice，唔使逐頁改 class），about/terms/privacy/contact/faq 加 `isPlatformMode()` gate。實測 platform terms/contact/faq 有皮、maysshop 租戶版一 pixel 唔變。contact WhatsApp 掣 platform 面轉單色 pill（`.wlx-cta` 防 ink-on-ink）。
    - **Footer audit**：landing/pricing/租戶店全部 link 有對應 route，**零死鏈**（唔使改）。
    - ⚠️ 未做/發現：platform mode 內容頁文案仍然係 maysshop 店味（title「- B」、「以下係關於 B 嘅常見問題」）—— 見「等 Yau」；shipping/returns 冇 gate（淨係租戶 footer 連去，platform 直入先會見，低危）。
-5. **Phase C 完成收貨**（`73d3c41`，2026-07-17 全 flow 驗埋尾）：/start 六步 wizard 上 Ink & Bone 皮（layout 級 subtree override + double-bezel 卡 + pill CTA + WoWlix wordmark 錨）；殺咗 step 1 Pro 深色卡 accent==ink 蟲（✓/radio/ring 黑撞黑）；裝飾色全轉單色（error 紅、Google logo、template 預覽色保留）。實測：Yau set 咗 `TENANT_JWT_SECRET` 之後真開咗間測試店 `phase-c-tea`（register 200 → step 6 完成頁 → 自動登入 admin 3/6 checklist → 店舖真 render），中英 + 375px 無橫捲，租戶店 face 全 unloaded、token 原色（新店自己彩色主題，證明零 mono 滲入），ci:build 綠。DESIGN.md 已記入 /start 做第三個 surface。
+5. **Phase E 完成**（2026-07-17）：
+   - **E-1 admin auth 三頁 DS 對齊**（`12f79ea`）—— login/forgot/reset CTA 統一 admin 款、zinc 清零、no-op hover 修。
+   - **Middleware auth route 修正**：發現真 bug —— auth guard 只放行 `/admin/login`，**未登入嘅人去 forgot/reset-password 會被彈返 login，成條忘記密碼 flow 根本行唔通**（E-1 驗收見到卡係因為當時登入咗，亦因此見到「admin chrome 包住 forgot 卡」嗰個怪相 —— 兩個問題同源）。修法（經 review workflow 兩輪打磨）：`isAuthRoute`（login|forgot-password|reset-password）做 guard 放行；middleware 嘅「登入咗彈 dashboard」**只做 login** 並加 `!isApiRoute`（唔加嘅話 regex 個 `[^/]+` 會食埋 `api`，帶 cookie POST `/api/admin/login` 被 307 去唔存在嘅 `/api/admin` —— pre-existing bug 順手修埋）；forgot-password 嘅彈走搬咗去 page 層 `forgot-password/layout.tsx` 用 `verifyToken()` **真驗 JWT 先彈**（middleware 只查 cookie 存在 —— 揸 stale/爛 cookie 嘅人正正最需要恢復頁，唔可以憑存在就彈走）；reset-password 永遠唔彈（email link flow）。實測：未登入 forgot/reset 都入到、有效 token 行 forgot → dashboard、爛 cookie 行 forgot 照入到、帶 cookie POST forgot API 直達 handler。
+   - **後台輕手（product register flow）**：150–250ms micro-transition，冇 choreography。Product modal + badge modal 入場（backdrop fade 200ms + panel slide-in-from-bottom-2 200ms ease-out）、badge dropdown 150ms、error banner slide-in、bulk bar fade、register flow 主要互動元素補 `transition-colors`（150ms；頁內其他角落——pagination/filter dropdown 等——未掃，屬後續 polish）、touched 範圍內嘅 no-op hover（stone→stone）修做 `hover:text-wlx-ink`、每個 animate-in 都有 `motion-reduce:animate-none`。全部用現成 `tw-animate-css` utility，零新 CSS。
+   - 實測：開 disposable 測試店 `phase-e-motion` 行成條 create flow（modal 開 → 揀類型 → 入名/價 → Create → 張枱即時出「測試蛋糕 Phase E」）；computed style 證實 backdrop/panel/dropdown 動畫真係行緊（`enter` @ 0.2s/0.15s）；ci:build 綠。
+6. **Phase C 完成收貨**（`73d3c41`，2026-07-17 全 flow 驗埋尾）：/start 六步 wizard 上 Ink & Bone 皮（layout 級 subtree override + double-bezel 卡 + pill CTA + WoWlix wordmark 錨）；殺咗 step 1 Pro 深色卡 accent==ink 蟲（✓/radio/ring 黑撞黑）；裝飾色全轉單色（error 紅、Google logo、template 預覽色保留）。實測：Yau set 咗 `TENANT_JWT_SECRET` 之後真開咗間測試店 `phase-c-tea`（register 200 → step 6 完成頁 → 自動登入 admin 3/6 checklist → 店舖真 render），中英 + 375px 無橫捲，租戶店 face 全 unloaded、token 原色（新店自己彩色主題，證明零 mono 滲入），ci:build 綠。DESIGN.md 已記入 /start 做第三個 surface。
 
 ### Motion loop 點重跑（分數 8.2，目標 10）
 
@@ -30,19 +35,15 @@
 
 ### 跟住落嚟（順序）
 
-- **Phase E 剩底：後台輕手**（product register flow：150–250ms micro-transition，冇 choreography）—— login/forgot/reset 三頁已完成（`12f79ea`，DS 對齊：CTA 統一 admin 款、zinc 清零、no-op hover 修）。
-- **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
-- 小發現（未修）：登入咗之後行 /admin/forgot-password 會喺 admin chrome（頂 bar + 底 tab）入面 render 個 forgot 卡 —— pre-existing，觀感細奇怪，Phase E 後台輕手嗰陣順手睇。
-- **Phase D**：法律/內容頁（about/terms/privacy/contact/faq）—— **必須 `isPlatformMode()` gate**（同真店共用 route，直接漆會滲入 Bull Kicks）；404/error 品牌化；footer 零死鏈。
-- **Phase E**：admin login/forgot/reset 三頁 + 後台輕手（product register：150–250ms，冇 choreography）。
-- **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
+- **Phase F（剩低唯一一個 phase）**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
+- ⚠️ **Phase F 會撞嘅 dev env 坑（2026-07-17 發現）**：admin 頁嘅 server action（例如 products 頁 `fetchProducts`）經 `getApiBaseUrl()` 打 API，而 dev `.env` 個 `NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_BASE_URL` 指住遠端 —— dev JWT 簽名同遠端唔夾 → admin SSR 頁喺 dev 一律 `ADMIN_AUTH_MISSING`（client-side fetch 就正常，所以 dashboard 冇事、products 頁死）。臨時解法（已用過、已還原）：`.claude/launch.json` 加一個 config，用 `env` 包住 `npm run dev` 覆寫兩個 var 做 `http://localhost:3012`（shell env 蓋 .env）。Playwright e2e 跑 admin 頁一定要處理呢樣嘢，唔係 CI/local 會冤枉紅。
 
 ### ⚠️ Phase C 實測發現（2026-07-16/17，行真 flow 揭出嚟）
 
 1. ~~`TENANT_JWT_SECRET` dev 冇 set~~ → **Yau 已加（2026-07-17），全 flow 通咗**。
 2. ~~Register 非原子 + raw error leak~~ → **已修（`1db8d16`）**：env secret 落 DB 前 fail-fast；auto-login 轉 best-effort（簽 token 失敗回 `autoLogin:false`，唔再累街）；外層 catch 唔再漏 error.message 原文，ApiError 交返 withApi（validation 由錯誤嘅 500 還原做 400/409）。curl 實測 400/409/200 三條 path。
 3. ~~Step 5 預覽綠 vs 開出嚟橙~~ → **已修（`4b1d2f6`）**：register 以前寫死 `brandColor:"#FF9500"`（舊品牌橙），蓋過 `brandColor || tmpl.accent` 條 fallback 鏈。而家寫 null，動態跟 template。**留意 schema default 仲係 `#FF9500`（`prisma/schema.prisma:325`），改 default 要 migration — 屬 P0 線。**
-4. Dev DB 五個測試 tenant 待清：半製成品 `ink-stone-tea` + `phase-c-tea` / `phase-c-harden` / `phase-c-green` / `phase-c-mochi`（email = phase-c-test~5@example.com）。⚠️ Tenant 關聯表冇 onDelete cascade，要逐層拆。
+4. Dev DB **六個**測試 tenant 待清：半製成品 `ink-stone-tea` + `phase-c-tea` / `phase-c-harden` / `phase-c-green` / `phase-c-mochi`（email = phase-c-test~5@example.com）+ `phase-e-motion`（email = phase-e-test@example.com，入面有一件測試貨「測試蛋糕 Phase E」）。⚠️ Tenant 關聯表冇 onDelete cascade，要逐層拆。
 
 ### 唔准掂（每個 agent prompt 都要抄）
 
