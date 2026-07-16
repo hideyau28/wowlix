@@ -13,6 +13,7 @@
 1. **執行修正批**（9 commit）：Fraunces opsz 軸（hero 由 9pt 內文 master 變真 display cut）、halt 約物（全形標點收半形）、假斜體/黑體標題/引號 CJK 三修、hover transition 撞車、深色島光管 shadow、TypeStyles 抽出共用（/pricing 先至第一次食到字體 rule）、fraunces preload:false（租戶店慳返 146KB）、scroll-coupling（view() 凍結 bug：**祖先 overflow-hidden 會凍死 view()，一律用 overflow-clip** —— 已寫入 DESIGN.md）。
 2. **卡收款封盤**（`e3bc8c8` + `9971661`）—— 見下面 2026-07-16 更新 section。
 3. **Motion loop 兩波**（`58303b6` + `0114b9c` + `5006cdc`）：judge panel 中位數 **7.2 → 8.2**。十六招落地，全部真 browser 逐效果實測。
+4. **Phase C 接皮完成**（`73d3c41`）：/start 六步 wizard 上 Ink & Bone 皮（layout 級 subtree override + double-bezel 卡 + pill CTA + WoWlix wordmark 錨）；殺咗 step 1 Pro 深色卡 accent==ink 蟲（✓/radio/ring 黑撞黑）；裝飾色全轉單色（error 紅、Google logo、template 預覽色保留）。實測：step 1–5 中英 + 375px 無橫捲，租戶店 face 全 unloaded、token 原色，ci:build 綠。DESIGN.md 已記入 /start 做第三個 surface。
 
 ### Motion loop 點重跑（分數 8.2，目標 10）
 
@@ -24,10 +25,16 @@
 
 ### 跟住落嚟（順序）
 
-- **Phase C：/start 開店 flow** —— 接皮（marketingBrandVars + fonts + TypeStyles 落 /start，而家係冷白 generic wizard，成條 flow 最大信任斷層）、wizard 全程真 browser 行一次（開測試店，電郵驗證碼由 dev server log 攞）、harden/clarify/onboard。
+- **Phase C 收尾**：wizard 冇 OTP（step 2 直接 email+password 註冊，電郵驗證碼嗰個係另一條 auth flow）。**全 flow 行到 step 5 register 就炸** —— 見下面「⚠️ Phase C 實測發現」。兩個 backend 修完先算 Phase C 收貨。
 - **Phase D**：法律/內容頁（about/terms/privacy/contact/faq）—— **必須 `isPlatformMode()` gate**（同真店共用 route，直接漆會滲入 Bull Kicks）；404/error 品牌化；footer 零死鏈。
 - **Phase E**：admin login/forgot/reset 三頁 + 後台輕手（product register：150–250ms，冇 choreography）。
 - **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
+
+### ⚠️ Phase C 實測發現（2026-07-16，行真 flow 揭出嚟）
+
+1. **`TENANT_JWT_SECRET` dev 環境冇 set** → `/api/tenant/register` 喺 signToken（route.ts:230）500。**要 Yau 喺 `.env.local` 加**（agent 冇權掂 `.env*`）。
+2. **Register 非原子**：DB 開晒 tenant/admin/settings 先至簽 token，炸咗 = 店開咗一半、user 冇 login cookie、slug 燒咗（實測 `ink-stone-tea` 已佔用）。加上 **raw internal error 原文直接顯示俾 end user**（error banner 見到成句 env var 名）。已開 task chip「Harden /api/tenant/register」兜住。
+3. Dev DB 有個半製成品 tenant：`ink-stone-tea` / phase-c-test@example.com，順手清。
 
 ### 唔准掂（每個 agent prompt 都要抄）
 
@@ -35,7 +42,7 @@
 
 ### 等 Yau
 
-口碑真偽 · hero「變現」定「變生意」· merge #345 時機（branch 已經好大，考慮分段）。
+口碑真偽 · hero「變現」定「變生意」· merge #345 時機（branch 已經好大，考慮分段）· **`.env.local` 加 `TENANT_JWT_SECRET`**（唔加 dev 開唔到店，Phase C 收唔到尾）。
 
 ---
 
