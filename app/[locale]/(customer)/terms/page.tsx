@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
+import { isPlatformMode } from "@/lib/tenant";
+import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 
 export async function generateMetadata({
   params,
@@ -43,9 +46,14 @@ export default async function TermsPage({
   const tenant = await getTenantInfo();
   const isZh = locale === "zh-HK";
 
+  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版
+  const platform = await isPlatformMode();
+  const shell = (node: ReactNode) =>
+    platform ? <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell> : node;
+
   // Bull Kicks / non-default tenants: English-only terms
   if (tenant.slug !== "maysshop") {
-    return (
+    return shell(
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           Terms of Service
@@ -152,7 +160,7 @@ export default async function TermsPage({
 
   // maysshop — original bilingual content
   if (isZh) {
-    return (
+    return shell(
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           服務條款
@@ -268,7 +276,7 @@ export default async function TermsPage({
     );
   }
 
-  return (
+  return shell(
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         Terms of Service
