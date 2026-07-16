@@ -93,7 +93,11 @@ export const POST = withApi(async (req: Request) => {
       description: cleanTagline || undefined,
       template: cleanTemplate,
       coverTemplate: cleanTemplate,
-      brandColor: "#FF9500",
+      // 明文寫 null（schema default 係已廢除嘅舊品牌橙 #FF9500，migration
+      // 另一條線先郁）—— storefront 係 brandColor || tmpl.accent，null 先會
+      // 動態跟住用戶揀嘅 template 行，第日轉 template 都唔會甩色。
+      // 以前寫死 #FF9500，搞到 step 5 預覽綠色但開出嚟間店橙色。
+      brandColor: null,
       status: "active",
     };
     // templateId column 可能未存在（需要手動 migration）
