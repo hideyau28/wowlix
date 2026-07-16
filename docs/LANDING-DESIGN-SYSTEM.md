@@ -3,7 +3,7 @@
 > **呢份係 landing + /pricing 嘅唯一設計真相。** 改任何 marketing 版面之前必讀。
 > 出面睇到嘅嘢 = 呢份文件寫嘅嘢。如果兩者唔一致，**係文件要更新**，唔係照舊文件改 code。
 >
-> Surfaces：`/[locale]`（landing）、`/[locale]/pricing`、`/[locale]/start`（開店 wizard）。**唔包租戶店**（見 §2 scoping）。
+> Surfaces：`/[locale]`（landing）、`/[locale]/pricing`、`/[locale]/start`（開店 wizard）、法律/內容頁 **platform mode 分支**（about/terms/privacy/contact/faq，經 `MarketingLegalShell`）。**唔包租戶店**（見 §2 scoping）。
 
 ---
 
@@ -38,6 +38,7 @@
 | `components/marketing/WowlixLandingPage.tsx` | 成個 landing（單檔，含 `<style jsx global>`：`.wlx-*` motion 系統） |
 | `components/marketing/StudioPricingPage.tsx` | `/pricing`（自己一套 `.studio-*` motion 系統，同 landing 獨立） |
 | `app/[locale]/start/layout.tsx` | `/start` 嘅接皮位：`marketingBrandVars` + 兩隻 font variable + `<MarketingTypeStyles/>`。wizard 本體喺 `components/onboarding/OnboardingWizard.tsx`（**冇 motion 系統**，淨係 200ms transition —— 表單唔使 choreography） |
+| `components/marketing/MarketingLegalShell.tsx` | 法律/內容頁 platform-mode 外殼：皮 + 自帶 nav/footer + **unlayered scoped CSS re-voice**（蓋過內容入面嘅 zinc/dark: utility，§8 坑 7 同一機制）。頁內 `if (await isPlatformMode())` 先包；租戶店行原本 zinc 版。內容 pill 掣要加 `.wlx-cta` 免俾 `a` 色規則蓋成 ink-on-ink |
 | `app/globals.css`（`@theme inline`） | `--font-wlx-*` token + `--wlx-font-*` override hook |
 | `public/demos/*.png` | 真實店舖截圖（唯一圖像來源） |
 
