@@ -40,9 +40,9 @@
 ### ⚠️ Phase C 實測發現（2026-07-16/17，行真 flow 揭出嚟）
 
 1. ~~`TENANT_JWT_SECRET` dev 冇 set~~ → **Yau 已加（2026-07-17），全 flow 通咗**。
-2. **Register 非原子**（未修）：DB 開晒 tenant/admin/settings 先至簽 token，炸咗 = 店開咗一半、user 冇 login cookie、slug 燒咗（實測 `ink-stone-tea` 已佔用）。加上 **raw internal error 原文直接顯示俾 end user**。已開 task chip「Harden /api/tenant/register」兜住。
-3. Dev DB 兩個測試 tenant：半製成品 `ink-stone-tea`（phase-c-test@example.com，順手清）+ 完整測試店 `phase-c-tea`（phase-c-test2@example.com）。
-4. 小觀察（唔急）：wizard step 5 預覽「抹茶」綠，但開出嚟間店 storefront 個 avatar 係橙、cover 粉紅雲石；admin header 就係綠。template 三個 surface 唔一致，Phase E 或者租戶 theming 嗰陣睇。
+2. ~~Register 非原子 + raw error leak~~ → **已修（`1db8d16`）**：env secret 落 DB 前 fail-fast；auto-login 轉 best-effort（簽 token 失敗回 `autoLogin:false`，唔再累街）；外層 catch 唔再漏 error.message 原文，ApiError 交返 withApi（validation 由錯誤嘅 500 還原做 400/409）。curl 實測 400/409/200 三條 path。
+3. ~~Step 5 預覽綠 vs 開出嚟橙~~ → **已修（`4b1d2f6`）**：register 以前寫死 `brandColor:"#FF9500"`（舊品牌橙），蓋過 `brandColor || tmpl.accent` 條 fallback 鏈。而家寫 null，動態跟 template。**留意 schema default 仲係 `#FF9500`（`prisma/schema.prisma:325`），改 default 要 migration — 屬 P0 線。**
+4. Dev DB 五個測試 tenant 待清：半製成品 `ink-stone-tea` + `phase-c-tea` / `phase-c-harden` / `phase-c-green` / `phase-c-mochi`（email = phase-c-test~5@example.com）。⚠️ Tenant 關聯表冇 onDelete cascade，要逐層拆。
 
 ### 唔准掂（每個 agent prompt 都要抄）
 
