@@ -4,6 +4,41 @@
 
 ---
 
+## 🚀 2026-07-16 深夜：全站提升 programme — 交接（新 session 由呢度開始）
+
+**目標（Yau 原話）**：要俾人信任度、覺得係一個專業嘅平台；成個流程有心、高級；全網每一頁每一條 flow 都要行一次。
+
+### 已完成（全部喺 branch，build 綠）
+
+1. **執行修正批**（9 commit）：Fraunces opsz 軸（hero 由 9pt 內文 master 變真 display cut）、halt 約物（全形標點收半形）、假斜體/黑體標題/引號 CJK 三修、hover transition 撞車、深色島光管 shadow、TypeStyles 抽出共用（/pricing 先至第一次食到字體 rule）、fraunces preload:false（租戶店慳返 146KB）、scroll-coupling（view() 凍結 bug：**祖先 overflow-hidden 會凍死 view()，一律用 overflow-clip** —— 已寫入 DESIGN.md）。
+2. **卡收款封盤**（`e3bc8c8` + `9971661`）—— 見下面 2026-07-16 更新 section。
+3. **Motion loop 兩波**（`58303b6` + `0114b9c` + `5006cdc`）：judge panel 中位數 **7.2 → 8.2**。十六招落地，全部真 browser 逐效果實測。
+
+### Motion loop 點重跑（分數 8.2，目標 10）
+
+- Script 喺 **`.claude/workflows/motion-overdrive.js`**（唔好again擺 /tmp —— 會俾系統清）。
+- 用法：`Workflow({ scriptPath: ".claude/workflows/motion-overdrive.js" })`。舊 run 嘅 cache（wf_ff492ead-d4e）新 session 用唔到，fresh run 會自己重新評 baseline（≈8.2）再爬。
+- 要 dev server：`preview_start {name:"dev"}`（port 3012），target `wowlix.localhost:3012`（**淨 localhost = May's Shop sample 店，唔係 WoWlix**）。
+- 已知第三波候選（判到一半俾 session limit 斬）：masthead 退場鏡像、hero release ensemble 補完（sub/CTA 各自速率）、phone halo 拖光、島 rail 反向視差、island figcaption 順序畫線、/pricing 逐卡 IO cascade + FAQ ledger + nav hairline（scroll(root) 短頁都得）、尾 CTA 墨水傾瀉 + paper glow breathe、stats @property 數字 settle、compositor 衛生（unspray will-change、reduced-motion gate .wlx-progress）、bento bleed 剷 700ms grayscale filter（§5）。
+- Session limit 會斷 workflow —— 斷咗就 keep going：睇 journal 執返已完成嘅嘢，主 loop 自己做得嘅自己做。
+
+### 跟住落嚟（順序）
+
+- **Phase C：/start 開店 flow** —— 接皮（marketingBrandVars + fonts + TypeStyles 落 /start，而家係冷白 generic wizard，成條 flow 最大信任斷層）、wizard 全程真 browser 行一次（開測試店，電郵驗證碼由 dev server log 攞）、harden/clarify/onboard。
+- **Phase D**：法律/內容頁（about/terms/privacy/contact/faq）—— **必須 `isPlatformMode()` gate**（同真店共用 route，直接漆會滲入 Bull Kicks）；404/error 品牌化；footer 零死鏈。
+- **Phase E**：admin login/forgot/reset 三頁 + 後台輕手（product register：150–250ms，冇 choreography）。
+- **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
+
+### 唔准掂（每個 agent prompt 都要抄）
+
+租戶店任何嘢（sample 店 + 真店）· `app/globals.css` base `:root` · 共用頁必須 platform-gate · `plans.ts` 定價 · 文案 pending 兩項（口碑真偽、變現 vs 變生意）· `#stores` sticky 機制 · overflow-clip 唔准改返 hidden · §5 只准 transform/opacity/clip-path。
+
+### 等 Yau
+
+口碑真偽 · hero「變現」定「變生意」· merge #345 時機（branch 已經好大，考慮分段）。
+
+---
+
 ## 🔄 2026-07-16 更新：卡收款商業決定（影響 P0 線 scope）
 
 **Yau 決定：暫時唔收信用卡。** 分析見對話記錄，重點：
