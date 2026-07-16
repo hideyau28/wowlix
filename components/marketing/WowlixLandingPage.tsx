@@ -214,7 +214,6 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
   // 同 T 一樣嘅 fallback：runtime 收到怪 locale（例如 middleware 冇 normalize 嘅 path segment）一律當 en
   const lang: "zh-HK" | "en" = locale === "zh-HK" ? "zh-HK" : "en";
   const otherLocale = locale === "zh-HK" ? "en" : "zh-HK";
-  const [scrolled, setScrolled] = useState(false);
 
   // Signature "real stores" section: a pinned phone cross-fades through three
   // real storefronts as you scroll past their captions. `activeShop` is driven
@@ -265,14 +264,6 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
     );
     captions.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
-
-  // Nav fills in once user scrolls past hero peak
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 32);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Scroll-reveal for sections marked with .wlx-reveal.
@@ -389,15 +380,12 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
       />
 
       {/* ───────── Nav ───────── */}
-      <header
-        className={`relative sticky top-0 z-50 transition-[background,border,backdrop-filter] duration-300 ${
-          scrolled
-            ? "border-b border-wlx-mist bg-wlx-paper/85 backdrop-blur-md"
-            : "border-b border-transparent bg-transparent"
-        }`}
-        style={{ transitionTimingFunction: "var(--wlx-ease)" }}
-      >
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
+      <header className="relative sticky top-0 z-50">
+        <span
+          aria-hidden
+          className="wlx-nav-veil pointer-events-none absolute inset-0 border-b border-wlx-mist bg-wlx-paper/90 shadow-[0_18px_40px_-32px_rgba(26,24,21,0.4)]"
+        />
+        <div className="relative mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
           <Link
             href={`/${locale}`}
             className="font-wlx-display text-lg tracking-tight"
@@ -596,7 +584,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                     alt=""
                     fill
                     sizes="300px"
-                    className="object-cover object-top"
+                    className="wlx-hero-screen object-cover object-top"
                     priority
                   />
                   {/* soft screen gloss for realism */}
@@ -605,7 +593,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               </div>
 
               {/* Floating accent badge */}
-              <div className="absolute -left-6 top-12 hidden rotate-[8deg] rounded-full border border-wlx-mist bg-wlx-paper px-3 py-1.5 shadow-md xl:block">
+              <div className="wlx-hero-badge absolute -left-6 top-12 hidden rotate-[8deg] rounded-full border border-wlx-mist bg-wlx-paper px-3 py-1.5 shadow-md xl:block">
                 <span className="text-[10px] uppercase tracking-[0.18em] text-wlx-ink">
                   0% commission
                 </span>
@@ -629,6 +617,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <span
             aria-hidden
             className="wlx-mark pointer-events-none absolute -right-6 -top-10 select-none font-wlx-serif leading-none text-[clamp(120px,22vw,300px)] text-wlx-ink/[0.035]"
+            style={{ "--wlx-mark-drift": "18%" } as CSSProperties}
           >
             0
           </span>
@@ -652,7 +641,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             ].map((s, i) => (
               <div
                 key={i}
-                className="wlx-stagger border-l border-wlx-mist pl-5 sm:pl-6"
+                className="wlx-stagger wlx-stat relative border-l border-wlx-mist pl-5 sm:pl-6"
                 style={{ "--i": i } as CSSProperties}
               >
                 <dt className="wlx-stat-num font-wlx-display text-[clamp(44px,8vw,88px)] font-[830] tabular-nums leading-none tracking-tight text-wlx-ink">
@@ -746,10 +735,10 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                   {shops.map((_, i) => (
                     <span
                       key={i}
-                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                      className={`wlx-dot h-1.5 w-6 rounded-full bg-wlx-ink transition-[scale,opacity] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${
                         activeShop === i
-                          ? "w-6 bg-wlx-ink"
-                          : "w-1.5 bg-wlx-ink/25"
+                          ? "opacity-100 [scale:1]"
+                          : "opacity-25 [scale:0.25_1]"
                       }`}
                     />
                   ))}
@@ -834,8 +823,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               return (
                 <li
                   key={key}
-                  className="wlx-stagger rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
-                  style={{ "--i": index } as CSSProperties}
+                  className="wlx-stagger wlx-tile-drift rounded-[26px] bg-wlx-mist/40 p-[5px] shadow-[0_30px_60px_-30px_rgba(26,24,21,0.32)]"
+                  style={
+                    {
+                      "--i": index,
+                      "--drift":
+                        index === 1 ? "16px" : index === 2 ? "8px" : "22px",
+                    } as CSSProperties
+                  }
                 >
                   <div
                     className="group relative flex h-full flex-col rounded-[21px] border border-wlx-mist bg-gradient-to-br from-wlx-cream/70 to-wlx-paper p-7 shadow-[0_2px_2px_rgba(26,24,21,0.03),0_16px_34px_-26px_rgba(26,24,21,0.28),inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgba(26,24,21,0.05),0_26px_46px_-24px_rgba(26,24,21,0.34)] will-change-transform sm:p-9"
@@ -934,14 +929,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             >
               <span
                 aria-hidden
-                className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
+                className="wlx-quotemark font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
               >
                 {lang === "zh-HK" ? "「" : "“"}
               </span>
               {/* font-synthesis-style:none — Noto Serif HK 冇 italic face，唔封住
                   browser 會機械剪切出假斜體漢字。字體匹配係逐字符嘅，所以句入面
                   嘅 Latin 照行 Fraunces 真斜體（font-synthesis 只管假 face）。 */}
-              <blockquote className="mt-2 font-wlx-serif italic [font-synthesis-style:none] [text-wrap:pretty] text-wlx-paper text-[clamp(22px,3vw,34px)] leading-[1.3]">
+              <blockquote className="wlx-quote-wipe mt-2 font-wlx-serif italic [font-synthesis-style:none] [text-wrap:pretty] text-wlx-paper text-[clamp(22px,3vw,34px)] leading-[1.3]">
                 {heroVoice.q}
               </blockquote>
               <figcaption className="mt-auto flex items-center gap-3 border-t border-wlx-paper/12 pt-6">
@@ -974,7 +969,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 >
                   <span
                     aria-hidden
-                    className="font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
+                    className="wlx-quotemark font-wlx-serif text-[64px] leading-[0.6] text-wlx-paper/25"
                   >
                     {lang === "zh-HK" ? "「" : "“"}
                   </span>
@@ -1155,14 +1150,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         {/* Subtle gradient orb in dark section */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <div
-            className="absolute -left-24 -top-24 h-[360px] w-[360px] rounded-full opacity-40 blur-3xl"
+            className="wlx-drift absolute -left-24 -top-24 h-[360px] w-[360px] rounded-full opacity-40 blur-3xl"
             style={{
               background:
                 "radial-gradient(closest-side, rgba(214,205,191,0.5), transparent)",
             }}
           />
           <div
-            className="absolute -bottom-32 -right-16 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
+            className="wlx-drift wlx-drift-rev absolute -bottom-32 -right-16 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
             style={{
               background:
                 "radial-gradient(closest-side, rgba(244,241,234,0.4), transparent)",
@@ -1285,13 +1280,60 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             animation-timeline: view();
             animation-range: entry 0% cover 70%;
           }
+          /* Stats ledger rules — the four hairlines draw top-down, sequenced
+             left-to-right, just ahead of the numeral wipe (entry 10% cover 40%)
+             so the ledger is ruled before the figures are inked. The real
+             border-l stays in markup as the static fallback (Safari/FF/no-JS);
+             here we blank it and draw a pseudo exactly over it. left: -1px
+             because absolute offsets resolve against the padding box, which
+             begins inside the 1px border. */
+          .wlx-js .wlx-stat {
+            border-left-color: transparent;
+          }
+          .wlx-js .wlx-stat::before {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: 0;
+            height: 100%;
+            width: 1px;
+            background: var(--wlx-mist);
+            transform-origin: top;
+            animation: wlxRuleDraw linear both;
+            animation-timeline: view();
+            animation-range: entry 0% cover 30%;
+          }
+          .wlx-js .wlx-stat:nth-child(2)::before {
+            animation-range: entry 8% cover 38%;
+          }
+          .wlx-js .wlx-stat:nth-child(3)::before {
+            animation-range: entry 16% cover 46%;
+          }
+          .wlx-js .wlx-stat:nth-child(4)::before {
+            animation-range: entry 24% cover 54%;
+          }
+          /* Bento small tiles — three drift amplitudes (--drift per tile) =
+             three parallax depths, so the grid reads as layered paper while
+             scrolling. Animates the INDEPENDENT translate property, never
+             transform: these li's are .wlx-stagger, whose reveal transitions
+             transform (a transform animation here would clobber it, §8 pit 2).
+             translate and transform are separate properties and compose. */
+          .wlx-js .wlx-tile-drift {
+            animation: wlxTileDrift linear both;
+            animation-timeline: view();
+            animation-range: entry 0% exit 100%;
+          }
         }
+        /* Custom properties resolve per-element inside keyframes: the 10%
+           default keeps the other four watermarks pixel-identical; the Stats
+           giant 0 sets --wlx-mark-drift: 18% inline for a visibly deeper
+           parallax layer behind the rule-draw and numeral wipe. */
         @keyframes wlxMarkDrift {
           from {
-            transform: translateY(-10%);
+            transform: translateY(calc(-1 * var(--wlx-mark-drift, 10%)));
           }
           to {
-            transform: translateY(10%);
+            transform: translateY(var(--wlx-mark-drift, 10%));
           }
         }
         @keyframes wlxBleedRise {
@@ -1308,6 +1350,22 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           }
           to {
             transform: scale(1);
+          }
+        }
+        @keyframes wlxRuleDraw {
+          from {
+            transform: scaleY(0);
+          }
+          to {
+            transform: scaleY(1);
+          }
+        }
+        @keyframes wlxTileDrift {
+          from {
+            translate: 0 var(--drift, 12px);
+          }
+          to {
+            translate: 0 calc(var(--drift, 12px) * -1);
           }
         }
         @keyframes wlxFadeUp {
@@ -1349,6 +1407,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         .wlx-drift {
           animation: wlxDrift 18s ease-in-out infinite alternate;
         }
+        /* Bookend: the dark CTA orbs breathe with the same wlxDrift the hero
+           glow uses, but counter-phase and slower — timing overrides only,
+           never a second animation declaration. */
+        .wlx-drift-rev {
+          animation-duration: 26s;
+          animation-delay: -13s;
+          animation-direction: alternate-reverse;
+        }
         /* Wave 4: hero phone depth parallax — Chromium-enhanced only. Gated
            behind @supports (animation-timeline: view()) so Safari/Firefox
            (and any browser without CSS scroll-timelines) simply keep the
@@ -1375,6 +1441,48 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             }
           }
         }
+        /* Screen content pans DOWN 18px while the bezel rises 40px (wlxRiseSlow):
+           the storefront lags behind the glass, reading as real content inside a
+           real device. scale(1.05) gives ~14px vertical overdraw in the 591px
+           screen so the pan never exposes an edge. Same 0 70vh clock as
+           wlxRiseSlow — one timeline, two rates. */
+        @supports (animation-timeline: scroll()) {
+          @media (prefers-reduced-motion: no-preference) {
+            .wlx-js .wlx-hero-screen {
+              animation: wlxScreenPan linear both;
+              animation-timeline: scroll(root);
+              animation-range: 0 70vh;
+            }
+            @keyframes wlxScreenPan {
+              from {
+                transform: translate3d(0, -8px, 0) scale(1.05);
+              }
+              to {
+                transform: translate3d(0, 10px, 0) scale(1.05);
+              }
+            }
+          }
+        }
+        /* Badge leads the ensemble by -10px on top of the wrapper's -40px rise
+           (wlxRiseSlow) — net -50px. Frontmost prop moves fastest, so occlusion,
+           cast shadow, and parallax rate all agree: the sticker floats slightly
+           proud of the phone, light paper leading heavy object. rotate-[8deg] is
+           the Tailwind v4 independent rotate property, not transform, so it
+           stacks safely with this transform animation. */
+        @supports (animation-timeline: scroll()) {
+          @media (prefers-reduced-motion: no-preference) {
+            .wlx-js .wlx-hero-badge {
+              animation: wlxBadgeFloat linear both;
+              animation-timeline: scroll(root);
+              animation-range: 0 70vh;
+            }
+            @keyframes wlxBadgeFloat {
+              to {
+                transform: translate3d(0, -10px, 0);
+              }
+            }
+          }
+        }
         /* Wave 4: sticky-nav scroll-progress hairline — Chromium-enhanced
            only, zero JS. Hidden entirely where animation-timeline: scroll()
            is unsupported so it never ships as a static full-width bar. */
@@ -1393,6 +1501,27 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
         @supports not (animation-timeline: scroll()) {
           .wlx-progress {
             display: none;
+          }
+        }
+        /* Nav elevation veil. Default = finished state (visible) so Safari,
+           Firefox and no-JS see an elevated paper nav from the start; Chromium
+           fades it in continuously over the first 96px of scroll. Only opacity
+           animates — the border, fill and shadow are static paint on the veil,
+           so there is no filter and no layout property in any transition list. */
+        .wlx-nav-veil {
+          opacity: 1;
+        }
+        @supports (animation-timeline: scroll()) {
+          .wlx-js .wlx-nav-veil {
+            opacity: 0;
+            animation: wlxNavVeil linear both;
+            animation-timeline: scroll(root);
+            animation-range: 0 96px;
+          }
+          @keyframes wlxNavVeil {
+            to {
+              opacity: 1;
+            }
           }
         }
         /* Wave 4: magnetic primary CTA — desktop pointer only. The pull is
@@ -1446,6 +1575,35 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           transform: none;
           clip-path: none;
         }
+        /* Island quote marks stamp down from 1.35x a beat (+150ms) after their
+           card's own rise — a chop pressed onto dark paper. Descendant of the
+           .wlx-stagger figure, not a stagger element itself, so this is the
+           span's first and only motion source. Quint ease-out. */
+        .wlx-js .wlx-reveal .wlx-quotemark {
+          opacity: 0;
+          transform: translateY(0.3em) scale(1.35);
+          transform-origin: left top;
+          transition:
+            opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 90ms + 150ms),
+            transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 90ms + 150ms);
+        }
+        .wlx-js .wlx-reveal.is-visible .wlx-quotemark {
+          opacity: 1;
+          transform: none;
+        }
+        /* Hero pull-quote inks in left-to-right — same gesture as the masthead
+           wlxLineWipe, IO-transition-driven so Safari/Firefox get it too. Both
+           states are 4-value inset() so the transition genuinely interpolates
+           (never the non-interpolable keyword none); end state -2% right
+           matches the shipped .wlx-line precedent so the Fraunces italic
+           overhang is never shaved at rest. */
+        .wlx-js .wlx-reveal .wlx-quote-wipe {
+          clip-path: inset(0 100% 0 0);
+          transition: clip-path 0.9s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 90ms + 220ms);
+        }
+        .wlx-js .wlx-reveal.is-visible .wlx-quote-wipe {
+          clip-path: inset(0 -2% 0 0);
+        }
         @media (prefers-reduced-motion: reduce) {
           .wlx-fade-up,
           .wlx-reveal {
@@ -1459,7 +1617,8 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
             transform: none !important;
             animation: none !important;
           }
-          .wlx-drift {
+          .wlx-drift,
+          .wlx-drift-rev {
             animation: none !important;
           }
           .wlx-stat-num {
@@ -1473,9 +1632,38 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           }
           .wlx-mark,
           .wlx-bleed,
-          .wlx-shot {
+          .wlx-shot,
+          .wlx-hero-screen,
+          .wlx-hero-badge {
             animation: none !important;
             transform: none !important;
+          }
+          .wlx-nav-veil {
+            animation: none !important;
+            opacity: 1 !important;
+          }
+          .wlx-stat {
+            border-left-color: var(--wlx-mist) !important;
+          }
+          .wlx-stat::before {
+            animation: none !important;
+            opacity: 0 !important;
+          }
+          .wlx-dot {
+            transition: none !important;
+          }
+          .wlx-tile-drift {
+            animation: none !important;
+            translate: none !important;
+          }
+          .wlx-quotemark {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+          }
+          .wlx-quote-wipe {
+            clip-path: none !important;
+            transition: none !important;
           }
         }
       `}</style>
