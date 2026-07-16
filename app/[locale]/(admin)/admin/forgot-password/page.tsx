@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
           {/* Branding */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 mb-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-wlx-ink text-white text-2xl">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-wlx-ink text-wlx-paper text-2xl">
                 ✦
               </div>
               <span className="text-2xl font-bold text-wlx-ink">WoWlix</span>
@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder-zinc-400 focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
+                  className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder:text-wlx-stone focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
                   placeholder={labels.emailPlaceholder}
                   required
                   autoComplete="email"
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full rounded-xl bg-wlx-ink py-3 text-white font-semibold hover:bg-wlx-ink/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full min-h-[44px] rounded-wlx-soft bg-wlx-ink py-3 text-[12px] uppercase tracking-[0.18em] text-wlx-paper hover:bg-wlx-ink/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? labels.submitting : labels.submit}
               </button>
