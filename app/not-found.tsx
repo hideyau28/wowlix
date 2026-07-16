@@ -1,36 +1,19 @@
 import Link from "next/link";
+import ErrorScreen, { errorActionClass } from "@/components/ErrorScreen";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
-        {/* WoWlix branding */}
-        <div className="mb-6">
-          <span className="text-2xl font-bold tracking-tight text-white">
-            Wo<span className="text-orange-500">W</span>lix
-          </span>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-8xl font-extrabold text-orange-500 mb-4">404</h1>
-          <h2 className="text-2xl font-semibold text-white mb-2">
-            搵唔到呢個頁面
-          </h2>
-          <p className="text-zinc-400">
-            你搵緊嘅頁面唔存在或者已經搬咗。
-          </p>
-          <p className="text-zinc-500 text-sm mt-1">
-            The page you&apos;re looking for doesn&apos;t exist or has been moved.
-          </p>
-        </div>
-
-        <Link
-          href="/"
-          className="inline-block rounded-2xl bg-orange-500 px-8 py-4 text-white font-semibold hover:bg-orange-600 transition-colors"
-        >
+    <ErrorScreen
+      code="404"
+      title="搵唔到呢個頁面"
+      action={
+        <Link href="/" className={errorActionClass}>
           返回首頁 / Back to Home
         </Link>
-      </div>
-    </div>
+      }
+    >
+      <p>你搵緊嘅頁面唔存在或者已經搬咗。</p>
+      <p>The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>
+    </ErrorScreen>
   );
 }
