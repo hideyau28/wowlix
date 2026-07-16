@@ -224,7 +224,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
                       </ul>
                       <Link
                         href={href}
-                        className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
+                        className="group mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-center text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:bg-wlx-paper/90 hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
                         style={{ transitionTimingFunction: "var(--wlx-ease)" }}
                       >
                         {cta}
@@ -305,7 +305,7 @@ export default function StudioPricingPage({ locale = "zh-HK" }: Props) {
           </p>
           <Link
             href={`/${locale}/start`}
-            className="group mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:brightness-[1.06] hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
+            className="group mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-wlx-paper px-8 py-4 text-[12px] uppercase tracking-[0.22em] text-wlx-ink transition-all duration-300 hover:bg-wlx-paper/90 hover:shadow-[0_18px_44px_-16px_rgba(244,241,234,0.25)] active:scale-[0.98]"
             style={{ transitionTimingFunction: "var(--wlx-ease)" }}
           >
             {t.ctaBtn}
