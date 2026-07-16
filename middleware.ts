@@ -193,9 +193,14 @@ export function middleware(request: NextRequest) {
 
   // --- Admin auth guard (page routes only) ---
   const isAdminRoute = !isApiRoute && pathname.match(/^\/[^/]+\/admin(?:\/|$)/);
-  const isLoginRoute = pathname.match(/^\/[^/]+\/admin\/login/);
+  // login / forgot-password / reset-password 係 public auth 頁 —
+  // 唔可以俾 auth guard 彈返 login（否則未登入嘅人永遠入唔到 forgot/reset）
+  const isAuthRoute = pathname.match(
+    /^\/[^/]+\/admin\/(login|forgot-password|reset-password)(?:\/|$)/,
+  );
+  const isLoginRoute = pathname.match(/^\/[^/]+\/admin\/login(?:\/|$)/);
 
-  if (isAdminRoute && !isLoginRoute) {
+  if (isAdminRoute && !isAuthRoute) {
     const sessionCookie = request.cookies.get("admin_session");
     const tenantAdminCookie = request.cookies.get("tenant-admin-token");
 
@@ -209,7 +214,14 @@ export function middleware(request: NextRequest) {
   }
 
   // --- Auto-redirect from login if already authenticated via JWT ---
-  if (isLoginRoute) {
+  // 只做 login：middleware 冇得驗 JWT（edge），淨係查「cookie 存在」。
+  // forgot-password 嘅彈走喺 page 層 layout 用 verifyToken 真驗先彈 —
+  // 揸住 stale/爛 cookie 嘅人正正最需要嗰頁，唔可以喺度憑存在就彈走。
+  // reset-password 永遠唔彈 — email link flow，登入緊都要照行到尾。
+  // !isApiRoute：API route 自己管 auth（isApiRoute 嘅約定）—— 冇呢個 gate，
+  // regex 個 [^/]+ 會食埋 "api"，帶 cookie POST /api/admin/login 就會被
+  // 307 去唔存在嘅 /api/admin（pre-existing bug，順手修埋）。
+  if (!isApiRoute && isLoginRoute) {
     const tenantAdminCookie = request.cookies.get("tenant-admin-token");
     if (tenantAdminCookie?.value) {
       const localeMatch = pathname.match(/^\/([^/]+)/);
