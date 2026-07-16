@@ -30,7 +30,9 @@
 
 ### 跟住落嚟（順序）
 
-- **Phase E：admin login/forgot/reset 三頁 + 後台輕手**（product register：150–250ms，冇 choreography）。
+- **Phase E 剩底：後台輕手**（product register flow：150–250ms micro-transition，冇 choreography）—— login/forgot/reset 三頁已完成（`12f79ea`，DS 對齊：CTA 統一 admin 款、zinc 清零、no-op hover 修）。
+- **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
+- 小發現（未修）：登入咗之後行 /admin/forgot-password 會喺 admin chrome（頂 bar + 底 tab）入面 render 個 forgot 卡 —— pre-existing，觀感細奇怪，Phase E 後台輕手嗰陣順手睇。
 - **Phase D**：法律/內容頁（about/terms/privacy/contact/faq）—— **必須 `isPlatformMode()` gate**（同真店共用 route，直接漆會滲入 Bull Kicks）；404/error 品牌化；footer 零死鏈。
 - **Phase E**：admin login/forgot/reset 三頁 + 後台輕手（product register：150–250ms，冇 choreography）。
 - **Phase F**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
