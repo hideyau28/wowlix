@@ -94,7 +94,7 @@ jobs:
       # migrate deploy 條 chain 喺空 DB 會爆（pre-existing，屬 P0 線嘅
       # prod migration 項目）— e2e 用 db push 直接影 schema
       - name: Push database schema
-        run: npx prisma db push --skip-generate
+        run: npx prisma db push
 
       - name: Build
         run: npm run build
