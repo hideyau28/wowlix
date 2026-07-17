@@ -14,6 +14,27 @@ const PAGES: Array<{ name: string; url: string }> = [
   { name: "admin login", url: `${APP}/en/admin/login` },
 ];
 
+// 深色 OS 訪客上 platform 法律頁：MarketingLegalShell 強制淺色皮，內容入面
+// 嘅 dark:text-zinc-* utility 曾經令答案文字 ≈2.2:1（review 抓到）。展開所有
+// FAQ 之後喺 dark 配色下跑 axe。
+test("platform FAQ stays readable for dark-OS visitors", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto(`${PLATFORM}/en/faq`);
+  for (const summary of await page.locator("summary").all()) {
+    await summary.click();
+  }
+  const results = await new AxeBuilder({ page })
+    .include(".wlx-legal-content")
+    .withRules(["color-contrast"])
+    .analyze();
+  expect(
+    results.violations,
+    results.violations
+      .map((v) => v.nodes.map((n) => n.html.slice(0, 160)).join("\n"))
+      .join("\n"),
+  ).toEqual([]);
+});
+
 for (const p of PAGES) {
   test(`${p.name} has no serious/critical a11y violations`, async ({
     page,
