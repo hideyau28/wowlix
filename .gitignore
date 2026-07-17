@@ -59,3 +59,8 @@ TASKS/CLAUDE/
 TASKS/TASK_ADMIN_AUTH.md
 generate_supplement.sh
 .env*.local
+
+# Playwright e2e
+e2e/.artifacts/
+playwright-report/
+test-results/
