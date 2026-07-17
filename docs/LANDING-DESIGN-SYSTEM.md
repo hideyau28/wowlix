@@ -61,7 +61,7 @@
 "--wlx-paper":     "#F4F1EA",  // 暖米白底
 "--wlx-cream":     "#EBE5DB",  // 交替 band
 "--wlx-ink":       "#1A1815",  // 近黑（文字 / 深色面）
-"--wlx-stone":     "#6E6A60",  // 次要文字
+"--wlx-stone":     "#686459",  // 次要文字（2026-07-17 由 #6E6A60 微調深：舊值 cream 上 4.3:1 唔過 WCAG AA，e2e a11y gate 擋；新值 4.71:1，肉眼無感）
 "--wlx-mist":      "#DCD6CA",  // 邊框 / hairline
 "--wlx-accent":    "#1A1815",  // ⚠️ accent == ink（單色）
 "--wlx-accent-fg": "#F4F1EA",

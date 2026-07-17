@@ -128,6 +128,9 @@ export function middleware(request: NextRequest) {
   const pathSlug = resolveSlugFromPath(pathname);
   const localePathSlug = resolveSlugFromLocalePath(pathname);
 
+  // Root layout 靠呢個 header set <html lang> — 唔好寫死 zh-HK
+  const pathLocale = pathname.match(/^\/(en|zh-HK)(?:\/|$)/)?.[1] || "zh-HK";
+
   if (pathSlug) {
     // Bare path /{slug}/... → rewrite to /zh-HK/{slug}/...
     const restPath = pathname.substring(pathSlug.length + 1);
@@ -139,6 +142,7 @@ export function middleware(request: NextRequest) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-tenant-slug", tenantSlug);
     requestHeaders.set("x-tenant-path-slug", pathSlug);
+    requestHeaders.set("x-locale", "zh-HK");
     if (isPlatform) {
       requestHeaders.set("x-is-platform", "true");
     }
@@ -234,6 +238,7 @@ export function middleware(request: NextRequest) {
   // --- Forward tenant slug via request header ---
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-slug", tenantSlug);
+  requestHeaders.set("x-locale", pathLocale);
   if (isPlatform && !tenantOverridden) {
     requestHeaders.set("x-is-platform", "true");
   }
