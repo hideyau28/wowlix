@@ -37,3 +37,28 @@ setup("register shared e2e tenant", async ({ request }) => {
   tenant.tenantId = json.data.tenantId;
   saveSharedTenant(tenant);
 });
+
+/**
+ * Seed 一個 default tenant，令 platform-mode 頁嘅 branding fetch 唔會 500。
+ * 平台面（wowlix.localhost）middleware 會 set x-tenant-slug = DEFAULT_TENANT_SLUG
+ * （fallback "maysshop"），branding / getTenantId 都 resolve 佢 —— 空 CI DB
+ * 冇呢間店，成個 [locale] layout 就會喺 console 撇 500，console guard 抓住。
+ * 本地 dev DB 已經有 maysshop，register 回 409，容忍即可。
+ */
+setup("seed default tenant so branding resolves", async ({ request }) => {
+  const slug = process.env.DEFAULT_TENANT_SLUG || "maysshop";
+  const res = await request.post(`${APP}/api/tenant/register`, {
+    data: {
+      name: "E2E Default Store",
+      slug,
+      email: `${slug}-default@example.com`,
+      password: "E2e-passw0rd-1234",
+      whatsapp: "+85290000000",
+      paymentMethods: ["fps"],
+      fpsId: "90000000",
+      templateId: "matcha",
+    },
+  });
+  // 200 = 新建；409 = 已存在（本地 / 重跑）——兩者都 OK
+  expect([200, 409]).toContain(res.status());
+});

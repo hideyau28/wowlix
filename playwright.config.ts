@@ -44,6 +44,11 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_API_URL: BASE,
       NEXT_PUBLIC_BASE_URL: BASE,
+      // 平台面 branding fetch resolve 呢個 slug；setup project 會 seed 佢。
+      // 本地無 set 就 fallback maysshop（dev DB 已有）。
+      ...(process.env.DEFAULT_TENANT_SLUG
+        ? { DEFAULT_TENANT_SLUG: process.env.DEFAULT_TENANT_SLUG }
+        : {}),
     },
   },
 });

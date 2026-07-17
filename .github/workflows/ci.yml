@@ -76,6 +76,9 @@ jobs:
       # e2e server 一定要自己打自己（見 playwright.config.ts 註解）
       NEXT_PUBLIC_API_URL: http://localhost:3100
       NEXT_PUBLIC_BASE_URL: http://localhost:3100
+      # 空 CI DB 冇 maysshop —— 指 default tenant 去 e2e setup 會 seed 嘅 slug，
+      # 否則平台面 branding fetch 500（見 e2e/setup/tenant.setup.ts）
+      DEFAULT_TENANT_SLUG: e2e-default
 
     steps:
       - uses: actions/checkout@v4
