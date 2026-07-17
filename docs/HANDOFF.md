@@ -23,7 +23,14 @@
    - **Middleware auth route 修正**：發現真 bug —— auth guard 只放行 `/admin/login`，**未登入嘅人去 forgot/reset-password 會被彈返 login，成條忘記密碼 flow 根本行唔通**（E-1 驗收見到卡係因為當時登入咗，亦因此見到「admin chrome 包住 forgot 卡」嗰個怪相 —— 兩個問題同源）。修法（經 review workflow 兩輪打磨）：`isAuthRoute`（login|forgot-password|reset-password）做 guard 放行；middleware 嘅「登入咗彈 dashboard」**只做 login** 並加 `!isApiRoute`（唔加嘅話 regex 個 `[^/]+` 會食埋 `api`，帶 cookie POST `/api/admin/login` 被 307 去唔存在嘅 `/api/admin` —— pre-existing bug 順手修埋）；forgot-password 嘅彈走搬咗去 page 層 `forgot-password/layout.tsx` 用 `verifyToken()` **真驗 JWT 先彈**（middleware 只查 cookie 存在 —— 揸 stale/爛 cookie 嘅人正正最需要恢復頁，唔可以憑存在就彈走）；reset-password 永遠唔彈（email link flow）。實測：未登入 forgot/reset 都入到、有效 token 行 forgot → dashboard、爛 cookie 行 forgot 照入到、帶 cookie POST forgot API 直達 handler。
    - **後台輕手（product register flow）**：150–250ms micro-transition，冇 choreography。Product modal + badge modal 入場（backdrop fade 200ms + panel slide-in-from-bottom-2 200ms ease-out）、badge dropdown 150ms、error banner slide-in、bulk bar fade、register flow 主要互動元素補 `transition-colors`（150ms；頁內其他角落——pagination/filter dropdown 等——未掃，屬後續 polish）、touched 範圍內嘅 no-op hover（stone→stone）修做 `hover:text-wlx-ink`、每個 animate-in 都有 `motion-reduce:animate-none`。全部用現成 `tw-animate-css` utility，零新 CSS。
    - 實測：開 disposable 測試店 `phase-e-motion` 行成條 create flow（modal 開 → 揀類型 → 入名/價 → Create → 張枱即時出「測試蛋糕 Phase E」）；computed style 證實 backdrop/panel/dropdown 動畫真係行緊（`enter` @ 0.2s/0.15s）；ci:build 綠。
-6. **Phase C 完成收貨**（`73d3c41`，2026-07-17 全 flow 驗埋尾）：/start 六步 wizard 上 Ink & Bone 皮（layout 級 subtree override + double-bezel 卡 + pill CTA + WoWlix wordmark 錨）；殺咗 step 1 Pro 深色卡 accent==ink 蟲（✓/radio/ring 黑撞黑）；裝飾色全轉單色（error 紅、Google logo、template 預覽色保留）。實測：Yau set 咗 `TENANT_JWT_SECRET` 之後真開咗間測試店 `phase-c-tea`（register 200 → step 6 完成頁 → 自動登入 admin 3/6 checklist → 店舖真 render），中英 + 375px 無橫捲，租戶店 face 全 unloaded、token 原色（新店自己彩色主題，證明零 mono 滲入），ci:build 綠。DESIGN.md 已記入 /start 做第三個 surface。
+6. **Phase F 完成**（2026-07-17）—— **成個 programme 最後一個 phase**：
+   - **六條 flow Playwright e2e 落 CI**（`e2e/`，27 條 spec 全綠）：訪客開店全程（/start 六步 wizard 行到 admin + storefront render）、登入（錯/啱/已登入彈走）、忘記密碼（含**爛 cookie 唔准鎖死恢復頁** —— Phase E 修正嘅 regression 測試）、法律（platform 有皮 / 租戶無皮）、繁↔EN（`<html lang>` + 切換）、404 三層 + **深色 OS FAQ 可讀性**。
+   - **三重 gate**：console error 零容忍 fixture（all specs auto，allowlist 只留公開頁 auth probe 嘅 401/404）、axe a11y serious/critical 零容忍（landing/pricing/start/login + 深色 FAQ）、Lighthouse a11y+SEO ≥0.9 硬 gate（`lighthouserc.cjs`）。實測 Lighthouse landing 92/96/100/92、pricing 97/98/100/100。
+   - **CI 新 `e2e` job**：postgres service + `prisma db push`（migrate chain 空 DB 會爆 = P0 線問題）+ build + playwright + lhci。
+   - **e2e 揭到 + 修咗嘅真 bug**：① `<html lang>` 寫死 zh-HK（`/en` 頁 screen reader 用中文聲讀英文）→ middleware `x-locale` header + `HtmlLangSync`；② `--wlx-stone` #6E6A60 喺 cream 上 4.3:1 唔過 WCAG AA → #686459（4.71:1，肉眼無感）；③ 空 DB `/api/tenant/branding` 500（default tenant 唔存在）→ e2e setup seed default tenant + CI `DEFAULT_TENANT_SLUG`；④ platform 法律頁深色 OS 文字 2.2:1（`MarketingLegalShell` override list 冇 `div` + dark: utility specificity 高）→ `!important` + 拍平深色底。
+   - **成條 branch review**（6-bucket 多角度 + adversarial verify）：唯一 confirmed = 上面 ④，已修。其餘 dismiss（pre-existing on main 或非本 branch 引入）—— 見「等 Yau / 安全跟進」。
+   - **e2e 慣例**：測試店一律 `e2e-*` 前綴（同 `phase-*` 一齊入待清名單）；e2e server 必須自己打自己（`NEXT_PUBLIC_API_URL/BASE_URL=localhost:3100`，否則 admin SSR 死 —— 即上面 Phase E 記低嗰個 dev env 坑，已喺 `playwright.config.ts` webServer.env 定死）。
+7. **Phase C 完成收貨**（`73d3c41`，2026-07-17 全 flow 驗埋尾）：/start 六步 wizard 上 Ink & Bone 皮（layout 級 subtree override + double-bezel 卡 + pill CTA + WoWlix wordmark 錨）；殺咗 step 1 Pro 深色卡 accent==ink 蟲（✓/radio/ring 黑撞黑）；裝飾色全轉單色（error 紅、Google logo、template 預覽色保留）。實測：Yau set 咗 `TENANT_JWT_SECRET` 之後真開咗間測試店 `phase-c-tea`（register 200 → step 6 完成頁 → 自動登入 admin 3/6 checklist → 店舖真 render），中英 + 375px 無橫捲，租戶店 face 全 unloaded、token 原色（新店自己彩色主題，證明零 mono 滲入），ci:build 綠。DESIGN.md 已記入 /start 做第三個 surface。
 
 ### Motion loop 點重跑（分數 8.2，目標 10）
 
@@ -35,8 +42,23 @@
 
 ### 跟住落嚟（順序）
 
-- **Phase F（剩低唯一一個 phase）**：六條 flow（訪客開店全程、登入、忘記密碼、法律、繁↔EN、404）寫成 Playwright e2e 落 CI；code-review 成條 branch；Lighthouse/console/a11y gate；Yau 親自行一次收貨。
-- ⚠️ **Phase F 會撞嘅 dev env 坑（2026-07-17 發現）**：admin 頁嘅 server action（例如 products 頁 `fetchProducts`）經 `getApiBaseUrl()` 打 API，而 dev `.env` 個 `NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_BASE_URL` 指住遠端 —— dev JWT 簽名同遠端唔夾 → admin SSR 頁喺 dev 一律 `ADMIN_AUTH_MISSING`（client-side fetch 就正常，所以 dashboard 冇事、products 頁死）。臨時解法（已用過、已還原）：`.claude/launch.json` 加一個 config，用 `env` 包住 `npm run dev` 覆寫兩個 var 做 `http://localhost:3012`（shell env 蓋 .env）。Playwright e2e 跑 admin 頁一定要處理呢樣嘢，唔係 CI/local 會冤枉紅。
+**四個 phase（C/D/E/F）全部完成。programme 嘅 code 部分收晒尾，剩返係 Yau 決定 + 安全跟進。**
+
+- **等 Yau 收貨 + merge #345**（branch 已好大，53 commit；考慮分段 merge 定一次過）。
+- ⚠️ **CI 個 `build` job 仍然紅** —— pre-existing prisma migrate `relation "Tenant" does not exist`，同 landing/Phase F 無關（P0 線嘅 prod migration 項目）。新加嘅 `e2e` job 用 `db push` 繞過，應該綠。**唔好因為 build 紅就以為 Phase F 壞咗** —— 睇 job 分開 conclusion。
+- **安全跟進（Phase F review 抓到嘅 pre-existing 問題，已開 task chip / 記喺下面「安全跟進」，唔屬本 branch scope）**。
+- dev env 坑（admin SSR server action 打遠端 API → `ADMIN_AUTH_MISSING`）已喺 `playwright.config.ts` webServer.env 定死解法（`NEXT_PUBLIC_*=localhost:3100`）。手動跑 admin 頁 dev 就要自己覆寫 env。
+
+### 🔐 安全跟進（Phase F review 揭出，pre-existing on main，非本 branch 引入）
+
+1. **register auto-login 簽平台 super-admin session cookie**（`app/api/tenant/register/route.ts` ~234）—— 公開開店成功後 `createSession()` 簽 `{role:"admin"}`（ADMIN_SECRET 簽名）set 做 `admin_session`，同平台 super-admin 同一款 token。adversarial verify 確認係真 weakness 但 pre-existing。已開 task chip。要查邊啲 guard 信任呢個 cookie（會唔會跨租戶提權）。P0 安全線。
+2. **payme / alipay QR URL 冇 validation** —— wizard/register 收 `paymeQrUrl`/`alipayQrUrl` 落 DB 再喺公開頁 render 做 `<img src>`。review verify 未跑完（credit 斷）；未確認有冇 sanitize。低-中危（img src 唔行 script，但可做 tracking / SSRF-ish）。值得單獨查。
+3. **inbound `x-is-platform` / `x-tenant-slug` header 冇 strip** —— middleware `new Headers(request.headers)` copy 晒 inbound，只喺特定 path 先覆寫。client 直接砌呢啲 header 可能扮到 platform mode。pre-existing。要 middleware 開頭一律 delete 呢幾個 internal header 先。
+
+### 📝 已審視但有意識接受（唔使改，記錄在案）
+
+- **base `--font-wlx-sans` 加咗 CJK fallback stack**（`app/globals.css` `@theme`）：影響所有 surface 包括租戶店。但 HK 目標裝置（iOS/macOS）PingFang 本來就係 sans CJK fallback → 視覺一致；其他平台反而更正確（明確 Traditional JhengHei/Noto TC）。DESIGN.md §3 有記，屬 landing redesign 有意識決定，唔係 regression。**如果 Yau 要租戶店 byte-identical**：將 CJK append 由 base `--font-wlx-sans` 搬去 marketing scope（`marketingBrandVars`）即可。
+- **dead-store 404 CTA 由 `/en/start` 改 `/zh-HK/start`**：呢頁全中文文案 + 平台 canonical default 就係 zh-HK（`/start` middleware 都 redirect 去 `/zh-HK/start`），一致，唔係 regression。
 
 ### ⚠️ Phase C 實測發現（2026-07-16/17，行真 flow 揭出嚟）
 
