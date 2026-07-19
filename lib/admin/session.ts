@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { getTokenFromRequest, verifyToken } from "@/lib/auth/jwt";
 
 const COOKIE_NAME = "admin_session";
 const EXPIRY = "24h";
@@ -61,4 +62,25 @@ export function validateAdminSecret(secret: string): boolean {
   const adminSecret = process.env.ADMIN_SECRET;
   if (!adminSecret) return false;
   return secret === adminSecret;
+}
+
+/**
+ * 一個 request 係咪合法 admin，接受三種憑證：
+ *  1) x-admin-secret header（外部整合 / 平台 super-admin 自動化）
+ *  2) tenant-admin-token JWT（租戶 admin —— 開店 / 登入 / select-tenant 攞到）
+ *  3) admin_session cookie（平台 super-admin，經 ADMIN_SECRET 登入）
+ *
+ * 點解要有佢：租戶 admin 唔再攞平台 god-mode `admin_session`（安全修正：
+ * 呢隻同 super-admin 同款，公開開店就攞到 = 跨租戶提權）。凡係本來淨認
+ * `getSessionFromCookie()` 嘅租戶功能（e.g. homepage CMS）都要改用呢個，
+ * 否則租戶 admin 401。tenant scope 仍然由各 route 嘅 getTenantId(req)（食 JWT）決定。
+ */
+export async function isAdminAuthenticated(req: Request): Promise<boolean> {
+  const headerSecret = req.headers.get("x-admin-secret");
+  if (headerSecret && validateAdminSecret(headerSecret)) return true;
+
+  const token = getTokenFromRequest(req);
+  if (token && verifyToken(token)) return true;
+
+  return getSessionFromCookie();
 }

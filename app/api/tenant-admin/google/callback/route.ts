@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession } from "@/lib/admin/session";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth/jwt";
 
@@ -115,8 +114,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (existingAdmin) {
-        // Existing account — create session and redirect to admin
-        const sessionToken = await createSession();
+        // Existing account — 只簽租戶級 tenant-admin-token，唔簽平台 admin_session
         const adminToken = signToken({
           tenantId: existingAdmin.tenantId,
           adminId: existingAdmin.id,
@@ -124,13 +122,6 @@ export async function GET(request: NextRequest) {
           role: existingAdmin.role,
         });
         const response = NextResponse.redirect(`${baseUrl}/${locale}/admin`);
-        response.cookies.set("admin_session", sessionToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24,
-          path: "/",
-        });
         response.cookies.set("tenant-admin-token", adminToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
@@ -168,8 +159,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${errorRedirect}?error=no_account`);
     }
 
-    // Create both session tokens: admin_session (middleware guard) + tenant-admin-token (tenant context)
-    const sessionToken = await createSession();
+    // 只簽租戶級 tenant-admin-token（tenant context）—— 唔簽平台 god-mode admin_session
     const adminToken = signToken({
       tenantId: existingAdmin.tenantId,
       adminId: existingAdmin.id,
@@ -179,13 +169,6 @@ export async function GET(request: NextRequest) {
 
     const redirectUrl = `${baseUrl}/${locale}/admin/products`;
     const response = NextResponse.redirect(redirectUrl);
-    response.cookies.set("admin_session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24,
-      path: "/",
-    });
     response.cookies.set("tenant-admin-token", adminToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

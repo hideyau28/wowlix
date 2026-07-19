@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession } from "@/lib/admin/session";
 import { prisma } from "@/lib/prisma";
 import { exchangeCodeForToken, getFacebookUser } from "@/lib/auth/facebook";
 import { signToken } from "@/lib/auth/jwt";
@@ -107,12 +106,10 @@ export async function GET(request: NextRequest) {
       return redirectAndClearState(`${errorRedirect}?error=unauthorized`);
     }
 
-    // Two cookies are required for an authenticated admin session:
-    //   admin_session     — middleware guard (short-lived, 24h)
-    //   tenant-admin-token — JWT carrying tenantId/adminId/email/role,
-    //                        consumed by API routes for tenant context (7d)
-    // Missing tenant-admin-token caused every post-login API call to 401.
-    const sessionToken = await createSession();
+    // 只簽租戶級 tenant-admin-token —— JWT 帶 tenantId/adminId/email/role，
+    // API route 靠佢做 tenant context（7d）。唔再簽平台 god-mode admin_session
+    // （同 super-admin 同款，會經 select-tenant 提權去任何租戶）；middleware
+    // guard 收 tenant-admin-token，admin layout 亦用佢判 mode，所以照樣入到後台。
     const adminToken = signToken({
       tenantId: admin.tenantId,
       adminId: admin.id,
@@ -120,16 +117,9 @@ export async function GET(request: NextRequest) {
       role: admin.role,
     });
 
-    // Set cookies directly on the redirect response (same pattern as Google OAuth)
+    // Set cookie directly on the redirect response (same pattern as Google OAuth)
     const redirectUrl = `${baseUrl}/${locale}/admin/products`;
     const response = redirectAndClearState(redirectUrl);
-    response.cookies.set("admin_session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // "lax" required for OAuth flows (navigation from Facebook)
-      maxAge: 60 * 60 * 24,
-      path: "/",
-    });
     response.cookies.set("tenant-admin-token", adminToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

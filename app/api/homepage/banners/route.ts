@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
-import { getSessionFromCookie } from "@/lib/admin/session";
+import { isAdminAuthenticated } from "@/lib/admin/session";
 import { prisma } from "@/lib/prisma";
 import { getTenantId } from "@/lib/tenant";
 
@@ -20,11 +20,7 @@ export const GET = withApi(async (req) => {
 
 // POST /api/homepage/banners - create a new banner (admin only)
 export const POST = withApi(async (req) => {
-  const headerSecret = req.headers.get("x-admin-secret");
-  const isAuthenticated = headerSecret
-    ? headerSecret === process.env.ADMIN_SECRET
-    : await getSessionFromCookie();
-  if (!isAuthenticated) {
+  if (!(await isAdminAuthenticated(req))) {
     throw new ApiError(401, "UNAUTHORIZED", "Unauthorized");
   }
 
@@ -62,11 +58,7 @@ export const POST = withApi(async (req) => {
 
 // PATCH /api/homepage/banners - reorder multiple banners
 export const PATCH = withApi(async (req) => {
-  const headerSecret = req.headers.get("x-admin-secret");
-  const isAuthenticated = headerSecret
-    ? headerSecret === process.env.ADMIN_SECRET
-    : await getSessionFromCookie();
-  if (!isAuthenticated) {
+  if (!(await isAdminAuthenticated(req))) {
     throw new ApiError(401, "UNAUTHORIZED", "Unauthorized");
   }
 
