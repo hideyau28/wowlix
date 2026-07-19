@@ -137,6 +137,11 @@ export function middleware(request: NextRequest) {
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `/zh-HK${pathname}`;
     const requestHeaders = new Headers(request.headers);
+    // 剷走 client 可以偽造嘅 internal header，之後先 set 可信值 —
+    // 否則 curl -H 'x-is-platform: true' 可以扮平台 mode。
+    requestHeaders.delete("x-is-platform");
+    requestHeaders.delete("x-tenant-slug");
+    requestHeaders.delete("x-tenant-path-slug");
     requestHeaders.set("x-tenant-slug", tenantSlug);
     requestHeaders.set("x-tenant-path-slug", pathSlug);
     if (isPlatform) {
@@ -221,6 +226,10 @@ export function middleware(request: NextRequest) {
 
   // --- Forward tenant slug via request header ---
   const requestHeaders = new Headers(request.headers);
+  // 剷走 client 可以偽造嘅 internal header，之後先 set 可信值。
+  requestHeaders.delete("x-is-platform");
+  requestHeaders.delete("x-tenant-slug");
+  requestHeaders.delete("x-tenant-path-slug");
   requestHeaders.set("x-tenant-slug", tenantSlug);
   if (isPlatform && !tenantOverridden) {
     requestHeaders.set("x-is-platform", "true");
