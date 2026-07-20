@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createSession } from "@/lib/admin/session";
 import { signToken } from "@/lib/auth/jwt";
 import { withApi, ok, ApiError } from "@/lib/api/route-helpers";
 import { resolveTemplateId } from "@/lib/cover-templates";
@@ -20,6 +19,18 @@ const RESERVED_SLUGS = new Set([
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
 const WHATSAPP_REGEX = /^\+?\d{6,15}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// QR 連結只准 https（合法上傳 = Cloudinary secure_url）。register 係公開端點，
+// 唔擋就會將任意 URL 存落 DB 再喺公開 checkout render 做 <img src>（tracking pixel /
+// 誤導圖）。淨係 <img src> sink，唔會 XSS，屬 defense-in-depth。
+const isHttpsUrl = (v: unknown): boolean => {
+  if (typeof v !== "string" || v.length === 0 || v.length > 2048) return false;
+  try {
+    return new URL(v).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 
 export const POST = withApi(async (req: Request) => {
   try {
@@ -64,6 +75,14 @@ export const POST = withApi(async (req: Request) => {
     if (!password || typeof password !== "string" || password.length < 8) {
       throw new ApiError(400, "BAD_REQUEST", "密碼最少 8 個字");
     }
+  }
+
+  // QR 連結 https 驗證（喺 tenant.create 之前，先 fail 唔燒 slug）
+  if (paymeQrUrl != null && paymeQrUrl !== "" && !isHttpsUrl(paymeQrUrl)) {
+    throw new ApiError(400, "BAD_REQUEST", "PayMe QR 連結格式唔啱（需要 https）");
+  }
+  if (alipayQrUrl != null && alipayQrUrl !== "" && !isHttpsUrl(alipayQrUrl)) {
+    throw new ApiError(400, "BAD_REQUEST", "AlipayHK QR 連結格式唔啱（需要 https）");
   }
 
   const cleanName = name.trim();
@@ -215,16 +234,11 @@ export const POST = withApi(async (req: Request) => {
       },
     }).catch(() => {}); // 非致命
 
-    // --- Auto-login: set admin_session cookie (middleware guard) ---
-    const sessionToken = await createSession();
+    // --- Auto-login: 只簽租戶級 tenant-admin-token（下面）---
+    // 唔再簽平台 god-mode `admin_session`：呢隻同 super-admin 登入攞嘅
+    // 同款 token，而 /api/admin/select-tenant 認住佢就會簽任何租戶嘅 super
+    // token（冇 ownership check）—— 公開開店攞到 = 跨租戶提權。
     const cookieStore = await cookies();
-    cookieStore.set("admin_session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24, // 24h
-      path: "/",
-    });
 
     // --- Set tenant-admin-token cookie (API auth) ---
     const adminToken = signToken({
@@ -268,8 +282,15 @@ export const POST = withApi(async (req: Request) => {
     throw err;
   }
   } catch (error: unknown) {
-    console.error(error);
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // ApiError 係我哋自己噏嘅 4xx（validation / conflict）—— 交返 withApi
+    // 正確 map status（400/409），唔好喺度食晒變 500。
+    if (error instanceof ApiError) throw error;
+    // 其餘真·unexpected error：log 出嚟，但唔好將 error.message 原文
+    // 漏返俾 client（可能含 DB / 內部細節 —— 資訊洩漏）。
+    console.error("[register] unexpected error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 });
