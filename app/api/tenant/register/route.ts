@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createSession } from "@/lib/admin/session";
 import { signToken } from "@/lib/auth/jwt";
 import { withApi, ok, ApiError } from "@/lib/api/route-helpers";
 import { resolveTemplateId } from "@/lib/cover-templates";
@@ -19,6 +18,18 @@ const RESERVED_SLUGS = new Set([
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
 const WHATSAPP_REGEX = /^\+?\d{6,15}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// QR 連結只准 https（合法上傳 = Cloudinary secure_url）。register 係公開端點，
+// 唔擋就會將任意 URL 存落 DB 再喺公開 checkout render 做 <img src>（tracking pixel /
+// 誤導圖）。淨係 <img src> sink，唔會 XSS，屬 defense-in-depth（PR #346）。
+const isHttpsUrl = (v: unknown): boolean => {
+  if (typeof v !== "string" || v.length === 0 || v.length > 2048) return false;
+  try {
+    return new URL(v).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 
 export const POST = withApi(async (req: Request) => {
   try {
@@ -70,6 +81,14 @@ export const POST = withApi(async (req: Request) => {
   if (!process.env.TENANT_JWT_SECRET || !process.env.ADMIN_SECRET) {
     console.error("[tenant/register] missing TENANT_JWT_SECRET / ADMIN_SECRET env");
     throw new ApiError(500, "INTERNAL", "伺服器設定有誤，請稍後再試");
+  }
+
+  // QR 連結 https 驗證（喺 tenant.create 之前，先 fail 唔燒 slug）（PR #346）
+  if (paymeQrUrl != null && paymeQrUrl !== "" && !isHttpsUrl(paymeQrUrl)) {
+    throw new ApiError(400, "BAD_REQUEST", "PayMe QR 連結格式唔啱（需要 https）");
+  }
+  if (alipayQrUrl != null && alipayQrUrl !== "" && !isHttpsUrl(alipayQrUrl)) {
+    throw new ApiError(400, "BAD_REQUEST", "AlipayHK QR 連結格式唔啱（需要 https）");
   }
 
   const cleanName = name.trim();
@@ -231,15 +250,9 @@ export const POST = withApi(async (req: Request) => {
     // 冇自動登入，用戶用返 email+password / Google 登入照入到後台。
     let autoLogin = true;
     try {
-      const sessionToken = await createSession();
+      // 只簽租戶級 tenant-admin-token —— 唔簽平台 god-mode admin_session
+      // （同 super-admin 同款，會經 select-tenant 提權去任何租戶；PR #346）。
       const cookieStore = await cookies();
-      cookieStore.set("admin_session", sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 60 * 60 * 24, // 24h
-        path: "/",
-      });
 
       const adminToken = signToken({
         tenantId: tenant.id,

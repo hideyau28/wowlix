@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { createSession } from "@/lib/admin/session";
 import { signToken } from "@/lib/auth/jwt";
 import { withApi, ok, ApiError } from "@/lib/api/route-helpers";
 import { cookies } from "next/headers";
@@ -47,16 +46,9 @@ export const POST = withApi(async (req: Request) => {
     throw new ApiError(401, "UNAUTHORIZED", "密碼錯誤");
   }
 
-  // Set admin_session cookie (middleware guard)
-  const sessionToken = await createSession();
+  // 只簽租戶級 tenant-admin-token —— 唔再簽平台 god-mode admin_session
+  // （同 super-admin 同款，會經 select-tenant 提權去任何租戶）。
   const cookieStore = await cookies();
-  cookieStore.set("admin_session", sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 24, // 24h
-    path: "/",
-  });
 
   // Set tenant-admin-token cookie (API auth)
   const adminToken = signToken({

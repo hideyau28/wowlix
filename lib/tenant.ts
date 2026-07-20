@@ -107,11 +107,13 @@ export async function resolveTenant(req?: Request): Promise<TenantContext> {
 
 export async function getTenantId(req?: Request): Promise<string> {
   if (req) {
-    // Fast path: if middleware already resolved the tenant ID
-    const cachedId = req.headers.get("x-tenant-id");
-    if (cachedId) {
-      return cachedId;
-    }
+    // ⚠️ 唔准信 inbound x-tenant-id header —— middleware 從來冇 set 佢
+    // （set 嘅係 x-tenant-slug），所以呢個 header 唯一來源就係 client。
+    // 以前喺度做「fast path」= 任何人 `curl -H 'x-tenant-id: <受害店>'` 就
+    // 攞到人哋張單 / 客人 PII（跨租戶 IDOR，~40 條 route 中招）。tenant 一律
+    // 由 JWT（下面）或 x-tenant-slug（resolveTenant）決定。
+    // 外部 x-admin-secret caller 用 x-tenant-id 嗰條路喺 admin-auth 個
+    // getExplicitTenantId 度處理，同呢度無關。
 
     // Check JWT token (admin requests carry tenantId in JWT)
     const token = getTokenFromRequest(req);
