@@ -43,8 +43,17 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --schema=prisma/schema.prisma
 
-      - name: Run database migrations
-        run: npx prisma migrate deploy
+      # Base 表係 schema-first（`prisma db push`）建，migration files 只係 layer 喺
+      # 上面嘅 data-migration；由空 DB 跑 `migrate deploy` 會喺 20260208 撞 P3018
+      # （relation "Tenant" 未存在）。用 db push 直接由 schema.prisma 建全 schema。
+      - name: Push database schema
+        run: npx prisma db push
+
+      # db push 後 DB 係空嘅（冇 default tenant / product）—— smoke 打 store-settings /
+      # orders / products 會 resolveTenant("maysshop") → 500。種返最小 baseline
+      # （default tenant + 一件有 stock 嘅 product），見 scripts/seed-ci-baseline.ts。
+      - name: Seed smoke baseline (default tenant + product)
+        run: npx --yes tsx scripts/seed-ci-baseline.ts
 
       - name: Build, start server, and run smoke tests
         run: npm run smoke:prod
