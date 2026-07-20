@@ -97,9 +97,16 @@ fi
 [ -n "$PRODUCT_NAME" ] && [ "$PRODUCT_NAME" != "null" ] || die "expected product name"
 [ -n "$PRODUCT_PRICE" ] && [ "$PRODUCT_PRICE" != "null" ] || die "expected product price"
 
+# Pickup 單 + 冇 coupon 嘅正路 payload：唔帶 discount / deliveryFee。
+# 原因：parseCreatePayload 對 amounts.discount / deliveryFee 係「存在就必須 > 0」
+# （assertPositiveNumber，<= 0 直接 400）；但 server reprice 一張 pickup + 冇 coupon
+# 嘅單一定係 deliveryFee=0 / discount=0（resolveDeliveryFee 只計 delivery 單；冇
+# couponCode client 傳嘅 discount 會被無視）。兩個約束對「有帶呢兩個 field」嘅情況
+# 不可調和，所以正路做法係索性 omit（下面 jq amounts 唔會 include 佢哋）。
+# DISCOUNT / DELIVERY_FEE 保留為 0 淨係畀 TOTAL / ALT_TOTAL 嘅 awk 用，令 total=subtotal。
 QTY=2
-DISCOUNT=1
-DELIVERY_FEE=1
+DISCOUNT=0
+DELIVERY_FEE=0
 SUBTOTAL="$(awk -v p="$PRODUCT_PRICE" -v q="$QTY" 'BEGIN{print p*q}')"
 TOTAL="$(awk -v s="$SUBTOTAL" -v d="$DISCOUNT" -v f="$DELIVERY_FEE" 'BEGIN{print s+f-d}')"
 
@@ -114,15 +121,13 @@ PAYLOAD="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$QTY" \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total "$TOTAL" \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -175,15 +180,13 @@ PAYLOAD_BAD_CURRENCY="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$QTY" \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total "$TOTAL" \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -206,15 +209,13 @@ PAYLOAD_BAD_QTY="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity 0 \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total "$TOTAL" \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -237,15 +238,13 @@ PAYLOAD_BAD_AMOUNTS="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$QTY" \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total 0 \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -275,15 +274,13 @@ PAYLOAD_MISMATCH="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$QTY" \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total 1 \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -306,15 +303,13 @@ PAYLOAD_BAD_PRODUCT="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$QTY" \
   --argjson subtotal "$SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total "$TOTAL" \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -365,15 +360,13 @@ PAYLOAD_ALT="$(jq -n \
   --argjson unitPrice "$PRODUCT_PRICE" \
   --argjson quantity "$ALT_QTY" \
   --argjson subtotal "$ALT_SUBTOTAL" \
-  --argjson discount "$DISCOUNT" \
-  --argjson deliveryFee "$DELIVERY_FEE" \
   --argjson total "$ALT_TOTAL" \
   '{
     customerName: $customerName,
     phone: $phone,
     email: $email,
     items: [{productId: $productId, name: $productName, unitPrice: $unitPrice, quantity: $quantity}],
-    amounts: {subtotal: $subtotal, discount: $discount, deliveryFee: $deliveryFee, total: $total, currency: $currency},
+    amounts: {subtotal: $subtotal, total: $total, currency: $currency},
     fulfillment: {type: "pickup"},
     note: $note
   }')"
@@ -404,11 +397,14 @@ h="$(echo "$resp" | sed -n "1p")"
 body="$(resp_body "$resp")"
 echo "$body" | jq -e --arg id "$ORDER_ID" '.data.id == $id' >/dev/null || die "expected order id match"
 
-resp="$(curl_resp -X PATCH -H "content-type: application/json" -H "x-admin-secret: ${ADMIN_SECRET}" --data '{"status":"PAID"}' "$BASE/$ORDER_ID")"
+# 新單初始 status=PENDING（冇 paymentProof，見 orders route）。狀態機只准
+# PENDING → PENDING_CONFIRMATION / CONFIRMED / CANCELLED（lib/orders/status-transitions），
+# PENDING → PAID 唔係有效轉換 → 400。用 CONFIRMED 測 status-update 全路徑。
+resp="$(curl_resp -X PATCH -H "content-type: application/json" -H "x-admin-secret: ${ADMIN_SECRET}" --data '{"status":"CONFIRMED"}' "$BASE/$ORDER_ID")"
 h="$(echo "$resp" | sed -n "1p")"
 [[ "$h" =~ " 200 " ]] || die "expected PATCH -> 200 but got: $h (URL=$BASE/$ORDER_ID)"
 body="$(resp_body "$resp")"
-echo "$body" | jq -e '.data.status == "PAID"' >/dev/null || die "expected status PAID"
+echo "$body" | jq -e '.data.status == "CONFIRMED"' >/dev/null || die "expected status CONFIRMED"
 
 echo "OK: GET list -> 200"
 echo "OK: GET by id -> 200"

@@ -45,10 +45,19 @@ if [[ -f "$ENV_LOCAL" ]]; then
   fi
 fi
 
+# prisma CLI + tsx seed 由 process.env 讀 DATABASE_URL（見 prisma.config.ts），要 export
+export DATABASE_URL
+
 echo "Running: npx prisma generate"
 npx prisma generate --schema="$ROOT_DIR/prisma/schema.prisma"
-echo "Running: npx prisma migrate deploy"
-npx prisma migrate deploy --schema="$ROOT_DIR/prisma/schema.prisma"
+# Base 表係 schema-first（db push）建 —— 由空 DB 跑 migrate deploy 會撞 P3018
+# （Tenant 未存在，同 CI build job 同源）。用 db push 直接由 schema 建全 schema。
+echo "Running: npx prisma db push"
+npx prisma db push --schema="$ROOT_DIR/prisma/schema.prisma"
+# 空 DB 冇 default tenant / product，smoke:prod 會 resolveTenant("maysshop") → 500。
+# 種返最小 baseline（default tenant + 一件有 stock 嘅 product）。
+echo "Running: seed smoke baseline (default tenant + product)"
+npx --yes tsx "$ROOT_DIR/scripts/seed-ci-baseline.ts"
 echo "Running: npm run smoke:prod"
 npm run smoke:prod
 
