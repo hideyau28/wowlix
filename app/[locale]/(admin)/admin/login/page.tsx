@@ -151,7 +151,7 @@ export default function AdminLoginPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-wlx-mist p-8">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 mb-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-800 text-white text-2xl">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-wlx-ink text-wlx-paper text-2xl">
                   ✦
                 </div>
                 <span className="text-2xl font-bold text-wlx-ink">Admin</span>
@@ -171,9 +171,9 @@ export default function AdminLoginPage() {
                   key={tenant.id}
                   onClick={() => handleSelectTenant(tenant.id)}
                   disabled={loading}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-wlx-mist hover:border-zinc-400 hover:bg-wlx-cream transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-wlx-mist hover:border-wlx-stone/50 hover:bg-wlx-cream transition-colors text-left disabled:opacity-50"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-wlx-ink text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-wlx-ink text-wlx-paper flex items-center justify-center text-sm font-bold flex-shrink-0">
                     {tenant.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -191,7 +191,7 @@ export default function AdminLoginPage() {
                 setTenants([]);
                 setSecret("");
               }}
-              className="mt-4 text-xs text-wlx-stone hover:text-wlx-stone transition-colors w-full text-center"
+              className="mt-4 text-xs text-wlx-stone hover:text-wlx-ink transition-colors w-full text-center"
             >
               {labels.selectTenantBack}
             </button>
@@ -208,7 +208,7 @@ export default function AdminLoginPage() {
           {/* Branding */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 mb-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-wlx-ink text-white text-2xl">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-wlx-ink text-wlx-paper text-2xl">
                 ✦
               </div>
               <span className="text-2xl font-bold text-wlx-ink">WoWlix</span>
@@ -273,7 +273,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder-zinc-400 focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
+                className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder:text-wlx-stone focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
                 placeholder={labels.emailPlaceholder}
                 required
                 autoComplete="email"
@@ -297,7 +297,7 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder-zinc-400 focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
+                className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder:text-wlx-stone focus:border-wlx-ink focus:outline-none focus:ring-2 focus:ring-wlx-ink/20"
                 placeholder={labels.passwordPlaceholder}
                 required
                 autoComplete="current-password"
@@ -342,7 +342,7 @@ export default function AdminLoginPage() {
                   type="password"
                   value={secret}
                   onChange={(e) => setSecret(e.target.value)}
-                  className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm"
+                  className="w-full rounded-xl border border-wlx-mist bg-white px-4 py-3 text-wlx-ink placeholder:text-wlx-stone focus:border-wlx-ink focus:outline-none focus:ring-1 focus:ring-wlx-ink/30 text-sm"
                   placeholder={labels.adminSecretPlaceholder}
                   required
                   autoComplete="current-password"
@@ -355,7 +355,7 @@ export default function AdminLoginPage() {
                 <button
                   type="submit"
                   disabled={loading || !secret}
-                  className="w-full rounded-xl bg-zinc-800 py-2.5 text-white text-sm font-semibold hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full rounded-xl bg-wlx-ink py-2.5 text-wlx-paper text-sm font-semibold hover:bg-wlx-ink/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading && showSecretLogin ? "..." : labels.adminLogin}
                 </button>

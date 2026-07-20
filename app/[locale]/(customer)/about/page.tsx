@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getAboutContent } from "@/lib/tenant-content";
+import { isPlatformMode } from "@/lib/tenant";
+import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 
 export async function generateMetadata({
   params,
@@ -45,12 +48,17 @@ export default async function AboutPage({
   const content = getAboutContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
+  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版
+  const platform = await isPlatformMode();
+  const shell = (node: ReactNode) =>
+    platform ? <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell> : node;
+
   // For non-default tenants (e.g. Bull Kicks), always show English content
   const showEnglish = tenant.slug !== "maysshop" || !isZh;
 
   if (!showEnglish) {
     // Original maysshop zh-HK content
-    return (
+    return shell(
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           關於我們
@@ -121,7 +129,7 @@ export default async function AboutPage({
   // English content — tenant-specific via content config
   const body = content.missionBody.replace("{storeName}", storeName);
 
-  return (
+  return shell(
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         About Us

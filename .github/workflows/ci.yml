@@ -57,3 +57,75 @@ jobs:
 
       - name: Build, start server, and run smoke tests
         run: npm run smoke:prod
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: ci_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ci_db?sslmode=disable
+      ADMIN_SECRET: ci-test-secret-key
+      # CI 內部自簽自驗，唔係真 secret
+      TENANT_JWT_SECRET: ci-e2e-jwt-secret-not-production
+      # e2e server 一定要自己打自己（見 playwright.config.ts 註解）
+      NEXT_PUBLIC_API_URL: http://localhost:3100
+      NEXT_PUBLIC_BASE_URL: http://localhost:3100
+      # 空 CI DB 冇 maysshop —— 指 default tenant 去 e2e setup 會 seed 嘅 slug，
+      # 否則平台面 branding fetch 500（見 e2e/setup/tenant.setup.ts）
+      DEFAULT_TENANT_SLUG: e2e-default
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      # migrate deploy 條 chain 喺空 DB 會爆（pre-existing，屬 P0 線嘅
+      # prod migration 項目）— e2e 用 db push 直接影 schema
+      - name: Push database schema
+        run: npx prisma db push
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npx playwright test
+
+      - name: Lighthouse gate
+        run: npx --yes @lhci/cli@0.15.1 autorun
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e/.artifacts/report
+            e2e/.artifacts/test-results
+          retention-days: 7

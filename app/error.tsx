@@ -1,5 +1,7 @@
 "use client";
 
+import ErrorScreen, { errorActionClass } from "@/components/ErrorScreen";
+
 export default function Error({
   reset,
 }: {
@@ -7,35 +9,17 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center">
-        {/* WoWlix branding */}
-        <div className="mb-6">
-          <span className="text-2xl font-bold tracking-tight text-white">
-            Wo<span className="text-orange-500">W</span>lix
-          </span>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-8xl font-extrabold text-orange-500 mb-4">500</h1>
-          <h2 className="text-2xl font-semibold text-white mb-2">
-            出咗啲問題
-          </h2>
-          <p className="text-zinc-400">
-            伺服器出現錯誤，請稍後再試。
-          </p>
-          <p className="text-zinc-500 text-sm mt-1">
-            An unexpected error occurred. Please try again.
-          </p>
-        </div>
-
-        <button
-          onClick={() => reset()}
-          className="inline-block rounded-2xl bg-orange-500 px-8 py-4 text-white font-semibold hover:bg-orange-600 transition-colors cursor-pointer"
-        >
+    <ErrorScreen
+      code="500"
+      title="出咗啲問題"
+      action={
+        <button onClick={() => reset()} className={errorActionClass}>
           重試 / Try Again
         </button>
-      </div>
-    </div>
+      }
+    >
+      <p>伺服器出現錯誤，請稍後再試。</p>
+      <p>An unexpected error occurred. Please try again.</p>
+    </ErrorScreen>
   );
 }

@@ -13,6 +13,9 @@
 :root {
   /* Wowlix palette — 4 neutrals + 1 default brand accent.
      Tenants override --wlx-accent at runtime. */
+  /* Wowlix shared base palette — used by the biolink "studio" tenant template too,
+     so it must stay stable. The marketing LANDING scopes its own creator-first warm
+     palette on its own root (see WowlixLandingPage), overriding these locally only. */
   --wlx-cream: #F8F6F2;
   --wlx-paper: #FBFAF7;
   --wlx-ink: #1A1A1A;
@@ -152,10 +155,26 @@
   --color-wlx-accent: var(--wlx-accent);
   --color-wlx-accent-fg: var(--wlx-accent-fg);
 
-  /* ── Wowlix DS typography (Geist for editorial sans, Cormorant for accent serif) ── */
-  --font-wlx-display: var(--font-geist-sans);
-  --font-wlx-sans: var(--font-geist-sans);
-  --font-wlx-serif: var(--font-cormorant);
+  /* ── Wowlix DS typography ──
+     Latin uses Geist / Cormorant; CJK glyphs (which those Latin faces don't have,
+     so they were falling to an accidental system font) now resolve to a DELIBERATE
+     native-first stack — PingFang HK first (iOS/macOS, the HK audience's devices),
+     then Windows JhengHei, then Noto as cross-platform fallback. No heavy CJK web
+     font download; the headline + body render in a crisp, intentional CJK face.
+     --font-wlx-display / --font-wlx-serif also expose --wlx-font-*-latin /
+     --wlx-font-*-cjk runtime override hooks (as var() fallbacks) so a subtree —
+     e.g. marketing pages via style={} — can re-voice display/serif type with its
+     own fonts without touching --font-wlx-sans or any non-marketing surface;
+     undefined hooks fall through to today's exact defaults, byte-identical. */
+  --font-wlx-cjk: "PingFang HK", "PingFang TC", "Microsoft JhengHei",
+    "Noto Sans TC", sans-serif;
+  --font-wlx-cjk-serif: "Songti TC", "Noto Serif TC", serif;
+  --font-wlx-display: var(--wlx-font-display-latin, var(--font-geist-sans)),
+    var(--wlx-font-display-cjk, "PingFang HK", "PingFang TC",
+      "Microsoft JhengHei", "Noto Sans TC", sans-serif);
+  --font-wlx-sans: var(--font-geist-sans), var(--font-wlx-cjk);
+  --font-wlx-serif: var(--wlx-font-serif-latin, var(--font-cormorant)),
+    var(--wlx-font-serif-cjk, "Songti TC", "Noto Serif TC", serif);
 
   /* ── Wowlix DS radius scale ── */
   --radius-wlx-sharp: 0;

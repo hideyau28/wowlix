@@ -111,13 +111,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // lang 跟返真 locale 行（middleware set x-locale）—— 以前寫死 zh-HK，
+  // /en 頁 screen reader 會用中文聲讀英文（e2e a11y/locale gate 抓住）
+  const { headers } = await import("next/headers");
+  const headersList = await headers();
+  const lang = headersList.get("x-locale") || "zh-HK";
   return (
-    <html lang="zh-HK" suppressHydrationWarning className={cn("font-sans", geistSansShadcn.variable)}>
+    <html lang={lang} suppressHydrationWarning className={cn("font-sans", geistSansShadcn.variable)}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${montserrat.variable} ${cormorantGaramond.variable} ${inter.variable} ${lato.variable} bg-white text-zinc-900 antialiased`}
       >

@@ -677,25 +677,25 @@ export function ProductsTable({
           </button>
           <button
             onClick={() => setIsBadgeModalOpen(true)}
-            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700"
+            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700 transition-colors"
           >
             Manage Badges
           </button>
           <button
             onClick={() => exportProductsToCsv(localProducts)}
-            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700"
+            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700 transition-colors"
           >
             Export CSV
           </button>
           <a
             href="/api/admin/products/csv-template"
-            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700"
+            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700 transition-colors"
           >
             Download Template
           </a>
           <button
             onClick={() => setIsCsvOpen(true)}
-            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700"
+            className="rounded-xl bg-olive-600 px-4 py-3 text-sm text-white font-semibold hover:bg-olive-700 transition-colors"
           >
             Import CSV
           </button>
@@ -710,19 +710,19 @@ export function ProductsTable({
         </div>
       </div>
       {selectedIds.size > 0 && (
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-wlx-mist bg-white px-4 py-3">
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-wlx-mist bg-white px-4 py-3 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
           <span className="text-sm text-wlx-stone">
             {selectedIds.size} selected
           </span>
           <button
             onClick={handleBatchHide}
-            className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-600 hover:bg-red-100"
+            className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-600 hover:bg-red-100 transition-colors"
           >
             Hide Selected
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="rounded-xl border border-wlx-mist bg-white px-3 py-1.5 text-sm text-wlx-stone hover:bg-wlx-cream"
+            className="rounded-xl border border-wlx-mist bg-white px-3 py-1.5 text-sm text-wlx-stone hover:bg-wlx-cream transition-colors"
           >
             Clear
           </button>
@@ -1112,7 +1112,7 @@ export function ProductsTable({
                     return (
                       <tr
                         key={product.id}
-                        className={`border-t border-wlx-mist hover:bg-wlx-cream ${!product.active ? "opacity-50" : ""} ${product.hidden ? "opacity-60" : ""}`}
+                        className={`border-t border-wlx-mist hover:bg-wlx-cream transition-colors ${!product.active ? "opacity-50" : ""} ${product.hidden ? "opacity-60" : ""}`}
                       >
                         {/* Checkbox */}
                         <td className="px-4 py-3">
@@ -1322,7 +1322,7 @@ export function ProductsTable({
                               )}
                               <button
                                 onClick={() => handleEditProduct(product)}
-                                className="rounded-lg border border-wlx-mist bg-white px-2.5 py-1.5 text-xs text-wlx-stone hover:bg-wlx-cream"
+                                className="rounded-lg border border-wlx-mist bg-white px-2.5 py-1.5 text-xs text-wlx-stone hover:bg-wlx-cream transition-colors"
                               >
                                 Edit
                               </button>
@@ -1398,14 +1398,14 @@ export function ProductsTable({
       {/* end viewMode === "table" */}
       {isBadgeModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsBadgeModalOpen(false);
             }
           }}
         >
-          <div className="w-full max-w-4xl rounded-3xl border border-wlx-mist bg-white p-6">
+          <div className="w-full max-w-4xl rounded-3xl border border-wlx-mist bg-white p-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-out motion-reduce:animate-none">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-wlx-ink">
@@ -1417,7 +1417,7 @@ export function ProductsTable({
               </div>
               <button
                 onClick={() => setIsBadgeModalOpen(false)}
-                className="text-wlx-stone hover:text-wlx-stone"
+                className="text-wlx-stone hover:text-wlx-ink transition-colors"
               >
                 ✕
               </button>
@@ -1438,7 +1438,7 @@ export function ProductsTable({
                   <button
                     onClick={loadBadges}
                     disabled={badgeLoading}
-                    className="text-xs text-wlx-stone hover:text-wlx-stone disabled:opacity-50"
+                    className="text-xs text-wlx-stone hover:text-wlx-ink transition-colors disabled:opacity-50"
                   >
                     Refresh
                   </button>
@@ -1475,13 +1475,13 @@ export function ProductsTable({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEditBadge(badge)}
-                            className="rounded-lg border border-wlx-mist bg-white px-2 py-1 text-xs text-wlx-stone hover:bg-wlx-cream"
+                            className="rounded-lg border border-wlx-mist bg-white px-2 py-1 text-xs text-wlx-stone hover:bg-wlx-cream transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteBadge(badge)}
-                            className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                            className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100 transition-colors"
                           >
                             Delete
                           </button>
@@ -1500,7 +1500,7 @@ export function ProductsTable({
                   {editingBadgeId && (
                     <button
                       onClick={resetBadgeForm}
-                      className="text-xs text-wlx-stone hover:text-wlx-stone"
+                      className="text-xs text-wlx-stone hover:text-wlx-ink transition-colors"
                     >
                       Cancel Edit
                     </button>
@@ -1594,14 +1594,14 @@ export function ProductsTable({
                     <button
                       onClick={handleSaveBadge}
                       disabled={badgeSaving}
-                      className="rounded-xl bg-olive-600 px-4 py-2 text-sm text-white font-semibold hover:bg-olive-700 disabled:opacity-50"
+                      className="rounded-xl bg-olive-600 px-4 py-2 text-sm text-white font-semibold hover:bg-olive-700 transition-colors disabled:opacity-50"
                     >
                       {editingBadgeId ? "Save Changes" : "Add Badge"}
                     </button>
                     <button
                       onClick={resetBadgeForm}
                       type="button"
-                      className="rounded-xl border border-wlx-mist bg-white px-4 py-2 text-sm text-wlx-stone hover:bg-wlx-cream"
+                      className="rounded-xl border border-wlx-mist bg-white px-4 py-2 text-sm text-wlx-stone hover:bg-wlx-cream transition-colors"
                     >
                       Clear
                     </button>

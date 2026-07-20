@@ -4,7 +4,6 @@ import { signToken } from "@/lib/auth/jwt";
 import { withApi, ok, ApiError } from "@/lib/api/route-helpers";
 import { resolveTemplateId } from "@/lib/cover-templates";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 export const runtime = "nodejs";
@@ -22,7 +21,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // QR 連結只准 https（合法上傳 = Cloudinary secure_url）。register 係公開端點，
 // 唔擋就會將任意 URL 存落 DB 再喺公開 checkout render 做 <img src>（tracking pixel /
-// 誤導圖）。淨係 <img src> sink，唔會 XSS，屬 defense-in-depth。
+// 誤導圖）。淨係 <img src> sink，唔會 XSS，屬 defense-in-depth（PR #346）。
 const isHttpsUrl = (v: unknown): boolean => {
   if (typeof v !== "string" || v.length === 0 || v.length > 2048) return false;
   try {
@@ -77,7 +76,14 @@ export const POST = withApi(async (req: Request) => {
     }
   }
 
-  // QR 連結 https 驗證（喺 tenant.create 之前，先 fail 唔燒 slug）
+  // Auto-login 簽兩條 token 都要 env secret — 落 DB 之前 fail-fast：
+  // 唔好等開完店先炸（slug 會燒咗、用戶又攞唔到 session，同一個 slug 冇得再試）
+  if (!process.env.TENANT_JWT_SECRET || !process.env.ADMIN_SECRET) {
+    console.error("[tenant/register] missing TENANT_JWT_SECRET / ADMIN_SECRET env");
+    throw new ApiError(500, "INTERNAL", "伺服器設定有誤，請稍後再試");
+  }
+
+  // QR 連結 https 驗證（喺 tenant.create 之前，先 fail 唔燒 slug）（PR #346）
   if (paymeQrUrl != null && paymeQrUrl !== "" && !isHttpsUrl(paymeQrUrl)) {
     throw new ApiError(400, "BAD_REQUEST", "PayMe QR 連結格式唔啱（需要 https）");
   }
@@ -106,7 +112,11 @@ export const POST = withApi(async (req: Request) => {
       description: cleanTagline || undefined,
       template: cleanTemplate,
       coverTemplate: cleanTemplate,
-      brandColor: "#FF9500",
+      // 明文寫 null（schema default 係已廢除嘅舊品牌橙 #FF9500，migration
+      // 另一條線先郁）—— storefront 係 brandColor || tmpl.accent，null 先會
+      // 動態跟住用戶揀嘅 template 行，第日轉 template 都唔會甩色。
+      // 以前寫死 #FF9500，搞到 step 5 預覽綠色但開出嚟間店橙色。
+      brandColor: null,
       status: "active",
     };
     // templateId column 可能未存在（需要手動 migration）
@@ -234,28 +244,35 @@ export const POST = withApi(async (req: Request) => {
       },
     }).catch(() => {}); // 非致命
 
-    // --- Auto-login: 只簽租戶級 tenant-admin-token（下面）---
-    // 唔再簽平台 god-mode `admin_session`：呢隻同 super-admin 登入攞嘅
-    // 同款 token，而 /api/admin/select-tenant 認住佢就會簽任何租戶嘅 super
-    // token（冇 ownership check）—— 公開開店攞到 = 跨租戶提權。
-    const cookieStore = await cookies();
+    // --- Auto-login (best-effort) ---
+    // 店已經開咗 — 由呢度開始任何失敗都唔准令成個 request 炸 500
+    // （否則 slug 燒咗但用戶見 error、又冇 session）。簽唔到 token 就
+    // 冇自動登入，用戶用返 email+password / Google 登入照入到後台。
+    let autoLogin = true;
+    try {
+      // 只簽租戶級 tenant-admin-token —— 唔簽平台 god-mode admin_session
+      // （同 super-admin 同款，會經 select-tenant 提權去任何租戶；PR #346）。
+      const cookieStore = await cookies();
 
-    // --- Set tenant-admin-token cookie (API auth) ---
-    const adminToken = signToken({
-      tenantId: tenant.id,
-      adminId: admin.id,
-      email: admin.email,
-      role: admin.role,
-    });
-    cookieStore.set("tenant-admin-token", adminToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    });
+      const adminToken = signToken({
+        tenantId: tenant.id,
+        adminId: admin.id,
+        email: admin.email,
+        role: admin.role,
+      });
+      cookieStore.set("tenant-admin-token", adminToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: "/",
+      });
+    } catch (loginErr) {
+      autoLogin = false;
+      console.error("[tenant/register] auto-login failed (store created ok):", loginErr);
+    }
 
-    return ok(req, { ok: true, tenantId: tenant.id, slug: tenant.slug });
+    return ok(req, { ok: true, tenantId: tenant.id, slug: tenant.slug, autoLogin });
   } catch (err: unknown) {
     // Handle unique constraint violations
     const isPrismaUnique = err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
@@ -282,15 +299,11 @@ export const POST = withApi(async (req: Request) => {
     throw err;
   }
   } catch (error: unknown) {
-    // ApiError 係我哋自己噏嘅 4xx（validation / conflict）—— 交返 withApi
-    // 正確 map status（400/409），唔好喺度食晒變 500。
+    // ApiError（validation 400 / conflict 409 / 手動拋嘅 500）交返俾 withApi
+    // 個 fail() 出正確 status + shape；其餘 unexpected error 詳情只落 server
+    // log，俾用戶嘅一律 generic —— 唔准將內部 error.message 原文送上前端。
     if (error instanceof ApiError) throw error;
-    // 其餘真·unexpected error：log 出嚟，但唔好將 error.message 原文
-    // 漏返俾 client（可能含 DB / 內部細節 —— 資訊洩漏）。
-    console.error("[register] unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    console.error("[tenant/register] unexpected error:", error);
+    throw new ApiError(500, "INTERNAL", "註冊失敗，請再試");
   }
 });

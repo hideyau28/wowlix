@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
+import { isPlatformMode } from "@/lib/tenant";
+import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 
 export async function generateMetadata({
   params,
@@ -51,12 +54,21 @@ export default async function ContactPage({
   const content = getContactContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
+  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版
+  const platform = await isPlatformMode();
+  const shell = (node: ReactNode) =>
+    platform ? <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell> : node;
+  // WhatsApp 掣：platform 面行單色 pill（WhatsApp 綠係租戶店先用）
+  const waBtnClass = platform
+    ? "wlx-cta inline-flex items-center gap-2 rounded-full bg-wlx-ink px-5 py-2.5 text-sm font-medium hover:bg-wlx-ink/90 transition-colors"
+    : "inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors";
+
   // For non-default tenants, always show English
   const showEnglish = tenant.slug !== "maysshop" || !isZh;
 
   if (!showEnglish) {
     // Original maysshop zh-HK content
-    return (
+    return shell(
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           聯絡我們
@@ -77,7 +89,7 @@ export default async function ContactPage({
               href={`https://wa.me/${content.whatsapp.number}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors"
+              className={waBtnClass}
             >
               <WhatsAppIcon />
               WhatsApp 聯絡我們
@@ -117,7 +129,7 @@ export default async function ContactPage({
   }
 
   // English content — tenant-specific
-  return (
+  return shell(
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         Contact Us
@@ -138,7 +150,7 @@ export default async function ContactPage({
             href={`https://wa.me/${content.whatsapp.number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors"
+            className={waBtnClass}
           >
             <WhatsAppIcon />
             {content.whatsapp.label}

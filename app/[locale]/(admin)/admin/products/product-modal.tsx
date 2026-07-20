@@ -656,12 +656,12 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
       onClick={handleBackdropClick}
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-wlx-mist bg-white"
+        className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-wlx-mist bg-white animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-out motion-reduce:animate-none"
       >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-3xl border-b border-wlx-mist bg-white px-6 py-4">
@@ -671,7 +671,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
           <button
             onClick={() => onClose()}
             disabled={isPending}
-            className="rounded-full p-2 text-wlx-stone hover:bg-wlx-cream hover:text-wlx-stone disabled:opacity-50"
+            className="rounded-full p-2 text-wlx-stone hover:bg-wlx-cream hover:text-wlx-ink transition-colors disabled:opacity-50"
           >
             <X size={20} />
           </button>
@@ -680,7 +680,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {error && (
-            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none">
               <div className="text-red-600 font-semibold text-sm">
                 {error.code}
               </div>
@@ -742,7 +742,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                       <button
                         type="button"
                         onClick={() => setImageUrl("")}
-                        className="absolute top-2 right-2 p-1 rounded-full bg-white/90 text-wlx-stone hover:text-red-500 hover:bg-white shadow-sm"
+                        className="absolute top-2 right-2 p-1 rounded-full bg-white/90 text-wlx-stone hover:text-red-500 hover:bg-white transition-colors shadow-sm"
                       >
                         <X size={16} />
                       </button>
@@ -799,7 +799,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                             type="button"
                             onClick={() => handleRemoveImage(index)}
                             disabled={isPending}
-                            className="absolute top-1 right-1 p-1 rounded-full bg-white/90 text-wlx-stone hover:text-red-500 hover:bg-white shadow-sm disabled:opacity-50"
+                            className="absolute top-1 right-1 p-1 rounded-full bg-white/90 text-wlx-stone hover:text-red-500 hover:bg-white transition-colors shadow-sm disabled:opacity-50"
                           >
                             <X size={12} />
                           </button>
@@ -840,7 +840,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                           type="button"
                           onClick={handleAddImage}
                           disabled={isPending || !newImageUrl.trim()}
-                          className="rounded-xl bg-wlx-cream px-3 py-2 text-wlx-stone hover:bg-wlx-mist disabled:opacity-50"
+                          className="rounded-xl bg-wlx-cream px-3 py-2 text-wlx-stone hover:bg-wlx-mist transition-colors disabled:opacity-50"
                         >
                           <Plus size={18} />
                         </button>
@@ -1088,7 +1088,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                       <span className="text-xs text-wlx-stone">▼</span>
                     </button>
                     {isBadgeDropdownOpen && (
-                      <div className="absolute z-20 mt-2 w-full max-h-64 overflow-y-auto rounded-xl border border-wlx-mist bg-white shadow-lg">
+                      <div className="absolute z-20 mt-2 w-full max-h-64 overflow-y-auto rounded-xl border border-wlx-mist bg-white shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-150 motion-reduce:animate-none">
                         {badgeLoading ? (
                           <div className="px-3 py-3 text-sm text-wlx-stone">
                             Loading badges...
@@ -1107,7 +1107,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                                 key={badge.id}
                                 type="button"
                                 onClick={() => toggleProductBadge(badge.id)}
-                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-wlx-cream ${isSelected ? "bg-olive-50" : ""}`}
+                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-wlx-cream transition-colors ${isSelected ? "bg-olive-50" : ""}`}
                               >
                                 <span
                                   className="h-3 w-3 rounded-full"
@@ -1290,7 +1290,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                           type="button"
                           onClick={() => removeOption2Value(val)}
                           disabled={isPending}
-                          className="text-wlx-stone hover:text-red-500 disabled:opacity-50"
+                          className="text-wlx-stone hover:text-red-500 transition-colors disabled:opacity-50"
                         >
                           <X size={12} />
                         </button>
@@ -1316,7 +1316,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                       type="button"
                       onClick={addOption2Value}
                       disabled={isPending || !newOption2Value.trim()}
-                      className="rounded-xl bg-wlx-cream px-3 py-2 text-sm text-wlx-stone hover:bg-wlx-mist disabled:opacity-50"
+                      className="rounded-xl bg-wlx-cream px-3 py-2 text-sm text-wlx-stone hover:bg-wlx-mist transition-colors disabled:opacity-50"
                     >
                       <Plus size={18} />
                     </button>
@@ -1400,7 +1400,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                             return (
                               <tr
                                 key={size}
-                                className="border-b border-wlx-mist hover:bg-wlx-cream"
+                                className="border-b border-wlx-mist hover:bg-wlx-cream transition-colors"
                               >
                                 <td className="py-2 px-3 text-center">
                                   <input
@@ -1422,7 +1422,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                                         onClick={() =>
                                           handleRemoveCustomSize(size)
                                         }
-                                        className="text-wlx-stone hover:text-red-500"
+                                        className="text-wlx-stone hover:text-red-500 transition-colors"
                                       >
                                         <X size={12} />
                                       </button>
@@ -1470,7 +1470,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                         type="button"
                         onClick={handleAddCustomSize}
                         disabled={isPending || !newCustomSize.trim()}
-                        className="rounded-xl bg-wlx-cream px-3 py-2 text-sm text-wlx-stone hover:bg-wlx-mist disabled:opacity-50"
+                        className="rounded-xl bg-wlx-cream px-3 py-2 text-sm text-wlx-stone hover:bg-wlx-mist transition-colors disabled:opacity-50"
                       >
                         + 自訂尺碼
                       </button>
@@ -1489,7 +1489,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
               type="button"
               onClick={() => onClose()}
               disabled={isPending}
-              className="flex-1 rounded-xl border border-wlx-mist bg-wlx-cream px-4 py-3 text-sm text-wlx-stone hover:bg-wlx-mist disabled:opacity-50"
+              className="flex-1 rounded-xl border border-wlx-mist bg-wlx-cream px-4 py-3 text-sm text-wlx-stone hover:bg-wlx-mist transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1497,7 +1497,7 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
               type="submit"
               form="product-form"
               disabled={isPending}
-              className="flex-1 rounded-xl bg-[#6B7A2F] px-4 py-3 text-sm text-white font-semibold hover:bg-[#5a6827] disabled:opacity-50"
+              className="flex-1 rounded-xl bg-[#6B7A2F] px-4 py-3 text-sm text-white font-semibold hover:bg-[#5a6827] transition-colors disabled:opacity-50"
             >
               {isPending ? "Saving..." : product ? "Update" : "Create"}
             </button>
