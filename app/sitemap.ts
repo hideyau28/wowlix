@@ -47,8 +47,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Fetch active tenants for tenant-specific sitemaps
   let tenantPages: MetadataRoute.Sitemap = [];
   try {
+    // 只出真實已啟用商戶 —— 排除 e2e/test/phase 測試店同自我指向 slug，
+    // 否則 sitemap 會塞滿 test.*/e2e-*/wowlix.wowlix.com 污染 crawl budget。
     const tenants = await prisma.tenant.findMany({
-      where: { status: "active" },
+      where: {
+        status: "active",
+        NOT: [
+          { slug: { startsWith: "e2e-" } },
+          { slug: { startsWith: "test" } },
+          { slug: { startsWith: "phase-" } },
+          { slug: { in: ["wowlix", "www", "demo"] } },
+        ],
+      },
       select: { slug: true, languages: true },
     });
 

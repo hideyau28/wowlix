@@ -13,6 +13,8 @@ const RESERVED_SLUGS = new Set([
   "app", "checkout", "cart", "search", "orders", "profile",
   "collections", "settings", "signup", "about", "contact",
   "terms", "privacy", "favicon.ico",
+  // 防自我指向子域（wowlix.wowlix.com / www.wowlix.com）同保留 demo
+  "wowlix", "www", "demo",
 ]);
 
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
