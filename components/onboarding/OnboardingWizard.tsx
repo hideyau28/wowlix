@@ -123,7 +123,7 @@ const t = {
     upgradeCtaDesc: "Unlock more products, orders & features as your store grows",
     liteTag: "Lite — $78/mo",
     proTag: "Pro — $198/mo",
-    liteBenefitShort: "50 products, unlimited orders, all 7 payment methods, coupons + WhatsApp",
+    liteBenefitShort: "50 products, unlimited orders, all payment methods, coupons + WhatsApp",
     proBenefitShort: "Unlimited everything, custom domain (add-on), abandoned cart recovery, CRM + analytics",
     viewPlans: "View plans & upgrade",
   },
@@ -242,7 +242,7 @@ const t = {
     upgradeCtaDesc: "解鎖更多產品、訂單同進階功能",
     liteTag: "Lite — $78/月",
     proTag: "Pro — $198/月",
-    liteBenefitShort: "50 件產品、無限訂單、全部 7 款收款方式、優惠碼 + WhatsApp",
+    liteBenefitShort: "50 件產品、無限訂單、全部收款方式、優惠碼 + WhatsApp",
     proBenefitShort: "無限全部、自訂域名（加購）、棄單挽回、CRM + 數據分析",
     viewPlans: "睇方案 & 升級",
   },
@@ -256,8 +256,8 @@ function getOnboardingPlans(isZh: boolean) {
       name: "Free",
       price: 0,
       features: isZh
-        ? ["10 件商品", "每月 50 單", "3 款收款方式", "1 款店鋪主題"]
-        : ["10 products", "50 orders/mo", "3 payment methods", "1 store theme"],
+        ? ["10 件商品", "每月 50 單", "全部收款方式", "1 款店鋪主題"]
+        : ["10 products", "50 orders/mo", "All payment methods", "1 store theme"],
       badge: null,
       footnote: isZh ? "永久免費" : "Free forever",
     },
@@ -266,8 +266,8 @@ function getOnboardingPlans(isZh: boolean) {
       name: "Lite",
       price: 78,
       features: isZh
-        ? ["50 件商品", "無限訂單", "全部 7 款收款方式", "全部主題", "優惠碼 + WhatsApp"]
-        : ["50 products", "Unlimited orders", "All 7 payment methods", "All themes", "Coupons + WhatsApp"],
+        ? ["50 件商品", "無限訂單", "全部收款方式", "全部主題", "優惠碼 + WhatsApp"]
+        : ["50 products", "Unlimited orders", "All payment methods", "All themes", "Coupons + WhatsApp"],
       badge: isZh ? "最受歡迎" : "Most popular",
       footnote: isZh ? "開店後設定付款" : "Set up billing after opening",
     },
