@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import type { ProductForBioLink } from "@/lib/biolink-helpers";
 import { formatPrice, getAllImages, isSoldOut } from "@/lib/biolink-helpers";
+import { useStoreLocale } from "../use-store-locale";
 
 type Props = {
   product: ProductForBioLink;
@@ -21,11 +22,16 @@ export default function StudioProductCard({ product, currency, onTap, priority =
   const onSale = product.originalPrice && product.originalPrice > product.price;
 
   const [hoverImage, setHoverImage] = useState(false);
+  const storeLocale = useStoreLocale();
 
   return (
-    <button
-      type="button"
-      onClick={() => onTap(product)}
+    // 真 <a href> — crawler/分享有得入獨立商品頁；點擊攔截開 sheet
+    <a
+      href={`/${storeLocale}/product/${product.id}`}
+      onClick={(e) => {
+        e.preventDefault();
+        onTap(product);
+      }}
       onMouseEnter={() => secondary && setHoverImage(true)}
       onMouseLeave={() => setHoverImage(false)}
       className="group flex flex-col text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-wlx-ink/30"
@@ -92,6 +98,6 @@ export default function StudioProductCard({ product, currency, onTap, priority =
           </span>
         </p>
       </div>
-    </button>
+    </a>
   );
 }

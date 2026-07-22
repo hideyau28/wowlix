@@ -151,18 +151,28 @@ export default function ProductGrid({
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {displayProducts.map((p, i) => (
-              <BioProductCard
+              // content-visibility: 離屏卡 skip layout/paint（大量商品時慳好多）。
+              // 第一張（priority/LCP 候選）唔包，保住即時 paint。
+              <div
                 key={p.id}
-                product={p}
-                currency={currency}
-                onAdd={onAdd}
-                onTap={onTap}
-                priority={i === 0}
-                wishlisted={wishlist?.includes(p.id)}
-                onToggleWishlist={
-                  onToggleWishlist ? () => onToggleWishlist(p.id) : undefined
+                style={
+                  i === 0
+                    ? undefined
+                    : { contentVisibility: "auto", containIntrinsicSize: "0 320px" }
                 }
-              />
+              >
+                <BioProductCard
+                  product={p}
+                  currency={currency}
+                  onAdd={onAdd}
+                  onTap={onTap}
+                  priority={i === 0}
+                  wishlisted={wishlist?.includes(p.id)}
+                  onToggleWishlist={
+                    onToggleWishlist ? () => onToggleWishlist(p.id) : undefined
+                  }
+                />
+              </div>
             ))}
           </div>
         )}
