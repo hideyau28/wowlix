@@ -20,7 +20,12 @@
 
 ⚠️ **根因未解**:e2e 寫緊同一個 DB（`e2e/setup/tenant.setup.ts:7`）,sitemap filter 只係遮掩 —— 要隔離 CI/e2e DB + purge 現有 `e2e-*`/`test.*`/`phase-*` row（獨立 task）。
 
-**Sprint 2 backlog（#8-13,M effort）**:register step-2 a11y（label/name/form/aria/focus）、商品 URL wiring（reuse 現有 route + sitemap products）、店舖 grid `content-visibility`、product sheet dialog a11y hook、JSON-LD 三面（landing Organization+SoftwareApplication / pricing offers / 店 Store+ItemList）+ 修 Organization 擺錯位、LCP 三招（標題即畫 + platform-only Fraunces preload + 考慮除 force-dynamic）。
+**Sprint 2 已落（6 commit,ci:build 綠,PR #349 stacked 喺 #348 上）**:
+`45998cf` /start step-2 form/label/aria/focus;`35479d0` grid content-visibility（priority 卡唔包）;`983f6cf` 商品卡真 `<a href>` + sitemap 商品 URL（reuse 現有 product/[id] route,特登唔用 next/Link 避 prefetch 風暴）;`66162d5` use-dialog-a11y hook（focus trap/Escape/還原）兩個 sheet 上 dialog 語義;`f6c6461` JSON-LD 三面 + 修 Organization 錯標租戶店 bug;`c22a93a` hero LCP 死 delay 剪走（編排不變）。
+
+**跟進 task（未做,有記錄）**:① e2e/CI DB 隔離 + purge 現有 test 店（sitemap 根因）;② Fraunces platform-only preload（dynamic import route 層重構,fonts.ts 註釋有方案）;③ 拆 `force-dynamic` 靜態化 platform landing（TTFB 最大槓桿）。
+
+**PR 狀態**:#348（Sprint 1,base main）、#349（Sprint 2,base = sprint1 branch,**#348 merge 後要 retarget main**）。等 CI e2e + Yau 收貨。
 
 ---
 
