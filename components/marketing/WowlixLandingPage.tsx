@@ -488,15 +488,17 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
               resolves last. */}
           <h1
             className="wlx-fade-up wlx-away mt-6 max-w-[16ch] font-wlx-display text-[clamp(46px,10vw,128px)] font-bold leading-[0.96] tracking-[-0.04em] [hanging-punctuation:first] text-balance lg:max-w-[64%]"
-            style={{ animationDelay: "140ms", "--away-y": "-28px", "--away-range": "70vh" } as CSSProperties}
+            style={{ animationDelay: "0ms", "--away-y": "-28px", "--away-range": "70vh" } as CSSProperties}
           >
+            {/* LCP 係呢啲 hero line — delay 剪到 0/140ms（原 140+120/260ms），
+                編排唔變，純粹早啲開始，LCP 提早 ~150-260ms */}
             <span className="block overflow-hidden">
-              <span className="block wlx-line" style={{ animationDelay: "120ms" }}>
+              <span className="block wlx-line" style={{ animationDelay: "0ms" }}>
                 {t.heroTitleA}
               </span>
             </span>
             <span className="block overflow-hidden">
-              <span className="block wlx-line" style={{ animationDelay: "260ms" }}>
+              <span className="block wlx-line" style={{ animationDelay: "140ms" }}>
                 <span className="font-wlx-serif text-wlx-accent italic font-normal text-[1.06em]">
                   {t.heroTitleAccent}
                 </span>{" "}
