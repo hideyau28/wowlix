@@ -13,6 +13,7 @@ import {
 import { getColorHex } from "@/lib/color-map";
 import { getEmbedUrl } from "@/lib/video-embed";
 import { useTemplate } from "@/lib/template-context";
+import { useDialogA11y } from "./use-dialog-a11y";
 import SizeChartModal from "@/components/SizeChartModal";
 
 type Props = {
@@ -41,6 +42,9 @@ export default function ProductSheet({
   onToggleWishlist,
 }: Props) {
   const tmpl = useTemplate();
+  // Dialog a11y — focus 入 sheet / Tab trap / Escape 閂 / 閂咗 focus 還原
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, onClose);
   const images = getAllImages(product);
   const dualVariant = getDualVariantData(product);
   const singleVariants = getVisibleVariants(product);
@@ -373,7 +377,15 @@ export default function ProductSheet({
   const sectionBorder = `${tmpl.subtext}25`;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: tmpl.bg }}>
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-sheet-title"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 focus:outline-none"
+      style={{ backgroundColor: tmpl.bg }}
+    >
       {/* Fullscreen modal */}
       <div className="h-full flex flex-col max-w-[480px] mx-auto animate-slide-up">
         {/* Image Carousel Section - 全寬 1:1 */}
@@ -505,7 +517,7 @@ export default function ProductSheet({
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {/* 商品名稱 + 價格 */}
           <div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: tmpl.text }}>
+            <h3 id="product-sheet-title" className="text-xl font-bold mb-2" style={{ color: tmpl.text }}>
               {product.title}
             </h3>
             <div className="flex items-center gap-2">

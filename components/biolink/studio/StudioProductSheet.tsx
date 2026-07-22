@@ -10,6 +10,7 @@ import {
   getVariantLabel,
   formatPrice,
 } from "@/lib/biolink-helpers";
+import { useDialogA11y } from "../use-dialog-a11y";
 
 type Props = {
   product: ProductForBioLink;
@@ -32,6 +33,10 @@ export default function StudioProductSheet({
   wishlisted = false,
   onToggleWishlist,
 }: Props) {
+  // Dialog a11y — focus 入 sheet / Tab trap / Escape 閂 / 閂咗 focus 還原
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, onClose);
+
   const images = getAllImages(product);
   const dual = getDualVariantData(product);
   const singleVariants = getVisibleVariants(product) ?? [];
@@ -127,7 +132,14 @@ export default function StudioProductSheet({
   })();
 
   return (
-    <div className="fixed inset-0 z-50 bg-wlx-paper text-wlx-ink overflow-y-auto">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="studio-product-sheet-title"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-wlx-paper text-wlx-ink overflow-y-auto focus:outline-none"
+    >
       {/* Top bar — close + wishlist */}
       <div className="sticky top-0 z-30 flex items-center justify-between bg-wlx-paper/95 backdrop-blur-sm border-b border-wlx-mist px-5 py-3 sm:px-8">
         <button
@@ -201,7 +213,7 @@ export default function StudioProductSheet({
 
         {/* Title + price */}
         <div className="px-5 pt-7 sm:px-8 sm:pt-10">
-          <h1 className="font-wlx-display text-2xl sm:text-3xl tracking-tight leading-tight text-wlx-ink">
+          <h1 id="studio-product-sheet-title" className="font-wlx-display text-2xl sm:text-3xl tracking-tight leading-tight text-wlx-ink">
             {product.title}
           </h1>
           <p className="mt-3 text-base tabular-nums">
