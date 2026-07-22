@@ -23,9 +23,11 @@
 **Sprint 2 已落（6 commit,ci:build 綠,PR #349 stacked 喺 #348 上）**:
 `45998cf` /start step-2 form/label/aria/focus;`35479d0` grid content-visibility（priority 卡唔包）;`983f6cf` 商品卡真 `<a href>` + sitemap 商品 URL（reuse 現有 product/[id] route,特登唔用 next/Link 避 prefetch 風暴）;`66162d5` use-dialog-a11y hook（focus trap/Escape/還原）兩個 sheet 上 dialog 語義;`f6c6461` JSON-LD 三面 + 修 Organization 錯標租戶店 bug;`c22a93a` hero LCP 死 delay 剪走（編排不變）。
 
-**跟進 task（未做,有記錄）**:① e2e/CI DB 隔離 + purge 現有 test 店（sitemap 根因）;② Fraunces platform-only preload（dynamic import route 層重構,fonts.ts 註釋有方案）;③ 拆 `force-dynamic` 靜態化 platform landing（TTFB 最大槓桿）。
+**2026-07-22 深夜:兩個 sprint 已 merge 出 prod** —— #348（Sprint 1）+ #350（Sprint 2;取代被 GitHub 閂死嘅 stacked #349,cherry-pick 落新 main,tree byte-identical）。Live 實證:sitemap 1008→632 URL、污染 672→88、商品 URL 336 條出街。⚠️ Stacked PR 教訓:squash-merge 底層 + `--delete-branch` 會即時 CLOSE 上層 PR 且無得救,merge 底層時唔好即刻刪 branch。
 
-**PR 狀態**:#348（Sprint 1,base main）、#349（Sprint 2,base = sprint1 branch,**#348 merge 後要 retarget main**）。等 CI e2e + Yau 收貨。
+**2026-07-22 深夜:prod DB 測試店 soft-disable（DB 操作,git 冇 trace,呢度係唯一記錄）** —— 經 Yau 批核,20 間 tenant `status` → `"disabled"`（可逆,還原就 update 返 active）:12× `e2e-*`、5× `phase-*`（phase-c-tea/harden/green/mochi、phase-e-motion）、`test`、`test2`、`wowlix`（自指向源頭）。**保留 active（Yau 揀）**:`maysshop`（sample,永遠唔掂）、`solemena-test`（Wowlix Studio,249 商品 3 訂單）、`tonic-test-0323`（1 單）。sitemap residual 88 條 URL 正正嚟自呢兩間保留店 —— 係有意決定,唔係漏。
+
+**跟進 task（未做,有記錄）**:① **e2e 本地 DB 隔離**（root cause 剩低嘅一半:local playwright 仲係寫 shared DB,新 e2e-* 店會再累積〔雖然 register 已 reserve 唔到 wowlix/www/demo、sitemap 有 filter〕— 方案:local docker postgres + db push + seed,學 CI 個 e2e job）;② Fraunces platform-only preload（dynamic import route 層重構,fonts.ts 註釋有方案）;③ 拆 `force-dynamic` 靜態化 platform landing（TTFB 最大槓桿）。
 
 ---
 
