@@ -4,6 +4,26 @@
 
 ---
 
+## ✅ 2026-07-22:出 prod 後現況 + audit Sprint 1（branch `fix/audit-sprint1`）
+
+**狀態更正**:#345（landing 重設計）/ #346（安全硬化）/ #347（CI）已於 2026-07-20 全部 merge 入 main 出咗 prod —— 下面「等 Yau merge #345」等字眼已過時,留底做歷史。
+
+**外部 audit（wowlix.com,13 條）→ 13 agent 逐條對 code adversarial verify**:13 條全部係真問題,但 4 條修正框架 ——
+- 商品 URL:`(customer)/product/[id]` route **已存在**（含 canonical + Product/BreadcrumbList JSON-LD）,只欠 biolink 店 wiring + sitemap;
+- LCP 真兇係 `force-dynamic` + hero 標題開場 clip-path 收埋 900ms + Fraunces 冇 preload（**唔係** audit 講嘅 CSS/圖片/動畫 —— repo 自己 Lighthouse artifact 證明嗰啲已 pass）;
+- JSON-LD 部分存在（FAQ/product ✓）,另發現 Organization node 擺錯位（只喺 store branch render + hardcode 平台身份）;
+- 「7 款收款方式」係作嘅 —— 收款方式根本冇 plan-gate,marketing 版先啱。
+- Live sitemap 實測（2026-07-21）:**1008 URL,672（67%）係 test/e2e 污染**（比 audit 見嘅 478/224 仲惡化咗）。
+
+**Sprint 1 已落（6 commit,ci:build 綠）**:
+`9e38ead` sitemap 排除 e2e-/test/phase-/wowlix/www/demo + register reserve;`df8c961` hreflang 絕對化 + self-ref canonical;`9ffe818` 收款文案統一;`8c44bbe` 「示範店舖」誠實化 + nav 44px + 雙色 focus 環;`50dba96` 商品卡 keyboard-operable;`4d72c12` WhatsApp header aria-label。
+
+⚠️ **根因未解**:e2e 寫緊同一個 DB（`e2e/setup/tenant.setup.ts:7`）,sitemap filter 只係遮掩 —— 要隔離 CI/e2e DB + purge 現有 `e2e-*`/`test.*`/`phase-*` row（獨立 task）。
+
+**Sprint 2 backlog（#8-13,M effort）**:register step-2 a11y（label/name/form/aria/focus）、商品 URL wiring（reuse 現有 route + sitemap products）、店舖 grid `content-visibility`、product sheet dialog a11y hook、JSON-LD 三面（landing Organization+SoftwareApplication / pricing offers / 店 Store+ItemList）+ 修 Organization 擺錯位、LCP 三招（標題即畫 + platform-only Fraunces preload + 考慮除 force-dynamic）。
+
+---
+
 ## 🚀 2026-07-16 深夜：全站提升 programme — 交接（新 session 由呢度開始）
 
 **目標（Yau 原話）**：要俾人信任度、覺得係一個專業嘅平台；成個流程有心、高級；全網每一頁每一條 flow 都要行一次。
