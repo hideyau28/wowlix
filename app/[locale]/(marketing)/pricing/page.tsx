@@ -1,4 +1,5 @@
 import PricingPage from "@/components/marketing/StudioPricingPage";
+import { MARKETING_PLANS } from "@/components/marketing/plans";
 import type { Locale } from "@/lib/i18n";
 import type { Metadata } from "next";
 
@@ -32,5 +33,39 @@ export default async function Page({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  return <PricingPage locale={locale as Locale} />;
+
+  // SoftwareApplication + AggregateOffer JSON-LD — 直接由 MARKETING_PLANS
+  // 出 offer（single source of truth，價錢唔會同頁面 drift）
+  const prices = MARKETING_PLANS.map((p) => p.priceHKD);
+  const pricingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "WoWlix",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: "https://wowlix.com/pricing",
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "HKD",
+      lowPrice: String(Math.min(...prices)),
+      highPrice: String(Math.max(...prices)),
+      offerCount: String(MARKETING_PLANS.length),
+      offers: MARKETING_PLANS.map((p) => ({
+        "@type": "Offer",
+        name: p.name,
+        price: String(p.priceHKD),
+        priceCurrency: "HKD",
+      })),
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
+      />
+      <PricingPage locale={locale as Locale} />
+    </>
+  );
 }
