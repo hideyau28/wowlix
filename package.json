@@ -27,8 +27,8 @@
     "ci:verify": "bash scripts/ci-verify-head.sh",
     "verify:local": "bash scripts/verify-local.sh",
     "verify:all": "npm run verify:local && npm run ci:verify",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e": "bash scripts/e2e-local-db.sh && playwright test",
+    "test:e2e:ui": "bash scripts/e2e-local-db.sh && playwright test --ui"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
