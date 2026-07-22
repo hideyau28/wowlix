@@ -15,6 +15,9 @@ const RESERVED_SLUGS = new Set([
   "terms", "privacy", "favicon.ico",
   // 防自我指向子域（wowlix.wowlix.com / www.wowlix.com）同保留 demo
   "wowlix", "www", "demo",
+  // 靜態 platform landing route segment（app/[locale]/landing）—— 租戶用咗
+  // 呢個 slug 會俾 route 遮死永遠開唔到
+  "landing",
 ]);
 
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;

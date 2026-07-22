@@ -4,7 +4,6 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
-import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 
 export async function generateMetadata({
   params,
@@ -48,10 +47,19 @@ export default async function FAQPage({
   const faqs = getFAQContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
-  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版
+  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
+  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
+  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
   const platform = await isPlatformMode();
+  const MarketingLegalShell = platform
+    ? (await import("@/components/marketing/MarketingLegalShell")).default
+    : null;
   const shell = (node: ReactNode) =>
-    platform ? <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell> : node;
+    MarketingLegalShell ? (
+      <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell>
+    ) : (
+      node
+    );
 
   return shell(
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">

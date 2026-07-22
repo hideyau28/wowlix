@@ -4,7 +4,6 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
-import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 
 export async function generateMetadata({
   params,
@@ -54,10 +53,19 @@ export default async function ContactPage({
   const content = getContactContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
-  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版
+  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
+  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
+  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
   const platform = await isPlatformMode();
+  const MarketingLegalShell = platform
+    ? (await import("@/components/marketing/MarketingLegalShell")).default
+    : null;
   const shell = (node: ReactNode) =>
-    platform ? <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell> : node;
+    MarketingLegalShell ? (
+      <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell>
+    ) : (
+      node
+    );
   // WhatsApp 掣：platform 面行單色 pill（WhatsApp 綠係租戶店先用）
   const waBtnClass = platform
     ? "wlx-cta inline-flex items-center gap-2 rounded-full bg-wlx-ink px-5 py-2.5 text-sm font-medium hover:bg-wlx-ink/90 transition-colors"

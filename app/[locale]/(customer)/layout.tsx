@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { Locale } from "@/lib/i18n";
 import { getDict } from "@/lib/i18n";
+import { getStoreName } from "@/lib/get-store-name";
 import { prisma } from "@/lib/prisma";
 import TopNav from "@/components/TopNav";
 import CategoryNavWrapper from "@/components/CategoryNavWrapper";
@@ -21,6 +23,26 @@ import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
 
 // Force dynamic rendering because we need headers() for tenant resolution
 export const dynamic = "force-dynamic";
+
+// storeName branding title —— 以前住喺 root layout generateMetadata（isPlatformMode
+// + getStoreName 都讀 headers）。root shell 搬入 [locale] 靜態化之後，呢套 headers
+// 邏輯落返嚟 (customer)（本身 force-dynamic，唔會拖累其他 route）。有自己
+// generateMetadata 嘅頁（home/product/legal…）照 override title/description。
+export async function generateMetadata(): Promise<Metadata> {
+  if (await isPlatformMode()) {
+    return {
+      title: "WoWlix — Turn Followers into Customers",
+      description:
+        "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
+    };
+  }
+  const storeName = await getStoreName();
+  return {
+    title: `${storeName} — WoWlix`,
+    description:
+      "WoWlix — The all-in-one store builder for Hong Kong Instagram merchants | 香港 IG 小店一站式開店平台，一條 Link 將 Follower 變成生意",
+  };
+}
 
 export default async function CustomerLayout({
   children,
