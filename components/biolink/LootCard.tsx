@@ -184,7 +184,20 @@ export default function LootCard({
         <div className="p-3 relative">
           <div
             className={onTap ? "cursor-pointer" : ""}
+            role={onTap ? "button" : undefined}
+            tabIndex={onTap ? 0 : undefined}
+            aria-label={onTap ? product.title : undefined}
             onClick={() => onTap?.(product)}
+            onKeyDown={
+              onTap
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onTap?.(product);
+                    }
+                  }
+                : undefined
+            }
           >
             <h3
               className="text-sm font-semibold leading-snug mb-1 pr-10"

@@ -87,6 +87,7 @@ export default function StickyHeader({ tenant, cartCount, onCartClick }: Props) 
               href={`https://wa.me/${tenant.whatsapp.replace(/[^0-9]/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={locale === "zh-HK" ? "WhatsApp 聯絡商戶" : "Contact store on WhatsApp"}
               className="w-7 h-7 rounded-full bg-[#25D366]/10 flex items-center justify-center"
             >
               <svg className="w-3.5 h-3.5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">

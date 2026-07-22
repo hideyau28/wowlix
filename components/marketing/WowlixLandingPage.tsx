@@ -395,14 +395,14 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
           <nav className="flex items-center gap-5 sm:gap-7">
             <Link
               href={`/${locale}/pricing`}
-              className="text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
+              className="inline-flex items-center min-h-[44px] px-2 -mx-2 text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {t.navPricing}
             </Link>
             <Link
               href={`/${otherLocale}`}
-              className="text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
+              className="inline-flex items-center min-h-[44px] px-2 -mx-2 text-[12px] uppercase tracking-[0.18em] text-wlx-stone hover:text-wlx-ink transition-colors duration-200"
               style={{ transitionTimingFunction: "var(--wlx-ease)" }}
             >
               {locale === "zh-HK" ? "EN" : "繁"}
@@ -671,7 +671,7 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
                 ✦
               </span>
               <p className="inline-flex items-center rounded-full border border-wlx-mist bg-wlx-paper/50 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-wlx-stone">
-                {lang === "zh-HK" ? "真實店舖" : "Real stores"}
+                {lang === "zh-HK" ? "示範店舖" : "Sample stores"}
               </p>
             </div>
             <h2 className="mt-5 max-w-[15ch] font-wlx-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.06] tracking-[-0.025em] [text-wrap:balance]">
@@ -1604,6 +1604,17 @@ export default function WowlixLandingPage({ locale = "zh-HK" }: Props) {
            nothing ever animates. Scoped under .wlx-root so it cannot leak. */
         .wlx-root :is(a, button, input, [tabindex]) {
           outline-offset: 3px;
+        }
+        /* Keyboard focus: explicit two-tone ring (paper inner + ink outer) so it
+           stays visible on BOTH paper and ink surfaces and is thicker than the
+           thin UA default. Transparent outline is the forced-colors fallback
+           (box-shadow is ignored in high-contrast mode). box-shadow is not
+           transitioned on plain links, so nothing animates. */
+        .wlx-root :is(a, button, input, [tabindex]):focus-visible {
+          outline: 2px solid transparent;
+          outline-offset: 3px;
+          border-radius: 3px;
+          box-shadow: 0 0 0 2px var(--wlx-paper), 0 0 0 4px var(--wlx-ink);
         }
         /* Visible by default (no JS / observer stall = content still shows). */
         .wlx-reveal {

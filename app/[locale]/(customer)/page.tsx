@@ -30,11 +30,12 @@ export async function generateMetadata({
     description:
       "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
     alternates: {
-      canonical: "https://wowlix.com",
+      // Self-referencing canonical per locale（唔好指去會 redirect 嘅 apex）+ 絕對 hreflang
+      canonical: locale === "en" ? "https://wowlix.com/en" : "https://wowlix.com/zh-HK",
       languages: {
-        en: "/en",
-        "zh-HK": "/zh-HK",
-        "x-default": "/",
+        en: "https://wowlix.com/en",
+        "zh-HK": "https://wowlix.com/zh-HK",
+        "x-default": "https://wowlix.com/zh-HK",
       },
     },
     openGraph: {
