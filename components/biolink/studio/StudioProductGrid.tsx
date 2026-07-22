@@ -40,13 +40,23 @@ export default function StudioProductGrid({
     <div className="mx-auto max-w-[1200px] px-4 sm:px-8 py-10 sm:py-14">
       <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-4 lg:gap-x-8">
         {filtered.map((product, idx) => (
-          <StudioProductCard
+          // content-visibility: 離屏卡 skip layout/paint（大量商品時慳好多）。
+          // priority 卡（above-the-fold）唔包，保住 LCP 候選即時 paint。
+          <div
             key={product.id}
-            product={product}
-            currency={currency}
-            onTap={onTap}
-            priority={idx < PRIORITY_COUNT}
-          />
+            style={
+              idx < PRIORITY_COUNT
+                ? undefined
+                : { contentVisibility: "auto", containIntrinsicSize: "0 380px" }
+            }
+          >
+            <StudioProductCard
+              product={product}
+              currency={currency}
+              onTap={onTap}
+              priority={idx < PRIORITY_COUNT}
+            />
+          </div>
         ))}
       </div>
     </div>
