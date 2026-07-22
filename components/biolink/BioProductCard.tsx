@@ -12,6 +12,7 @@ import {
   formatPrice,
 } from "@/lib/biolink-helpers";
 import { useTemplate } from "@/lib/template-context";
+import { useStoreLocale } from "./use-store-locale";
 import SoldOutOverlay from "./SoldOutOverlay";
 import NewBadge from "./NewBadge";
 import LowStockBadge from "./LowStockBadge";
@@ -36,6 +37,7 @@ export default function BioProductCard({
   onToggleWishlist,
 }: Props) {
   const tmpl = useTemplate();
+  const storeLocale = useStoreLocale();
   const images = getAllImages(product);
   const heroImage = images[0] || null;
   const variants = getVisibleVariants(product);
@@ -220,22 +222,16 @@ export default function BioProductCard({
 
       {/* Content — 點擊標題/價格開 product sheet */}
       <div className="p-3 relative">
-        <div
-          className={onTap ? "cursor-pointer" : ""}
-          role={onTap ? "button" : undefined}
-          tabIndex={onTap ? 0 : undefined}
-          aria-label={onTap ? product.title : undefined}
-          onClick={() => onTap?.(product)}
-          onKeyDown={
-            onTap
-              ? (e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onTap?.(product);
-                  }
-                }
-              : undefined
-          }
+        {/* 真 <a href> — crawler/分享有得入獨立商品頁；點擊有 onTap 就攔截開 sheet */}
+        <a
+          href={`/${storeLocale}/product/${product.id}`}
+          className="block"
+          onClick={(e) => {
+            if (onTap) {
+              e.preventDefault();
+              onTap(product);
+            }
+          }}
         >
           <h3
             className="text-sm font-semibold leading-snug mb-1 pr-10"
@@ -275,7 +271,7 @@ export default function BioProductCard({
               </span>
             )}
           </div>
-        </div>
+        </a>
 
         {/* + 圓形按鈕 — 右下角（已售完時隱藏） */}
         {!soldOut && (

@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           { slug: { in: ["wowlix", "www", "demo"] } },
         ],
       },
-      select: { slug: true, languages: true },
+      select: { id: true, slug: true, languages: true },
     });
 
     const infoPages = [
@@ -94,6 +94,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.5,
           });
         }
+      }
+    }
+
+    // 商品獨立 URL — 每個商戶嘅 active 商品入 sitemap（subdomain canonical 形式，
+    // 對應 (customer)/product/[id] 現有 SSR 詳情頁）
+    const tenantById = new Map(tenants.map((t) => [t.id, t]));
+    const products = await prisma.product.findMany({
+      where: {
+        tenantId: { in: tenants.map((t) => t.id) },
+        active: true,
+        hidden: false,
+        deletedAt: null,
+      },
+      select: { id: true, tenantId: true },
+    });
+    for (const product of products) {
+      const tenant = tenantById.get(product.tenantId);
+      if (!tenant) continue;
+      const tenantBase = `https://${tenant.slug}.wowlix.com`;
+      const locales = tenant.languages.length > 0 ? tenant.languages : ["en"];
+      for (const locale of locales) {
+        tenantPages.push({
+          url: `${tenantBase}/${locale}/product/${product.id}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly",
+          priority: 0.7,
+        });
       }
     }
   } catch {
