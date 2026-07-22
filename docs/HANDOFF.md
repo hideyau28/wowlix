@@ -27,7 +27,7 @@
 
 **2026-07-22 深夜:prod DB 測試店 soft-disable（DB 操作,git 冇 trace,呢度係唯一記錄）** —— 經 Yau 批核,20 間 tenant `status` → `"disabled"`（可逆,還原就 update 返 active）:12× `e2e-*`、5× `phase-*`（phase-c-tea/harden/green/mochi、phase-e-motion）、`test`、`test2`、`wowlix`（自指向源頭）。**保留 active（Yau 揀）**:`maysshop`（sample,永遠唔掂）、`solemena-test`（Wowlix Studio,249 商品 3 訂單）、`tonic-test-0323`（1 單）。sitemap residual 88 條 URL 正正嚟自呢兩間保留店 —— 係有意決定,唔係漏。
 
-**跟進 task（未做,有記錄）**:① **e2e 本地 DB 隔離**（root cause 剩низ嘅一半:local playwright 仲係寫 shared DB,新 e2e-* 店會再累積〔雖然 register 已 reserve 唔到 wowlix/www/demo、sitemap 有 filter〕— 方案:local docker postgres + db push + seed,學 CI 個 e2e job）;② Fraunces platform-only preload（dynamic import route 層重構,fonts.ts 註釋有方案）;③ 拆 `force-dynamic` 靜態化 platform landing（TTFB 最大槓桿）。
+**跟進 task（未做,有記錄）**:① **e2e 本地 DB 隔離**（root cause 剩低嘅一半:local playwright 仲係寫 shared DB,新 e2e-* 店會再累積〔雖然 register 已 reserve 唔到 wowlix/www/demo、sitemap 有 filter〕— 方案:local docker postgres + db push + seed,學 CI 個 e2e job）;② Fraunces platform-only preload（dynamic import route 層重構,fonts.ts 註釋有方案）;③ 拆 `force-dynamic` 靜態化 platform landing（TTFB 最大槓桿）。
 
 ---
 
