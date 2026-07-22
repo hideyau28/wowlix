@@ -160,7 +160,41 @@ export default async function SlugPage({ params }: PageProps) {
       DEFAULT_ORDER_CONFIRM,
   };
 
-  return <BioLinkPage tenant={tenantForBioLink} products={serialized} />;
+  // Store + ItemList JSON-LD（ItemList cap 100 控制 HTML 重量；
+  // 商品 URL 用 subdomain canonical 形式，對應 sitemap）
+  const storeBase = `https://${slug}.wowlix.com`;
+  const storeLocale =
+    (tenant.languages && tenant.languages[0]) || "en";
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Store",
+        name: tenant.name,
+        url: `${storeBase}/${storeLocale}`,
+        ...(tenant.description ? { description: tenant.description } : {}),
+      },
+      {
+        "@type": "ItemList",
+        itemListElement: serialized.slice(0, 100).map((p, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: p.title,
+          url: `${storeBase}/${storeLocale}/product/${p.id}`,
+        })),
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
+      <BioLinkPage tenant={tenantForBioLink} products={serialized} />
+    </>
+  );
 }
 
 export async function generateMetadata({

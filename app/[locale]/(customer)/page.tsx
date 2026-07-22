@@ -193,7 +193,38 @@ export default async function Home({
 
   // Platform bare domain → landing page
   if (await isPlatformMode()) {
-    return <LandingPage locale={l} />;
+    // Organization + SoftwareApplication JSON-LD — 平台首頁結構化資料
+    const platformJsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://wowlix.com/#organization",
+          name: "WoWlix",
+          url: "https://wowlix.com",
+          logo: "https://wowlix.com/og-default.png",
+        },
+        {
+          "@type": "SoftwareApplication",
+          name: "WoWlix",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          url: "https://wowlix.com",
+          description:
+            "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "HKD" },
+        },
+      ],
+    };
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(platformJsonLd) }}
+        />
+        <LandingPage locale={l} />
+      </>
+    );
   }
 
   // Check if tenant exists; if not, show landing page
@@ -329,19 +360,23 @@ export default async function Home({
 
   const firstBannerIndex = renderItems.findIndex((i) => i.type === "banner");
 
+  // 店舖身份 JSON-LD — 反映租戶身份（之前 hardcode 做 WoWlix，錯標所有租戶店）
+  const { headers: getStoreHeaders } = await import("next/headers");
+  const storeHeaders = await getStoreHeaders();
+  const storeSlug = storeHeaders.get("x-tenant-slug") || "maysshop";
+  const storeDisplayName = await getStoreName();
+
   return (
     <div className="pb-16">
-      {/* Organization JSON-LD */}
+      {/* Store JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "WoWlix",
-            url: "https://wowlix.com",
-            logo: "https://wowlix.com/favicon.svg",
-            description: "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。",
+            "@type": "Store",
+            name: storeDisplayName,
+            url: `https://${storeSlug}.wowlix.com`,
           }),
         }}
       />
