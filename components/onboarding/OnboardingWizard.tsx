@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, type RefObject } from "react";
 import { DollarSign, Sparkles, Check, Circle } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import { COVER_TEMPLATES } from "@/lib/cover-templates";
@@ -654,6 +654,20 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
   };
 
   // --- Validation per step ---
+  // Step 2 input refs — validation fail 時 focus 返第一個錯誤欄位
+  const shopNameRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
+  const step2Refs: Record<string, RefObject<HTMLInputElement | null>> = {
+    shopName: shopNameRef,
+    slug: slugRef,
+    email: emailRef,
+    password: passwordRef,
+    confirmPassword: confirmPasswordRef,
+  };
+
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
     const name = data.shopName.trim();
@@ -685,6 +699,10 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
     }
 
     setErrors(newErrors);
+    // Focus 第一個錯誤欄位（screen reader 會即時讀出 aria-describedby 嘅錯誤）
+    const firstError = ["shopName", "slug", "email", "password", "confirmPassword"]
+      .find((k) => newErrors[k]);
+    if (firstError) step2Refs[firstError]?.current?.focus();
     return Object.keys(newErrors).length === 0;
   };
 
@@ -887,6 +905,12 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
       errors[field] ? "border-red-400" : "border-wlx-mist"
     } focus:outline-none focus:ring-2 focus:ring-wlx-ink/20 focus:border-wlx-ink text-wlx-ink placeholder:text-wlx-stone`;
 
+  // a11y helpers — 錯誤時 aria-invalid + 指向對應 error message
+  const inputA11y = (field: string) => ({
+    "aria-invalid": errors[field] ? true : undefined,
+    "aria-describedby": errors[field] ? `ob-${field}-err` : undefined,
+  });
+
   const selectedTemplate = COVER_TEMPLATES.find(
     (tmpl) => tmpl.id === data.templateId
   );
@@ -1040,7 +1064,14 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
 
             {/* ======== STEP 2: Store Info + Account ======== */}
             {step === 2 && (
-              <div className="space-y-4">
+              <form
+                className="space-y-4"
+                noValidate
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleNext();
+                }}
+              >
                 <div className="text-center">
                   <h2 className="font-wlx-display text-2xl tracking-tight text-wlx-ink">
                     {labels.storeInfo}
@@ -1051,25 +1082,30 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                 <div className="space-y-3">
                   {/* Store name */}
                   <div>
-                    <label className="block text-sm font-medium text-wlx-stone mb-1">
+                    <label htmlFor="ob-shopName" className="block text-sm font-medium text-wlx-stone mb-1">
                       {labels.storeName}
                     </label>
                     <input
+                      id="ob-shopName"
+                      name="organization"
+                      autoComplete="organization"
+                      ref={shopNameRef}
                       type="text"
                       value={data.shopName}
                       onChange={(e) => handleNameChange(e.target.value)}
                       placeholder={labels.storeNamePlaceholder}
                       maxLength={50}
                       className={inputClass("shopName")}
+                      {...inputA11y("shopName")}
                     />
                     {errors.shopName && (
-                      <p className="text-red-500 text-xs mt-1">{errors.shopName}</p>
+                      <p id="ob-shopName-err" role="alert" className="text-red-500 text-xs mt-1">{errors.shopName}</p>
                     )}
                   </div>
 
                   {/* Slug */}
                   <div>
-                    <label className="block text-sm font-medium text-wlx-stone mb-1">
+                    <label htmlFor="ob-slug" className="block text-sm font-medium text-wlx-stone mb-1">
                       {labels.storeUrl}
                     </label>
                     <div className="relative">
@@ -1077,6 +1113,10 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                         wowlix.com/
                       </span>
                       <input
+                        id="ob-slug"
+                        name="slug"
+                        autoComplete="off"
+                        ref={slugRef}
                         type="text"
                         value={data.slug}
                         onChange={(e) => handleSlugChange(e.target.value)}
@@ -1084,6 +1124,16 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                           errors.slug ? "border-red-400" : "border-wlx-mist"
                         } focus:outline-none focus:ring-2 focus:ring-wlx-ink/20 focus:border-wlx-ink text-wlx-ink`}
                         maxLength={30}
+                        aria-invalid={
+                          errors.slug || slugStatus === "taken" || slugStatus === "invalid"
+                            ? true
+                            : undefined
+                        }
+                        aria-describedby={
+                          errors.slug || slugStatus === "taken" || slugStatus === "invalid"
+                            ? "ob-slug-err"
+                            : undefined
+                        }
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                         {slugStatus === "checking" && (
@@ -1104,10 +1154,10 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                       <p className="text-wlx-stone text-xs mt-1">{labels.slugChecking}</p>
                     )}
                     {(slugStatus === "taken" || slugStatus === "invalid") && slugReason && (
-                      <p className="text-red-500 text-xs mt-1">{slugReason}</p>
+                      <p id="ob-slug-err" role="alert" className="text-red-500 text-xs mt-1">{slugReason}</p>
                     )}
                     {errors.slug && slugStatus !== "taken" && slugStatus !== "invalid" && (
-                      <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
+                      <p id="ob-slug-err" role="alert" className="text-red-500 text-xs mt-1">{errors.slug}</p>
                     )}
                   </div>
                 </div>
@@ -1159,19 +1209,24 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-medium text-wlx-stone mb-1">
+                    <label htmlFor="ob-email" className="block text-sm font-medium text-wlx-stone mb-1">
                       {labels.email}
                     </label>
                     <input
+                      id="ob-email"
+                      name="email"
+                      autoComplete="email"
+                      ref={emailRef}
                       type="email"
                       value={data.email}
                       onChange={(e) => update("email", e.target.value)}
                       placeholder={labels.emailPlaceholder}
                       readOnly={!!googleEmail}
                       className={`${inputClass("email")} ${googleEmail ? "bg-wlx-cream text-wlx-stone" : ""}`}
+                      {...inputA11y("email")}
                     />
                     {errors.email && (
-                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                      <p id="ob-email-err" role="alert" className="text-red-500 text-xs mt-1">{errors.email}</p>
                     )}
                   </div>
 
@@ -1179,35 +1234,43 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                   {!googleEmail && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-wlx-stone mb-1">
+                      <label htmlFor="ob-password" className="block text-sm font-medium text-wlx-stone mb-1">
                         {labels.password}
                       </label>
                       <input
+                        id="ob-password"
+                        name="password"
+                        ref={passwordRef}
                         type="password"
                         value={data.password}
                         onChange={(e) => update("password", e.target.value)}
                         placeholder={labels.passwordPlaceholder}
                         autoComplete="new-password"
                         className={inputClass("password")}
+                        {...inputA11y("password")}
                       />
                       {errors.password && (
-                        <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                        <p id="ob-password-err" role="alert" className="text-red-500 text-xs mt-1">{errors.password}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-wlx-stone mb-1">
+                      <label htmlFor="ob-confirmPassword" className="block text-sm font-medium text-wlx-stone mb-1">
                         {labels.confirmPassword}
                       </label>
                       <input
+                        id="ob-confirmPassword"
+                        name="confirm-password"
+                        ref={confirmPasswordRef}
                         type="password"
                         value={data.confirmPassword}
                         onChange={(e) => update("confirmPassword", e.target.value)}
                         placeholder={labels.confirmPasswordPlaceholder}
                         autoComplete="new-password"
                         className={inputClass("confirmPassword")}
+                        {...inputA11y("confirmPassword")}
                       />
                       {errors.confirmPassword && (
-                        <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+                        <p id="ob-confirmPassword-err" role="alert" className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
                       )}
                     </div>
                   </div>
@@ -1224,14 +1287,14 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                     &larr; {labels.back}
                   </button>
                   <button
-                    onClick={handleNext}
+                    type="submit"
                     disabled={slugStatus === "checking"}
                     className="flex-1 py-3 rounded-full bg-wlx-ink text-wlx-paper font-semibold text-base hover:bg-wlx-ink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
                   >
                     {labels.next} &rarr;
                   </button>
                 </div>
-              </div>
+              </form>
             )}
 
             {/* ======== STEP 3: WhatsApp ======== */}
