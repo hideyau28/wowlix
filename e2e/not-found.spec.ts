@@ -23,6 +23,24 @@ test("unknown store slug shows store-not-found", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("3-seg deep path under a real store slug hits the branded 404", async ({
+  page,
+}) => {
+  // [slug]/[...rest] catch-all（#353 root shell 搬遷之後深層 404 嘅接口）：
+  // /{locale}/{真店 slug}/{垃圾}/{垃圾} 要俾 [slug]/not-found 接住 render
+  // branded 404 —— 唔准跌落 Next 內建無品牌 default（連 <html lang> 都冇嗰隻）。
+  const tenant = loadSharedTenant();
+  const res = await page.goto(
+    `${APP}/zh-HK/${tenant.slug}/e2e-no-such-section/e2e-no-such-page`,
+  );
+  expect(res?.status()).toBe(404);
+  await expect(
+    page.locator(".font-wlx-display", { hasText: "404" }),
+  ).toBeVisible();
+  // 有 branded shell = 唔係 __next_error__ 光板（嗰隻連 lang 都冇）
+  await expect(page.locator("html")).toHaveAttribute("lang", /zh-HK|en/);
+});
+
 test("tenant deep 404 renders inside a real store", async ({
   page,
   context,
