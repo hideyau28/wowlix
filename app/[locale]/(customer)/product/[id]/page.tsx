@@ -1,7 +1,8 @@
 import { getDict, type Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getStoreName } from "@/lib/get-store-name";
-import { getServerTenantId } from "@/lib/tenant";
+import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
+import { productUrl } from "@/lib/biolink-data";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -44,11 +45,28 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     ? `選購 ${product.title}${product.brand ? ` (${product.brand})` : ""}，正品保證！`
     : `Shop ${product.title}${product.brand ? ` by ${product.brand}` : ""} at ${storeName}. 100% authentic!`;
 
+  // Platform bare host（www/apex）上呢條 route 解析做 default 店 —— 同一件商品
+  // 而家有第二個 200 URL（path biolink /[slug]/product/[id]，sitemap 出嗰個）。
+  // 兩邊各自 self-canonical 會分薄 signal（review 抓住）—— platform mode 一律
+  // canonical 併軌去 biolink 形式；subdomain host（第日 (a) 補咗 DNS 先存在）
+  // 先用返自己形式。
+  let canonical = `https://wowlix.com/${locale}/product/${id}`;
+  if (await isPlatformMode()) {
+    const { headers } = await import("next/headers");
+    const tenantSlug = (await headers()).get("x-tenant-slug") || "maysshop";
+    const tenantLangs = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { languages: true },
+    });
+    const storeLocale = tenantLangs?.languages?.[0] || "en";
+    canonical = productUrl(storeLocale, tenantSlug, id);
+  }
+
   return {
     title: `${product.title} - ${storeName}`,
     description,
     alternates: {
-      canonical: `https://wowlix.com/${locale}/product/${id}`,
+      canonical,
     },
     openGraph: {
       title: `${product.title} - ${storeName}`,

@@ -12,7 +12,7 @@ import {
   formatPrice,
 } from "@/lib/biolink-helpers";
 import { useTemplate } from "@/lib/template-context";
-import { useStoreLocale } from "./use-store-locale";
+import { useStoreLocale, useStoreSlug } from "./use-store-locale";
 import SoldOutOverlay from "./SoldOutOverlay";
 
 type Props = {
@@ -38,6 +38,7 @@ export default function LootCard({
 }: Props) {
   const tmpl = useTemplate();
   const storeLocale = useStoreLocale();
+  const storeSlug = useStoreSlug();
   const rarity = getRarity(product);
   const config = rarity ? rarityConfig[rarity] : rarityConfig.common;
   const badge = getBadgeText(product);
@@ -186,7 +187,7 @@ export default function LootCard({
         <div className="p-3 relative">
           {/* 真 <a href> — crawler/分享有得入獨立商品頁；點擊有 onTap 就攔截開 sheet */}
           <a
-            href={`/${storeLocale}/product/${product.id}`}
+            href={`/${storeLocale}/${storeSlug}/product/${product.id}`}
             className="block"
             onClick={(e) => {
               if (onTap) {

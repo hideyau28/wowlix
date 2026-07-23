@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { useStoreLocale, useStoreSlug } from "./use-store-locale";
 import { formatPrice, type OrderConfirmConfig } from "@/lib/biolink-helpers";
 import { buildMerchantNotifyUrl } from "@/lib/whatsapp-notify";
 import { useTemplate } from "@/lib/template-context";
@@ -56,7 +56,11 @@ export default function OrderConfirmation({
   languages,
 }: Props) {
   const tmpl = useTemplate();
-  const pathname = usePathname();
+  // ⚠️ 唔准由 pathname append 砌 order link —— 商品獨立頁（/{locale}/{slug}/
+  // product/{id}）checkout 完 append /order/{id} 會砌出 5 段死 path → 404
+  //（review 2026-07-23 抓住）。由 store 身份砌，喺邊條 biolink route 都啱。
+  const storeLocale = useStoreLocale();
+  const storeSlug = useStoreSlug();
   const currency = order.currency || "HKD";
   const isZh = (languages || ["zh-HK"]).includes("zh-HK");
   const config = orderConfirmMessage || {
@@ -805,7 +809,7 @@ export default function OrderConfirmation({
 
           {/* Track order link */}
           <a
-            href={`${pathname}/order/${order.orderId}`}
+            href={`/${storeLocale}/${storeSlug}/order/${order.orderId}`}
             className="block mt-4 w-full py-3.5 rounded-xl font-medium text-sm text-center active:scale-[0.98] transition-transform"
             style={{
               backgroundColor: `${tmpl.accent}15`,

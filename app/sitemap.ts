@@ -2,7 +2,12 @@ import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://wowlix.com";
+  // www = 真 host（apex 全路徑 307 → www；Vercel domains 兩個都掛喺 project）。
+  // 全份 sitemap 統一一個 host —— 混 host 會踩 sitemap cross-host rule，
+  // 商品 URL 嗰家族隨時俾 search engine 當 cross-host 掉咗（Bing 直情硬性
+  // 同 host）。留意 platform 頁 canonical 仲係 apex 形式（歷史遺留），
+  // 唔喺呢度郁 —— apex 307 會令 engine 自己 resolve 落 www。
+  const baseUrl = "https://www.wowlix.com";
 
   // Platform pages
   const platformPages: MetadataRoute.Sitemap = [
@@ -59,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           { slug: { in: ["wowlix", "www", "demo"] } },
         ],
       },
-      select: { slug: true },
+      select: { id: true, slug: true, languages: true },
     });
 
     // ⚠️ 唔准 emit `{slug}.wowlix.com` subdomain URL —— `*.wowlix.com` wildcard
@@ -73,16 +78,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     //（(customer) route 靠 host 解析 tenant，喺 www 上永遠係 default 店 context）
     // —— 所以唔出住，出咗都係 404。
     //
-    // 加返嘅條件（Yau 決定，二選一）：
-    // (a) 補 wildcard DNS + Vercel wildcard domain（要 NS 遷去 Vercel，會斷
-    //     Namecheap email forwarding，要配套搬）→ revert 呢個 commit 就得；
-    // (b) 起 path-based 商品 route（[slug]/product/[id]）→ 依 path 形式加返。
+    // 商品 URL 已依 (b) 路線加返：path biolink route [slug]/product/[id]
+    //（2026-07-23 起，tenant 由 path slug 解析，咩 host 都可達）。
+    // 如果第日行 (a)（補 wildcard DNS）想轉返 subdomain canonical，要連
+    // [slug]/product/[id] canonical、biolink 卡 href、lib/biolink-data.ts
+    // 一齊轉，唔好淨改呢度。
     for (const tenant of tenants) {
       tenantPages.push({
         url: `${baseUrl}/${tenant.slug}`,
         lastModified: new Date(),
         changeFrequency: "daily",
         priority: 0.9,
+      });
+    }
+
+    // 商品獨立 URL —— canonical 形式同 [slug]/product/[id] 頁自身 canonical
+    // 一致（lib/biolink-data.ts productUrl；store 主 locale 一條，唔逐 locale 炒
+    // duplicate）。
+    const { productUrl } = await import("@/lib/biolink-data");
+    const tenantById = new Map(tenants.map((t) => [t.id, t]));
+    const products = await prisma.product.findMany({
+      where: {
+        tenantId: { in: tenants.map((t) => t.id) },
+        active: true,
+        hidden: false,
+        deletedAt: null,
+      },
+      select: { id: true, tenantId: true },
+    });
+    for (const product of products) {
+      const tenant = tenantById.get(product.tenantId);
+      if (!tenant) continue;
+      const storeLocale = tenant.languages[0] || "en";
+      tenantPages.push({
+        url: productUrl(storeLocale, tenant.slug, product.id),
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
       });
     }
   } catch {
