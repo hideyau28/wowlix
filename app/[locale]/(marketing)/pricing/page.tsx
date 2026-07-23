@@ -3,6 +3,19 @@ import { MARKETING_PLANS } from "@/components/marketing/plans";
 import type { Locale } from "@/lib/i18n";
 import type { Metadata } from "next";
 
+// ── 真 prerender（HANDOFF 跟進 task ②）────────────────────────────────────────
+// 成條 chain 冇 headers()/cookies()/DB，一直都係 static-compatible，但冇
+// generateStaticParams 就只係 on-demand cache —— 補呢兩句變 build-time SSG，
+// 學 [locale]/landing 一樣。定價由 plans.ts 烘死喺 build（同 landing 一致，
+// 改價要 redeploy —— HANDOFF「有意識接受」嗰項）。
+export function generateStaticParams() {
+  return [{ locale: "zh-HK" }, { locale: "en" }];
+}
+
+// 冇呢句 /fr/pricing /xx/pricing 垃圾 locale 會 on-demand render 200 兼永久
+// 佔 full-route cache（landing 嗰邊實測過）。鎖死兩個值，其他一律 404。
+export const dynamicParams = false;
+
 export const metadata: Metadata = {
   title: "Pricing | WoWlix — IG Shop Builder",
   description:

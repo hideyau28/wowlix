@@ -228,6 +228,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(startUrl);
   }
 
+  // --- 光板 /pricing 學 /start redirect ---
+  // 唔處理嘅話會以 locale="pricing" 跌落 (customer) home（platform host 上
+  // 即係 render 咗 landing 內容）—— 而 pricing 頁個 canonical 正正指住
+  // https://wowlix.com/pricing，即 canonical 目標同真內容對唔上。
+  if (!isApiRoute && pathname === "/pricing") {
+    return NextResponse.redirect(new URL("/zh-HK/pricing", request.url));
+  }
+
   // --- /landing 收口 ---
   // 租戶 host 直接開 /{locale}/landing 會食到 platform landing（static segment
   // 贏 [slug]，middleware 個 rewrite gate 唔會攔直接 hit）—— 即係每間租戶店
