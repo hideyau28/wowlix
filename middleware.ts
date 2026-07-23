@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { ROUTE_RESERVED_SLUGS } from "@/lib/slug-policy";
 
 const DEFAULT_SLUG = process.env.DEFAULT_TENANT_SLUG || "maysshop";
 const DEFAULT_HOSTS = new Set(["wowlix", "www", "localhost", "127.0.0.1"]);
@@ -22,40 +23,9 @@ function isPlatformBare(hostname: string): boolean {
   return false;
 }
 
-/**
- * 保留字清單 — 呢啲 path segment 唔會被當成 tenant slug。
- * 用於 /{slug} 路由（P4-F 先用到），而家預留。
- */
-const RESERVED_SLUGS = new Set([
-  "admin",
-  "api",
-  "auth",
-  "login",
-  "signup",
-  "settings",
-  "checkout",
-  "cart",
-  "about",
-  "contact",
-  "terms",
-  "privacy",
-  "start",
-  "_next",
-  "favicon.ico",
-  "categories",
-  "collections",
-  "faq",
-  "orders",
-  "product",
-  "products",
-  "profile",
-  "returns",
-  "search",
-  "shipping",
-  "track",
-  "pricing",
-  "landing",
-]);
+// 保留字清單搬咗去 lib/slug-policy.ts（單一真相）——
+// 呢度用 route 版：判斷「首個 path segment 唔係租戶 slug」。
+const RESERVED_SLUGS = ROUTE_RESERVED_SLUGS;
 
 /**
  * Extract tenant slug from hostname.

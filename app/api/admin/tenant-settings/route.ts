@@ -4,6 +4,12 @@ import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
 import { authenticateAdmin } from "@/lib/auth/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { resolveTemplateId } from "@/lib/cover-templates";
+import {
+  REGISTRATION_RESERVED_SLUGS,
+  SLUG_FORMAT_MESSAGE,
+  SLUG_REGEX,
+  SLUG_RESERVED_MESSAGE,
+} from "@/lib/slug-policy";
 
 const ROUTE = "/api/admin/tenant-settings";
 
@@ -62,34 +68,51 @@ export const PUT = withApi(async (req) => {
     throw new ApiError(400, "BAD_REQUEST", "Invalid JSON body");
   }
 
-  // Validate slug if provided
+  // Validate slug if provided — rename 必須行足 register 同一套規矩
+  // （format + reserved + uniqueness，全部食 lib/slug-policy 單一真相）。
+  // 以前呢度乜都唔驗，租戶 admin 可以將 slug 改做 "landing"/"www" 遮死
+  // 自己間店、或者大楷/怪字砌爛 URL。
+  let slugUpdate: string | undefined;
   if (body.slug !== undefined) {
     if (typeof body.slug !== "string" || body.slug.trim().length === 0) {
       throw new ApiError(400, "BAD_REQUEST", "slug must be a non-empty string");
     }
 
-    // Check if slug is changing
+    const cleanSlug = body.slug.trim().toLowerCase();
+
     const currentTenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { slug: true },
     });
+    if (!currentTenant) {
+      throw new ApiError(404, "NOT_FOUND", "Tenant not found");
+    }
 
-    if (currentTenant && body.slug !== currentTenant.slug) {
-      // Check if new slug is already taken
+    // 冇改到（settings form 成個 object 照 PUT 返嚟係常態）就唔郁 slug —
+    // 歷史 slug 未必過得到而家嘅規矩，唔可以逼佢哋改名先俾儲存其他設定
+    if (cleanSlug !== currentTenant.slug) {
+      if (!SLUG_REGEX.test(cleanSlug)) {
+        throw new ApiError(400, "BAD_REQUEST", SLUG_FORMAT_MESSAGE);
+      }
+      if (REGISTRATION_RESERVED_SLUGS.has(cleanSlug)) {
+        throw new ApiError(400, "BAD_REQUEST", SLUG_RESERVED_MESSAGE);
+      }
+
       const existing = await prisma.tenant.findUnique({
-        where: { slug: body.slug },
+        where: { slug: cleanSlug },
       });
-
       if (existing) {
         throw new ApiError(409, "CONFLICT", "Slug already taken");
       }
+
+      slugUpdate = cleanSlug;
     }
   }
 
   // Prepare update data
   const updateData: any = {};
   if (body.name !== undefined) updateData.name = body.name;
-  if (body.slug !== undefined) updateData.slug = body.slug;
+  if (slugUpdate !== undefined) updateData.slug = slugUpdate;
   if (body.tagline !== undefined) updateData.tagline = body.tagline;
   if (body.location !== undefined) updateData.location = body.location;
   if (body.whatsapp !== undefined) updateData.whatsapp = body.whatsapp;
