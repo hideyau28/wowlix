@@ -4,6 +4,22 @@
 
 ---
 
+## ✅ 2026-07-23（夜）：HANDOFF 跟進三連發（#358–#360，等 Yau 收貨）
+
+**#358 slug policy 收口單一真相（`fix/slug-policy-unify`）** —— 追「tenant-settings PUT rename 繞過 RESERVED_SLUGS」個 chip，查落唔止一個洞：slug 規矩散落三份各自唔同嘅 copy —— ① PUT rename **乜都唔驗**（可改做 `landing`/`www`/大楷遮死自己間店）；② check-slug 揸 stale list（話 `wowlix`/`landing` 可用，wizard 綠燈行到 register 先 400）；③ register 唔擋 route 字（`pricing`/`product` 等 —— 註冊到但 path routing 永遠 resolve 唔到 = 出世死店）。全部收口落新 `lib/slug-policy.ts`：`ROUTE_RESERVED_SLUGS`（middleware routing 判斷）+ `PLATFORM_RESERVED_SLUGS`（wowlix/www/demo/app/maysshop）+ `REGISTRATION_RESERVED_SLUGS`（union，register/check-slug/rename 用）。⚠️ **ROUTE list 唔可以擺真租戶 slug**（maysshop 擺入去佢個 path biolink 就 resolve 唔到）—— 所以要分兩層，唔係一份 union 用到底。PUT rename 而家行足 register 全套（trim/lowercase → format → reserved → uniqueness；slug 冇改到 = no-op，歷史 slug 唔使被逼改名先儲到其他設定）。新 `e2e/slug-policy.spec.ts` 三條。30/30 綠。
+
+**#359 /pricing 真 prerender + 光板 /pricing redirect（`perf/pricing-prerender`）** —— 跟進 ②。pricing 補 `generateStaticParams` + `dynamicParams=false`（on-demand cache → build-time SSG，`● /[locale]/pricing` 兩 locale；`/fr/pricing` 由 200 變 404）。做嘅時候發現：**pricing canonical 指住光板 `wowlix.com/pricing`，但光板 `/pricing` 冇 middleware 接** —— 以 `locale="pricing"` 跌落 (customer) home（platform host 上 render 咗 landing 內容），canonical 目標同真內容對唔上。學 #353 光板 `/landing` 先例補 redirect 落 `/zh-HK/pricing`。新 `e2e/pricing.spec.ts` 三條。30/30 綠。
+
+**#360 path-slug 3-seg deep 404 spec（`test/deep-404-path-slug-spec`）** —— 跟進 ③。`/{locale}/{真店}/{垃圾}/{垃圾}` 行 `[slug]/[...rest]` catch-all 落 branded 404：驗 HTTP 404 + 404 screen + `<html lang>` 存在（唔准跌落 `__next_error__` 光板）。28/28 綠。純 spec，零 production code。
+
+**📌 勘誤：下面「🔐 安全跟進（Phase F review 揭出）」三條全部已經喺 PR #346（2026-07-20 出 prod）修咗** —— ① register auto-login 而家只簽租戶級 `tenant-admin-token`（route 註釋直接寫明唔簽 god-mode `admin_session`）；② payme/alipay QR URL 有 https-only 驗證；③ middleware 三處都先 delete 晒 inbound `x-is-platform`/`x-tenant-slug`/`x-tenant-path-slug` 先 set 可信值。**唔好再追呢三條。**（2026-07-23 夜逐條對 code 證實。）
+
+**Merge 注意**：#358 同 #359 都掂 `middleware.ts` 但唔同 hunk，順序無所謂；#360 純 e2e。三個都係由 main 開嘅獨立 branch，唔係 stacked。
+
+**剩返未郁（要 Yau 決定）**：apex→www canonical sweep（platform 頁 canonical 仍係 apex 形式，engine 靠 307 自己 resolve —— 獨立決定）；(a) subdomain 復活路線（要先搬 email forwarding，見 2026-07-23 後半 section）。
+
+---
+
 ## ✅ 2026-07-23:三個跟進 task 全部落地（兩個 PR 等 Yau 收貨）
 
 **Task ①（PR #352,branch `fix/e2e-local-db-isolation`）:e2e 本地 DB 隔離** —— root cause 剩低嗰一半堵咗。`scripts/e2e-local-db.sh` drop+recreate local homebrew postgres 嘅 `wowlix_e2e` + `prisma db push`;`playwright.config.ts` 喺 `!CI` 硬性 override `DATABASE_URL`(就算有人直接 `npx playwright test` 都寫唔到 shared DB)+ `DEFAULT_TENANT_SLUG` 統一 `e2e-default`(`maysshop` 喺 register reserve list,空 DB seed 會 400 —— test process 同 server 兩邊都要見到)。實證:27/27 綠、rows 全落 local、shared DB e2e-* 跑前跑後都係 12。**唔使 docker**(local 有 homebrew postgresql@14 行緊)。
@@ -114,6 +130,8 @@
 - dev env 坑（admin SSR server action 打遠端 API → `ADMIN_AUTH_MISSING`）已喺 `playwright.config.ts` webServer.env 定死解法（`NEXT_PUBLIC_*=localhost:3100`）。手動跑 admin 頁 dev 就要自己覆寫 env。
 
 ### 🔐 安全跟進（Phase F review 揭出，pre-existing on main，非本 branch 引入）
+
+> **⚠️ 2026-07-23 勘誤：下面三條全部已喺 PR #346 修咗（見最頂 2026-07-23（夜）section）。留底做歷史，唔好再追。**
 
 1. **register auto-login 簽平台 super-admin session cookie**（`app/api/tenant/register/route.ts` ~234）—— 公開開店成功後 `createSession()` 簽 `{role:"admin"}`（ADMIN_SECRET 簽名）set 做 `admin_session`，同平台 super-admin 同一款 token。adversarial verify 確認係真 weakness 但 pre-existing。已開 task chip。要查邊啲 guard 信任呢個 cookie（會唔會跨租戶提權）。P0 安全線。
 2. **payme / alipay QR URL 冇 validation** —— wizard/register 收 `paymeQrUrl`/`alipayQrUrl` 落 DB 再喺公開頁 render 做 `<img src>`。review verify 未跑完（credit 斷）；未確認有冇 sanitize。低-中危（img src 唔行 script，但可做 tracking / SSRF-ish）。值得單獨查。
