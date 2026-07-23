@@ -165,3 +165,19 @@ Backgrounds: Create atmosphere and depth. Layer gradients, geometric patterns, c
 Avoid: purple gradients on white, predictable layouts, cookie-cutter components.
 Make unexpected choices that feel genuinely designed for the context.
 </frontend_aesthetics>
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`gh` CLI, repo hideyau28/wowlix). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical labels (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
