@@ -4,6 +4,28 @@
 
 ---
 
+## ✅ 2026-07-23:三個跟進 task 全部落地（兩個 PR 等 Yau 收貨）
+
+**Task ①（PR #352,branch `fix/e2e-local-db-isolation`）:e2e 本地 DB 隔離** —— root cause 剩低嗰一半堵咗。`scripts/e2e-local-db.sh` drop+recreate local homebrew postgres 嘅 `wowlix_e2e` + `prisma db push`;`playwright.config.ts` 喺 `!CI` 硬性 override `DATABASE_URL`(就算有人直接 `npx playwright test` 都寫唔到 shared DB)+ `DEFAULT_TENANT_SLUG` 統一 `e2e-default`(`maysshop` 喺 register reserve list,空 DB seed 會 400 —— test process 同 server 兩邊都要見到)。實證:27/27 綠、rows 全落 local、shared DB e2e-* 跑前跑後都係 12。**唔使 docker**(local 有 homebrew postgresql@14 行緊)。
+
+**Task ③+②(branch `feat/static-platform-landing`):拆 force-dynamic 靜態化 platform landing + Fraunces platform-only preload** —— 一個 root 級重構做齊兩件:
+- **Root shell 搬遷**:`app/layout.tsx` 刪咗,`<html>/<body>` + 8 個 font 註冊 + globals.css 搬入 `app/[locale]/layout.tsx`,lang 由 param 嚟(normalize en|zh-HK)。舊 root 讀 `headers()`(x-locale + generateMetadata 嘅 isPlatformMode/getStoreName)令**全站每條 route 焗住 dynamic** —— 呢個先係 TTFB 真兇。storeName branding metadata 搬落 `(customer)`/`(admin)` layout(本身 force-dynamic);`[slug]/order/[id]` 自己補(**要 isPlatformMode 先行**,唔係會將 maysshop 個名印落人哋訂單頁 —— review 抓住)。
+- **靜態 landing route**:`app/[locale]/landing/page.tsx`(generateStaticParams en/zh-HK + `dynamicParams=false`,metadata/JSON-LD 照抄 (customer) platform branch,**兩邊必須keep一致**),middleware 將 platform host 嘅 /en /zh-HK 內部 rewrite 過去(`?tenant=` override 照跌返落 dynamic route)。`landing` 入咗 middleware + register 兩份 RESERVED_SLUGS(prod 已 query 過冇 tenant 用緊呢個 slug);租戶 host 直開 /{locale}/landing 會 307 返店首頁;光板 /landing 學 /start redirect。**實證:TTFB 3-4ms(舊 dynamic 路 local→Neon 係 ~2.5s);/pricing 都順手甩咗 dynamic**。
+- **Fraunces preload**:`fonts.ts` 掀 `preload:true`,靠 import 紀律控制邊條 route 食 hint —— landing/pricing/start static import(要 preload 嘅 marketing 面),`(customer)/page.tsx` 同五頁法律頁(MarketingLegalShell)轉 **lazy `await import()`**。實證 preload hint 只喺 platform landing HTML 出現(2 個 woff2),租戶 home/法律頁 = 0。
+- **`/` redirect 搬入 middleware**(app/page.tsx 冇得留,`nextUrl.clone()` 保 query 唔整跛 `?tenant=` demo 預覽);root not-found/error 刪咗,深層 404 由 `[slug]/[...rest]/page.tsx` catch-all 接(掟 notFound 落 [slug]/not-found branded 版);`app/global-error.tsx` 補返 root shell 爆嘅品牌 500。
+- 驗證:ci:build 綠(landing = ● SSG)、27/27 e2e 綠、6-lens adversarial review workflow(28 agents)17 findings 全修/確認 accept。
+
+**⚠️ Next 16 三個踩過嘅坑(唔知會再中)**:
+1. **notFound() 喺直屬 root layout segment 嘅 page 掟,唔會俾 [locale]/not-found 或 sibling not-found 接**,一律跌落無品牌 default(root 級 /_not-found 冇 locale param 起唔到 shell)。要接就要喺更深 segment(如 [slug]/[...rest])掟。dev + prod build 都實測過。
+2. **next/font 將 preload flag 燒入檔名**(`-s.p.` vs `-s.`):「另開一個 preload:true 副本 module」會出兩份檔,preload 嗰份冇人用 = 雙倍下載。唔好玩。
+3. **next-font-manifest 係 superset**:lazy import 咗嘅 module 照樣列喺 manifest,但 runtime 唔會 emit hint —— 判斷要 curl 真 HTML,唔好淨睇 manifest。
+
+**有意識接受(記錄在案)**:landing 靜態化後 `plans.ts` 定價**烘死喺 build**,改價要 redeploy 先生效;深層 404 文案係「呢間店唔存在」(舊 root 版係通用「搵唔到呢個頁面」);edge 404 面 title 用靜態「WoWlix」;platform 法律頁 marketing fonts 冇 preload hint(lazy 嘅代價,字體照載,同以前 preload:false 一樣);2-seg 404 個 `__next_error__` 殼(冇 lang)係 **prod 一早如此**嘅 pre-existing class,唔係本 branch 引入。
+
+**跟進(有 chip / 未做)**:① tenant-settings PUT slug rename 繞過 RESERVED_SLUGS(pre-existing,review 揭出,已有 task chip);② /pricing 可加 generateStaticParams 做真 prerender(而家係 on-demand cache,已經夠快);③ e2e 可補 3-seg deep 404 spec。
+
+---
+
 ## ✅ 2026-07-22:出 prod 後現況 + audit Sprint 1（branch `fix/audit-sprint1`）
 
 **狀態更正**:#345（landing 重設計）/ #346（安全硬化）/ #347（CI）已於 2026-07-20 全部 merge 入 main 出咗 prod —— 下面「等 Yau merge #345」等字眼已過時,留底做歷史。

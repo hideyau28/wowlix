@@ -54,6 +54,7 @@ const RESERVED_SLUGS = new Set([
   "shipping",
   "track",
   "pricing",
+  "landing",
 ]);
 
 /**
@@ -182,13 +183,68 @@ export function middleware(request: NextRequest) {
     tenantSlug = DEFAULT_SLUG;
   }
 
+  // --- Platform landing → 靜態 route ---
+  // 平台 bare domain 嘅 /en /zh-HK 內部 rewrite 去 /{locale}/landing（SSG 頁，
+  // 冇 headers()/DB，TTFB 唔使等 server render）。公開 URL 不變（rewrite 唔係
+  // redirect —— sitemap/canonical/e2e 全部照舊）。?tenant= override（demo 預覽）
+  // 會令 tenantOverridden=true，跌返落 (customer) 動態 route，行為不變。
+  if (
+    isPlatform &&
+    !tenantOverridden &&
+    (pathname === "/en" || pathname === "/zh-HK")
+  ) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = `${pathname}/landing`;
+    const landingHeaders = new Headers(request.headers);
+    landingHeaders.delete("x-is-platform");
+    landingHeaders.delete("x-tenant-slug");
+    landingHeaders.delete("x-tenant-path-slug");
+    landingHeaders.set("x-tenant-slug", tenantSlug);
+    landingHeaders.set("x-locale", pathLocale);
+    landingHeaders.set("x-is-platform", "true");
+    return NextResponse.rewrite(rewriteUrl, {
+      request: { headers: landingHeaders },
+    });
+  }
+
   // --- Skip admin guards for API routes (they handle auth themselves) ---
   const isApiRoute = pathname.startsWith("/api/");
+
+  // --- "/" → default locale（以前由 app/page.tsx redirect；root shell 搬入
+  //     [locale] 之後 app/ 頂層冇得再擺 page，redirect 搬嚟呢度）---
+  // 用 nextUrl.clone() 保留 query：/?tenant=x 要落到 /zh-HK?tenant=x 先入到
+  // 上面個 override branch（舊 flow 係 middleware 過 route 先 redirect，cookie
+  // 喺 "/" 嗰下已經 set 咗；而家 middleware 直接 redirect，唔保留 query 就會
+  // 整跛 demo 預覽）。
+  if (pathname === "/") {
+    const rootRedirect = request.nextUrl.clone();
+    rootRedirect.pathname = "/zh-HK";
+    return NextResponse.redirect(rootRedirect);
+  }
 
   // --- /start redirect: /start → /en/start ---
   if (!isApiRoute && pathname === "/start") {
     const startUrl = new URL("/zh-HK/start", request.url);
     return NextResponse.redirect(startUrl);
+  }
+
+  // --- /landing 收口 ---
+  // 租戶 host 直接開 /{locale}/landing 會食到 platform landing（static segment
+  // 贏 [slug]，middleware 個 rewrite gate 唔會攔直接 hit）—— 即係每間租戶店
+  //（包括 hideBranding Pro 店）都掛住份 200 嘅平台廣告。彈返去店首頁。
+  if (
+    !isPlatform &&
+    (pathname === "/en/landing" || pathname === "/zh-HK/landing")
+  ) {
+    const localePrefix = pathname.split("/")[1];
+    return NextResponse.redirect(new URL(`/${localePrefix}`, request.url));
+  }
+  // 光板 /landing（"landing" 而家係 reserved，唔會再入 slug rewrite）——
+  // 唔處理嘅話會以 locale="landing" 跌落 (customer) home（垃圾 canonical）。
+  // 學 /start 咁 redirect 落 default locale；platform host 就係 landing 本尊，
+  // 租戶 host 就會俾上面個 gate 接力彈返店首頁。
+  if (!isApiRoute && pathname === "/landing") {
+    return NextResponse.redirect(new URL("/zh-HK/landing", request.url));
   }
 
   // --- Admin redirect: /admin → /en/admin ---

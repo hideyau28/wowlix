@@ -12,8 +12,14 @@ import RecentlyViewed from "@/components/home/RecentlyViewed";
 import SaleZone from "@/components/home/SaleZone";
 import KidsSection from "@/components/home/KidsSection";
 import { Metadata } from "next";
-import LandingPage from "@/components/marketing/WowlixLandingPage";
 import TrustBar from "@/components/TrustBar";
+
+// LandingPage 一律 lazy import：static import 會將 marketing fonts（Fraunces 等）
+// 綁入成條 (customer) route graph，租戶店白食 preload/CSS（fonts.ts 註釋記低嘅
+// 污染）。正常 platform 流量已由 middleware rewrite 去靜態 /[locale]/landing，
+// 呢度兩個 branch 只係 middleware 冇捕到嘅 fallback（unknown tenant / 邊緣 case）。
+const loadLandingPage = () =>
+  import("@/components/marketing/WowlixLandingPage").then((m) => m.default);
 
 // Force dynamic rendering because we need headers() for tenant resolution
 export const dynamic = "force-dynamic";
@@ -216,6 +222,7 @@ export default async function Home({
         },
       ],
     };
+    const LandingPage = await loadLandingPage();
     return (
       <>
         <script
@@ -233,6 +240,7 @@ export default async function Home({
     tenantId = await getServerTenantId();
   } catch (error) {
     // Tenant not found
+    const LandingPage = await loadLandingPage();
     return <LandingPage locale={l} />;
   }
 
