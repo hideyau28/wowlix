@@ -26,6 +26,21 @@
 
 ---
 
+## ✅ 2026-07-23(後半):全部出 prod + 租戶 SEO 死鏈救返
+
+**#352/#353/#354 已 squash-merge 出 prod + live 驗證全過**(Yau 授權「你幫我處理」):landing `x-vercel-cache: HIT`(真 CDN 靜態)、Fraunces preload 只喺 platform、租戶 biolink 零污染、deep 404 branded。
+
+**Live 驗證揭發 pre-existing P1 → 當日救完**:`*.wowlix.com` **wildcard DNS 根本唔存在**(dig NXDOMAIN;Namecheap DNS 冇 wildcard、Vercel project 冇 wildcard domain)—— 即係 sitemap 977 條有 971 條 subdomain URL 全部死鏈(包括 Sprint 2 個 336 條商品 URL),租戶 canonical 指死 host,biolink 商品卡 `<a href>` crawler 面 cross-tenant 404(JS sheet UX 一直冇事)。兩步救:
+
+1. **#355 止血**:sitemap 唔再 emit subdomain URL,改出可達 path biolink。
+2. **#356 重建商品 SEO 面(揀咗 (b) path 路線)**:新 route `[locale]/[slug]/product/[id]`(tenant 由 path slug 解析,render biolink + product sheet 自動開,SSR 齊,share link 落地可以直接買)、`lib/biolink-data.ts` 共用 loader + `productUrl()` 單一真相、三張卡 href + JSON-LD + sitemap 商品 URL 全部接返去 path 形式、**sitemap/robots 全份統一 www host**(apex 全路徑 307 → www)。Review workflow 抓到修埋:HIGH(OrderConfirmation pathname-append order link 喺商品頁 checkout 後會 404)+ sitemap 混 host + og fallback + default 店雙 canonical 併軌。Live 實證:550 條全 www、商品頁 200/JSON-LD/canonical、卡 href 可達。
+
+**(a) 路線(subdomain 復活)如果第日要行**:Vercel 加 wildcard domain 要 NS 遷去 Vercel,**會斷 Namecheap email forwarding**(MX = eforward*.registrar-servers.com),要先搬 email(improvmx / Cloudflare email routing);跟住轉返 subdomain canonical 要一齊改 sitemap/卡 href/biolink-data/canonical(sitemap.ts 註釋列晒)。
+
+**未郁 / follow-up**:platform 頁 canonical 仍係 apex 形式(歷史遺留,engine 靠 307 自己 resolve 落 www)—— apex→www canonical sweep 係獨立決定;(customer) 非 platform host 嘅 canonical 仍係 subdomain 年代形式(得 subdomain host 先 render,今日冇影響)。
+
+---
+
 ## ✅ 2026-07-22:出 prod 後現況 + audit Sprint 1（branch `fix/audit-sprint1`）
 
 **狀態更正**:#345（landing 重設計）/ #346（安全硬化）/ #347（CI）已於 2026-07-20 全部 merge 入 main 出咗 prod —— 下面「等 Yau merge #345」等字眼已過時,留底做歷史。
