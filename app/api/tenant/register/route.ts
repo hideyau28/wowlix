@@ -3,24 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth/jwt";
 import { withApi, ok, ApiError } from "@/lib/api/route-helpers";
 import { resolveTemplateId } from "@/lib/cover-templates";
+import {
+  REGISTRATION_RESERVED_SLUGS,
+  SLUG_FORMAT_MESSAGE,
+  SLUG_REGEX,
+  SLUG_RESERVED_MESSAGE,
+} from "@/lib/slug-policy";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
 export const runtime = "nodejs";
 
-const RESERVED_SLUGS = new Set([
-  "admin", "api", "auth", "login", "start", "_next", "maysshop",
-  "app", "checkout", "cart", "search", "orders", "profile",
-  "collections", "settings", "signup", "about", "contact",
-  "terms", "privacy", "favicon.ico",
-  // 防自我指向子域（wowlix.wowlix.com / www.wowlix.com）同保留 demo
-  "wowlix", "www", "demo",
-  // 靜態 platform landing route segment（app/[locale]/landing）—— 租戶用咗
-  // 呢個 slug 會俾 route 遮死永遠開唔到
-  "landing",
-]);
-
-const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
 const WHATSAPP_REGEX = /^\+?\d{6,15}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,11 +52,11 @@ export const POST = withApi(async (req: Request) => {
 
   const cleanSlug = slug.trim().toLowerCase();
   if (!SLUG_REGEX.test(cleanSlug)) {
-    throw new ApiError(400, "BAD_REQUEST", "Slug 格式唔啱：3-30 個字，只可以用細楷英文、數字同連字號");
+    throw new ApiError(400, "BAD_REQUEST", SLUG_FORMAT_MESSAGE);
   }
 
-  if (RESERVED_SLUGS.has(cleanSlug)) {
-    throw new ApiError(400, "BAD_REQUEST", "呢個名係保留字，唔可以用");
+  if (REGISTRATION_RESERVED_SLUGS.has(cleanSlug)) {
+    throw new ApiError(400, "BAD_REQUEST", SLUG_RESERVED_MESSAGE);
   }
 
   if (whatsapp && typeof whatsapp === "string" && whatsapp.trim() && !WHATSAPP_REGEX.test(whatsapp.trim())) {

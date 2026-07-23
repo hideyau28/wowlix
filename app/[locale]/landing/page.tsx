@@ -7,7 +7,8 @@ import type { Locale } from "@/lib/i18n";
 // wowlix.com/en | /zh-HK 由 middleware 內部 rewrite 嚟呢度（公開 URL 不變）。
 // 成條 chain（[locale] layout → 呢頁）冇 headers()/cookies()/DB —— build time
 // prerender，TTFB 唔使等 server render（HANDOFF 跟進 task ③）。
-// "landing" 已入晒 middleware + register 兩份 RESERVED_SLUGS，唔會同租戶 slug 撞。
+// "landing" 喺 lib/slug-policy.ts 個 shared RESERVED list（middleware routing +
+// register/rename 都食同一份），唔會同租戶 slug 撞。
 //
 // (customer)/page.tsx 仲留住 platform/unknown-tenant fallback（lazy import）——
 // middleware 冇捕到嘅邊緣 case 照有得 render，只係行返 dynamic 路。
