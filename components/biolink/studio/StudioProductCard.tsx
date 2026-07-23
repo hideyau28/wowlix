@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import type { ProductForBioLink } from "@/lib/biolink-helpers";
 import { formatPrice, getAllImages, isSoldOut } from "@/lib/biolink-helpers";
-import { useStoreLocale } from "../use-store-locale";
+import { useStoreLocale, useStoreSlug } from "../use-store-locale";
 
 type Props = {
   product: ProductForBioLink;
@@ -23,11 +23,12 @@ export default function StudioProductCard({ product, currency, onTap, priority =
 
   const [hoverImage, setHoverImage] = useState(false);
   const storeLocale = useStoreLocale();
+  const storeSlug = useStoreSlug();
 
   return (
     // 真 <a href> — crawler/分享有得入獨立商品頁；點擊攔截開 sheet
     <a
-      href={`/${storeLocale}/product/${product.id}`}
+      href={`/${storeLocale}/${storeSlug}/product/${product.id}`}
       onClick={(e) => {
         e.preventDefault();
         onTap(product);

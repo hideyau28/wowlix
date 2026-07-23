@@ -73,9 +73,11 @@ function swapLocale(pathname: string, nextLocale: Locale) {
 type Props = {
   tenant: TenantForBioLink;
   products: ProductForBioLink[];
+  /** 商品獨立頁（[slug]/product/[id]）用：落地自動開咗個 product sheet */
+  initialProductId?: string;
 };
 
-export default function BioLinkPage({ tenant, products }: Props) {
+export default function BioLinkPage({ tenant, products, initialProductId }: Props) {
   const tmpl = useMemo(
     () => getCoverTemplate(tenant.coverTemplate),
     [tenant.coverTemplate],
@@ -89,7 +91,8 @@ export default function BioLinkPage({ tenant, products }: Props) {
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [sheetProduct, setSheetProduct] = useState<ProductForBioLink | null>(
-    null,
+    // 商品獨立頁 share link 落地即開 sheet（SSR 都 render 埋，crawler 見到內容）
+    () => products.find((p) => p.id === initialProductId) ?? null,
   );
   const [lightbox, setLightbox] = useState<{
     images: string[];
