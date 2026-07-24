@@ -4,6 +4,33 @@
 
 ---
 
+## ✅ 2026-07-24（續）：#365 + #366 出 prod —— 技術 SEO 尾巴掃乾淨
+
+**#365 死店連結（`fix/dead-store-links`，已 merge + prod）** —— 掃跟進撞返同 #355/#356/#363 同一 class，但喺冇人掃過嘅 admin 工具 + 對外訊息：
+- **追單 WhatsApp send 咗條死 link 俾真客人（收入面 bug）**：`admin/cart-recovery` 砌 `${slug}.wowlix.com` 做 checkout link 塞入 WhatsApp 追單訊息 —— wildcard DNS NXDOMAIN，客人 100% 開唔到。
+- **商戶貼 IG bio 嗰條 link 食 307**：OnboardingWizard 完成頁「複製連結」+ BioLinkDashboard copy 都出 apex `wowlix.com/{slug}`（307→www）。畫面**顯示**短版照留，**複製出去**改真 www host。
+- 新 `storeShareUrl(slug, customDomain)`（`lib/site-url.ts`）收口「人真係會撳」嗰類 link。
+- **Build guard**（`scripts/assert-no-subdomain-store-urls.mjs`，落 prebuild）：呢 class 炸過四次（#355 sitemap 971 死鏈／#356 卡 href／#363 canonical／#365 追單），code 裏面（註釋除外）再出現 `${...}.wowlix.com` 就 build 紅。正反兩面都驗過。
+
+**#366 平台滲漏（`fix/platform-store-page-leak`，已 merge + prod）** —— Phase D 尾巴「shipping/returns 冇 platform gate」+ 一條冇人記低嘅 sitemap 污染：
+- **平台 host render 緊人哋間店政策**：`/en/shipping`「Shipping Policy - B」（B = default 店 maysshop）。平台唔寄貨，呢兩頁冇平台版內容 → redirect 返 landing。
+- **sitemap 主動 index 租戶個人化頁**：`platformPages` 有 `/en/collections`（title「My Wishlist - B」）/`/en/cart`/`/en/orders`。剷咗，換返 `/en/pricing`+`/zh-HK/pricing`（本身漏咗）。
+- Live 驗證 4/4：平台 shipping/returns 4 條全 307→landing、legal 五頁冇誤殺（200）、sitemap 個人化頁 = 0 兼 pricing = 1、租戶 biolink 200。
+
+### ⚠️⚠️ 2026-07-24 揪到嘅結構性坑（新 session 必讀）——「(customer) 深層頁 notFound()/redirect() = soft 200」
+
+做 #366 嗰陣 CI e2e 捉到平台 shipping 用 `notFound()` 竟然回 **200 唔係 404**。逐個方案否決後揪到根因：
+
+> **`app/[locale]/layout.tsx` 好早就 stream 咗 `<html>` 殼**，deep `(customer)` page 先至跑到。到時 page 級 `redirect()` / `notFound()` 已經變成 **soft 200**（client-side redirect / soft-404），HTTP status 唔會係 307/404。
+
+實測逐個否決：page 內 `notFound()` → 200 · 加 co-located **server** component `not-found.tsx`（`(customer)/not-found.tsx` 甚至 `shipping/not-found.tsx`）→ 一樣 200 · 改 `redirect()` → 一樣 soft 200（`isPlatformMode()` log 出嚟明明 `true`）。對比 `[locale]/[slug]/`（有 co-located not-found + 冇早 stream）就正常回 404。
+
+**兩個影響**：
+1. **#366 解法** = 平台 shipping/returns 改喺 **middleware** redirect（render 前 return，307 硬確定，同 `/pricing` `/landing` `/start` 一致）。**呢類「平台 host 唔應該出某頁」以後一律行 middleware，唔好喺 page 用 notFound()/redirect()。**
+2. **pre-existing bug（開咗 chip `task_56cbe3eb`）**：`(customer)` group 內**任何** `notFound()` 都係 soft 200 —— 即係**未知/已刪商品 `product/[id]` 依家回 200 soft-404**，Google 當正常頁 index。middleware 幫唔到（要 DB query 先知商品存唔存在）。要動 root layout streaming（唔好倒退 #353 靜態 landing TTFB），risk 高過 #366，獨立處理。
+
+---
+
 ## 🔑 2026-07-24：merge workflow 改咗（新 session 讀呢段先）
 
 **Yau 授權：CI 綠 = Claude Code 自己 squash-merge 出 prod，唔使逐個等佢批。** 之後自己 live 驗證 + 報佢知。
@@ -52,7 +79,12 @@
 
 **Merge 注意**：#358 同 #359 都掂 `middleware.ts` 但唔同 hunk，順序無所謂；#360 純 e2e。三個都係由 main 開嘅獨立 branch，唔係 stacked。
 
-**剩返未郁（要 Yau 決定）**：~~apex→www canonical sweep~~（**已由 #363 做咗** —— 查落發現唔止 host 唔一致，仲有條英文 pricing canonical 去咗中文版嘅真 bug，見最頂）；**(a) subdomain 復活路線**（要先搬 email forwarding，見 2026-07-23 後半 section）—— 呢個先係真正剩返嘅決定。
+**剩返未郁 —— 技術 SEO 尾巴 07-24 已掃乾淨（#363/#365/#366），淨返全部係 Yau 拍板位（唔好自己郁）：**
+
+1. **platform 內容頁文案（文案＋法律）** —— about/faq/terms/privacy/contact 五頁喺平台 host 上 title 全部「- B」+ body 係 maysshop 波鞋店文案（Phase D 上咗 marketing 殼，但內容仲係 default 店嘅）。⚠️ 唔好自己作 WoWlix 嘅 About/Terms/Privacy（法律敏感）。要 Yau：出 platform copy（然後 wire 一個 platform branch），**或者**話 redirect/隱藏佢哋（同 shipping/returns 一樣喺 middleware 做）。
+2. **`brandColor` schema default 仲係橙 `#FF9500`（DB migration）** —— `prisma/schema.prisma:325`。register 已寫 null，實際好少中，低優先。改 default = migration = 停低問。
+3. **(a) subdomain 復活（infra）** —— 要先搬 Namecheap email forwarding 先郁得 NS，見 2026-07-23 後半 section。
+4. **(customer) soft-404（技術，但 risk 高，開咗 chip `task_56cbe3eb`）** —— 見上面「結構性坑」。未知/已刪商品回 200 soft-404。
 
 ---
 
