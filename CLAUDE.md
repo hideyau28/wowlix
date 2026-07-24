@@ -9,14 +9,33 @@ Fast iteration without sacrificing quality. Follow strictly.
 ```
 Yau ←→ claude.ai (規劃/spec/架構)
               ↓ Task Package or Quick Fix
-         Claude Code (執行/commit)
+         Claude Code (執行/commit/PR/merge)
               ↓
-         Yau (驗收)
+         Yau (事後驗收 · 拍板位先停低)
 ```
 
 - **claude.ai**: 出 spec、設計 schema、寫 Task Package、架構決策
-- **Claude Code**: 寫 code、跑 build/test、commit
-- **Yau**: 最終驗收，決定 merge / deploy
+- **Claude Code**: 寫 code、跑 build/test、開 PR、**CI 綠自己 merge 出 prod + live 驗證**
+- **Yau**: 事後驗收；四類拍板位先停低問（見下）
+
+### Merge 授權（2026-07-24 起）
+
+**CI 綠 = Claude Code 自己 squash-merge，唔使等 Yau 逐個批。** merge 完自己 live 驗證再報。
+
+⚠️ **呢四類照樣要停低問 Yau**（CI 驗唔到）：
+
+1. **文案** — 對外聲稱、hero/pricing 字眼
+2. **商業承諾** — 收費、佣金、功能承諾
+3. **DB migration** — 見下面「DB migration safety」
+4. **安全改動** — auth / 租戶隔離 / secret
+
+### 點解仍然要開 PR
+
+**唔係為咗 code review**（呢個 repo 冇第二個 reviewer），係為咗「**e2e 綠先准出 prod**」呢個 gate：
+
+> **Vercel 唔會等 GitHub Actions。** 佢自己只跑 `npm run build`，唔跑 e2e 套件。直接 `push main` = CI 未出結果之前，個版本已經喺 prod 度。
+
+CI 本身 `on: push main` + `pull_request` 兩邊都跑，所以 gate 嘅價值淨係喺 PR 呢一邊。
 
 ---
 

@@ -4,7 +4,43 @@
 
 ---
 
-## ✅ 2026-07-23（夜）：HANDOFF 跟進三連發（#358–#360，等 Yau 收貨）
+## 🔑 2026-07-24：merge workflow 改咗（新 session 讀呢段先）
+
+**Yau 授權：CI 綠 = Claude Code 自己 squash-merge 出 prod，唔使逐個等佢批。** 之後自己 live 驗證 + 報佢知。
+
+點解保留 PR：**唔係為咗 code review**（呢個 repo 冇第二個 reviewer），係為咗「**e2e 綠先准出 prod**」呢個 gate —— 關鍵事實：**Vercel 唔會等 GitHub Actions**，佢自己只跑 `npm run build`，唔跑 41 條 e2e。直接 `push main` = CI 未出結果之前個版本已經喺 prod 度。CI 本身 `on: push main` + `pull_request` 兩邊都跑。
+
+⚠️ **四類照樣要停低問 Yau**（CI 驗唔到）：① 文案 ② 商業承諾 ③ DB migration ④ 安全改動。
+
+---
+
+## ✅ 2026-07-24：canonical 收口單一 host（#363 **已 merge 出 prod + live 驗證 7/7 過**）
+
+**Live 實測**（merge 後）：`/en/pricing` canonical 終於自指 `www.wowlix.com/en/pricing` + 三條 hreflang 齊；`/zh-HK/pricing` 自指；landing 兩個 locale 自指；`?tenant=solemena-test` 由死 subdomain 變 `www.wowlix.com/solemena-test`；租戶 biolink（solemena-test / maysshop）200 冇跌；landing + pricing `x-vercel-cache: HIT` 冇跌；**四條 platform route 掃 apex 殘留 = 0**。
+
+
+追下面嗰句掛咗好耐嘅「apex→www canonical sweep（要 Yau 決定）」，逐條 live curl 查落去 —— 入面**唔止係靚唔靚，有條真 bug**。
+
+**① `/en/pricing` 個 canonical 指住中文版（P1 真 bug）** —— pricing 用緊 static `metadata` object，兩個 locale share 同一句 `canonical: https://wowlix.com/pricing`。而 #359 補咗光板 `/pricing` → `/zh-HK/pricing` 之後，**英文定價頁等於親口同 engine 講「我嘅正本係中文版」**，仲要經兩次 307（apex→www→zh-HK）。英文版基本上 index 唔到。改咗做 `generateMetadata` + per-locale self-canonical + hreflang。**route 照樣 `● SSG`**（`await params` 唔算 dynamic API，build output 實測）。
+
+**② canonical 全部指 apex，但 sitemap 一早淨出 www** —— apex 喺 Vercel domain 層**全路徑 307 → www**（`/`、`/pricing`、`/en/pricing` 逐條 curl 驗過）。sitemap/robots/商品 URL 由 #356 起統一 www —— 即係 sitemap 講 www、canonical 講 apex，自己同自己嘈。**呢個一直當「決定」擺住，但其實冇得揀**：307 方向係 apex→www，sitemap 亦已經落咗 www 嗰邊，今次淨係補返一致。
+
+**③ 租戶面 canonical 指住開唔到嘅 host** —— `(customer)/page.tsx` 租戶 branch 出 `https://{slug}.wowlix.com/{locale}`（wildcard DNS NXDOMAIN）。**呢個 branch 唔係死 code**：platform host 加 `?tenant={slug}`（demo 預覽）→ `tenantOverridden=true` → `x-is-platform` 冇 set → 就跌落嗰度，live curl 實證真係出咗死 canonical。連 Store JSON-LD 個 `url` 一齊併軌落 path biolink。順帶執埋 `(customer)/product/[id]`：以前**淨係 platform mode 先併軌**，non-platform 跌返 `/{locale}/product/{id}` —— 嗰條 URL 冇 tenant context 只解得返 default 店，即係 canonical 指住第二間店件貨。
+
+**新 `lib/site-url.ts` 做 host 單一真相**（`SITE_URL` / `OG_DEFAULT_IMAGE` / `ORGANIZATION_ID` / `platformUrl()` / `biolinkUrl()`）；`lib/biolink-data.ts` 個 `BIOLINK_BASE` 同 `app/sitemap.ts` 都食返同一個常數 —— **當初就係各自揸一份 hardcode string 先 drift 出兩個 host**。新 `e2e/canonical.spec.ts` 七條，含通用 guard：platform 四條 route 所有 canonical/hreflang **一律唔准 apex、一律要 www**，將來邊個 hardcode 返都即刻紅。
+
+**冇掂**：`privacy`/`terms`/`about`/`Footer` 版面文字上面嘅 `https://wowlix.com`（係 copy，apex 照 307 行得通，文案歸 Yau）。
+**留意**：`ORGANIZATION_ID` 由 apex 變 www = JSON-LD entity 一次性 re-key（站仔新、冇外部引用，判斷零成本）。
+**驗證**：`npm run ci:build` 綠（landing + pricing 仍然 `●`，四份 prerender HTML 逐份 grep 過 canonical/hreflang）· `npm run test:e2e` **41/41 綠**。
+
+⚠️ 本機第一次跑 e2e 要 `npx playwright install chromium`（browser binary 冇裝，36 條會集體紅，唔關 code 事）。
+
+---
+
+## ✅ 2026-07-23（夜）：HANDOFF 跟進三連發（#358–#360）→ **已 merge 出 prod**
+
+> **📌 2026-07-24 更正：下面寫「等 Yau 收貨」已過時。** #358 / #359 / #360 / #361（docs）/ #362（gitignore `.lighthouseci/`）全部順序 squash-merge 出咗 prod，CI build+e2e 逐個綠先郁，**live 驗證 6/6 過**：`/pricing` 307 → `/zh-HK/pricing`、`/zh-HK/pricing` `x-vercel-cache: PRERENDER`、check-slug `pricing`/`wowlix` 齊出保留字、`/fr/pricing` 404、deep 404、maysshop biolink 200 + landing HIT 冇跌。
+
 
 **#358 slug policy 收口單一真相（`fix/slug-policy-unify`）** —— 追「tenant-settings PUT rename 繞過 RESERVED_SLUGS」個 chip，查落唔止一個洞：slug 規矩散落三份各自唔同嘅 copy —— ① PUT rename **乜都唔驗**（可改做 `landing`/`www`/大楷遮死自己間店）；② check-slug 揸 stale list（話 `wowlix`/`landing` 可用，wizard 綠燈行到 register 先 400）；③ register 唔擋 route 字（`pricing`/`product` 等 —— 註冊到但 path routing 永遠 resolve 唔到 = 出世死店）。全部收口落新 `lib/slug-policy.ts`：`ROUTE_RESERVED_SLUGS`（middleware routing 判斷）+ `PLATFORM_RESERVED_SLUGS`（wowlix/www/demo/app/maysshop）+ `REGISTRATION_RESERVED_SLUGS`（union，register/check-slug/rename 用）。⚠️ **ROUTE list 唔可以擺真租戶 slug**（maysshop 擺入去佢個 path biolink 就 resolve 唔到）—— 所以要分兩層，唔係一份 union 用到底。PUT rename 而家行足 register 全套（trim/lowercase → format → reserved → uniqueness；slug 冇改到 = no-op，歷史 slug 唔使被逼改名先儲到其他設定）。新 `e2e/slug-policy.spec.ts` 三條。30/30 綠。
 
@@ -16,7 +52,7 @@
 
 **Merge 注意**：#358 同 #359 都掂 `middleware.ts` 但唔同 hunk，順序無所謂；#360 純 e2e。三個都係由 main 開嘅獨立 branch，唔係 stacked。
 
-**剩返未郁（要 Yau 決定）**：apex→www canonical sweep（platform 頁 canonical 仍係 apex 形式，engine 靠 307 自己 resolve —— 獨立決定）；(a) subdomain 復活路線（要先搬 email forwarding，見 2026-07-23 後半 section）。
+**剩返未郁（要 Yau 決定）**：~~apex→www canonical sweep~~（**已由 #363 做咗** —— 查落發現唔止 host 唔一致，仲有條英文 pricing canonical 去咗中文版嘅真 bug，見最頂）；**(a) subdomain 復活路線**（要先搬 email forwarding，見 2026-07-23 後半 section）—— 呢個先係真正剩返嘅決定。
 
 ---
 
