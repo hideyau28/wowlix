@@ -6,6 +6,7 @@ import { getDict } from "@/lib/i18n";
 import SidebarToggle from "@/components/admin/SidebarToggle";
 import Link from "next/link";
 import { CartRecoveryClient } from "./cart-recovery-client";
+import { storeShareUrl } from "@/lib/site-url";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -130,7 +131,10 @@ export default async function AdminCartRecovery({
     where: { id: tenantId },
     select: { slug: true, customDomain: true },
   });
-  const storeHost = tenant?.customDomain || `${tenant?.slug}.wowlix.com`;
+  // ⚠️ 以前係 `${slug}.wowlix.com` —— wildcard DNS 唔存在（NXDOMAIN），
+  // 即係追單 WhatsApp send 咗條開唔到嘅 link 俾真客人。呢條係人真係會撳
+  // 嘅 URL，一律行 lib/site-url.ts 個 storeShareUrl（自訂域名 → path biolink）。
+  const storeUrl = storeShareUrl(tenant?.slug, tenant?.customDomain);
 
   return (
     <div className="p-4 pb-16">
@@ -155,7 +159,7 @@ export default async function AdminCartRecovery({
         stats={{ totalAbandoned, totalAmount, recoveryRate }}
         locale={l}
         currentRange={currentRange}
-        storeHost={storeHost}
+        storeUrl={storeUrl}
       />
     </div>
   );

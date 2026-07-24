@@ -33,7 +33,7 @@ type Props = {
   stats: Stats;
   locale: Locale;
   currentRange: string;
-  storeHost: string;
+  storeUrl: string;
 };
 
 function formatTimeAgo(dateStr: string, t: ReturnType<typeof getDict>): string {
@@ -115,7 +115,7 @@ export function CartRecoveryClient({
   stats,
   locale,
   currentRange,
-  storeHost,
+  storeUrl,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -155,7 +155,7 @@ export function CartRecoveryClient({
   function buildWhatsAppUrl(order: AbandonedOrder): string {
     const phone = order.phone.replace(/\D/g, "");
     const itemName = getFirstItemName(order.items);
-    const checkoutLink = `https://${storeHost}`;
+    const checkoutLink = storeUrl;
     const msg = t.admin.cartRecovery.whatsappMessage
       .replace("{customerName}", order.customerName)
       .replace("{itemName}", itemName)

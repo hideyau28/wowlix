@@ -22,6 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import ProductEditSheet from "./ProductEditSheet";
 import { getCoverTemplate } from "@/lib/cover-templates";
+import { storeShareUrl } from "@/lib/site-url";
 
 type Product = {
   id: string;
@@ -222,7 +223,9 @@ export default function BioLinkDashboard({ locale, tenant, products: initialProd
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const isZh = locale === "zh-HK";
-  const storeUrl = `wowlix.com/${tenant.slug}`;
+  // 顯示用短版（畫面窄，apex 撳得到）；複製出去用 storeShareUrl —— 商戶
+  // 貼落 IG bio 嗰條唔應該經 apex 307。
+  const storeUrlLabel = `wowlix.com/${tenant.slug}`;
   const brandColor = tenant.brandColor || "#1A1A1A";
   const tmpl = getCoverTemplate(tenant.coverTemplate);
   // Admin header banner：自訂 cover → template default banner
@@ -275,7 +278,7 @@ export default function BioLinkDashboard({ locale, tenant, products: initialProd
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`https://${storeUrl}`);
+      await navigator.clipboard.writeText(storeShareUrl(tenant.slug));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -493,7 +496,7 @@ export default function BioLinkDashboard({ locale, tenant, products: initialProd
             onClick={handleCopyLink}
             className="inline-flex items-center gap-1.5 mt-2 text-sm text-white/80 hover:text-white transition-colors"
           >
-            <span>{storeUrl}</span>
+            <span>{storeUrlLabel}</span>
             {copied ? <Check size={14} /> : <Copy size={14} />}
           </button>
 
