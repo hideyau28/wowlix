@@ -177,6 +177,23 @@ export function middleware(request: NextRequest) {
     });
   }
 
+  // --- 平台 host 冇送貨/退貨政策（呢兩頁純租戶專屬）---
+  // /{locale}/shipping | /{locale}/returns 喺平台 host 上會解做 default 店
+  // （maysshop）→ render 咗人哋間店嘅政策（live 實測 title「Shipping Policy - B」）。
+  // 平台根本唔寄貨，呢兩頁冇平台版內容，一律 redirect 返 landing。
+  // ⚠️ 特登喺 middleware 做（唔喺 page 用 notFound()/redirect()）：呢個 app 個
+  // [locale] layout 好早就 stream 咗 <html> 殼，deep (customer) page 先至跑到，
+  // 到時 redirect()/notFound() 已經變成 soft 200（client-side）—— 實測 co-located
+  // server not-found 都救唔到。middleware 喺 render 之前 return，個 307 係硬。
+  if (
+    isPlatform &&
+    !tenantOverridden &&
+    /^\/(en|zh-HK)\/(shipping|returns)\/?$/.test(pathname)
+  ) {
+    const localePrefix = pathname.split("/")[1];
+    return NextResponse.redirect(new URL(`/${localePrefix}`, request.url));
+  }
+
   // --- Skip admin guards for API routes (they handle auth themselves) ---
   const isApiRoute = pathname.startsWith("/api/");
 

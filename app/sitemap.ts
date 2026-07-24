@@ -31,23 +31,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
+    // ⚠️ 以前呢度仲有 /en/collections /en/cart /en/orders —— 三條都係
+    // **租戶客人個人化頁**（心願單／購物車／我嘅訂單），喺平台 host 上會
+    // 解做 default 店，live 實測 /en/collections 個 title 直情係
+    // 「My Wishlist - B」（B = 另一間店個名）。呢類頁本身就唔應該入 sitemap
+    // （個人化、空、對搜尋者零價值），仲要係主動叫 Google 去 index 人哋
+    // 間店嘅嘢。剷咗。真正嘅平台面 = 首頁兩個 locale + /pricing。
     {
-      url: `${baseUrl}/en/collections`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/en/cart`,
+      url: `${baseUrl}/en/pricing`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.5,
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/en/orders`,
+      url: `${baseUrl}/zh-HK/pricing`,
       lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.6,
+      changeFrequency: "monthly",
+      priority: 0.9,
     },
   ];
 
