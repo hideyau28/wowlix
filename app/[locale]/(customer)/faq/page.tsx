@@ -4,6 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import { platformFaq } from "@/lib/platform-content";
 
 export async function generateMetadata({
   params,
@@ -11,8 +12,9 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const storeName = await getStoreName();
   const isZh = locale === "zh-HK";
+  // 平台 host 唔好用 default 店個名（會出「FAQ - B」）—— 用 WoWlix。
+  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
   const title = isZh ? `常見問題 - ${storeName}` : `FAQ - ${storeName}`;
   const description = isZh
     ? `${storeName} 常見問題`
@@ -42,15 +44,19 @@ export default async function FAQPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const storeName = await getStoreName();
   const tenant = await getTenantInfo();
-  const faqs = getFAQContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
   // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
   // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
   const platform = await isPlatformMode();
+  // 平台 host：出 WoWlix 自己嘅雙語 FAQ + 用 WoWlix 做名；租戶店維持原狀
+  //（同一段 JSX，淨係換 data source，JSON-LD 都跟住出平台 Q&A）。
+  const storeName = platform ? "WoWlix" : await getStoreName();
+  const faqs = platform
+    ? platformFaq[isZh ? "zh" : "en"]
+    : getFAQContent(tenant.slug);
   const MarketingLegalShell = platform
     ? (await import("@/components/marketing/MarketingLegalShell")).default
     : null;

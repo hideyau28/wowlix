@@ -4,6 +4,11 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getAboutContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import {
+  PLATFORM_EMAIL,
+  PLATFORM_WHATSAPP,
+  platformAbout,
+} from "@/lib/platform-content";
 
 export async function generateMetadata({
   params,
@@ -11,8 +16,9 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const storeName = await getStoreName();
   const isZh = locale === "zh-HK";
+  // 平台 host 唔好用 default 店個名（會出「About Us - B」）—— 用 WoWlix。
+  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
   const title = isZh ? `關於我們 - ${storeName}` : `About Us - ${storeName}`;
   const description = isZh
     ? `了解更多關於 ${storeName}`
@@ -60,6 +66,73 @@ export default async function AboutPage({
     ) : (
       node
     );
+
+  // 平台 host：出 WoWlix 自己嘅 About（唔好跌落 default 店文案）。租戶店嗰邊
+  // 完全唔行呢個 branch，維持原狀。
+  if (platform) {
+    const c = platformAbout[isZh ? "zh" : "en"];
+    return shell(
+      <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+          {c.title}
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          {c.intro}
+        </p>
+
+        <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none space-y-6">
+          <section>
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {c.body}
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+              {c.whyTitle}
+            </h2>
+            <ul className="list-disc pl-5 text-zinc-700 dark:text-zinc-300 space-y-1">
+              {c.why.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+              {c.contactTitle}
+            </h2>
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {c.contactBody}
+            </p>
+            <ul className="list-disc pl-5 text-zinc-700 dark:text-zinc-300 space-y-1 mt-2">
+              <li>
+                WhatsApp：{" "}
+                <a
+                  href={`https://wa.me/${PLATFORM_WHATSAPP}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  5432 3686
+                </a>
+              </li>
+              <li>
+                Email：{" "}
+                <a href={`mailto:${PLATFORM_EMAIL}`} className="underline">
+                  {PLATFORM_EMAIL}
+                </a>
+              </li>
+            </ul>
+          </section>
+
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            {c.footer}
+          </p>
+        </div>
+      </div>,
+    );
+  }
 
   // For non-default tenants (e.g. Bull Kicks), always show English content
   const showEnglish = tenant.slug !== "maysshop" || !isZh;
