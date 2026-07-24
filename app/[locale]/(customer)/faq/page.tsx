@@ -4,7 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
-import { platformAlternates } from "@/lib/site-url";
+import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
 import { platformFaq } from "@/lib/platform-content";
 
 export async function generateMetadata({
@@ -17,6 +17,7 @@ export async function generateMetadata({
   // 平台 host 唔好用 default 店個名（會出「FAQ - B」）—— 用 WoWlix。
   const platform = await isPlatformMode();
   const storeName = platform ? "WoWlix" : await getStoreName();
+  const alt = platform ? platformAlternates(locale, "/faq") : null;
   const title = isZh ? `常見問題 - ${storeName}` : `FAQ - ${storeName}`;
   const description = isZh
     ? `${storeName} 常見問題`
@@ -25,13 +26,17 @@ export async function generateMetadata({
   return {
     title,
     description,
-    ...(platform ? { alternates: platformAlternates(locale, "/faq") } : {}),
+    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
       siteName: storeName,
       type: "website",
       locale: locale === "zh-HK" ? "zh_HK" : "en_US",
+      // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
+      // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
+      // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
+      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -95,12 +100,11 @@ export default async function FAQPage({
         {isZh ? "常見問題" : "Frequently Asked Questions"}
       </h1>
       <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-        {platform
-          ? isZh
-            ? `以下係關於 ${storeName} 嘅常見問題。`
-            : `Common questions about ${storeName}.`
-          : isZh
-            ? `以下係關於 ${storeName} 嘅常見問題。`
+        {isZh
+          ? `以下係關於 ${storeName} 嘅常見問題。`
+          : platform
+            ? // WoWlix 係開店工具，唔係俾人買嘢嘅店 —— 唔可以寫 shopping with
+              `Common questions about ${storeName}.`
             : `Common questions about shopping with ${storeName}.`}
       </p>
 

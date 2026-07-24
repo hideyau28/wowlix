@@ -4,11 +4,12 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getAboutContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
-import { platformAlternates } from "@/lib/site-url";
+import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
 import {
   PLATFORM_EMAIL,
   PLATFORM_WHATSAPP,
   PLATFORM_WHATSAPP_DISPLAY,
+  PLATFORM_WHATSAPP_INTL,
   platformAbout,
 } from "@/lib/platform-content";
 
@@ -22,6 +23,7 @@ export async function generateMetadata({
   // 平台 host 唔好用 default 店個名（會出「About Us - B」）—— 用 WoWlix。
   const platform = await isPlatformMode();
   const storeName = platform ? "WoWlix" : await getStoreName();
+  const alt = platform ? platformAlternates(locale, "/about") : null;
   const title = isZh ? `關於我們 - ${storeName}` : `About Us - ${storeName}`;
   const description = isZh
     ? `了解更多關於 ${storeName}`
@@ -32,13 +34,17 @@ export async function generateMetadata({
     description,
     // 平台版先加 self-canonical + hreflang（同 landing/pricing 一致）。租戶店
     // 唔加，維持 byte-identical metadata。
-    ...(platform ? { alternates: platformAlternates(locale, "/about") } : {}),
+    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
       siteName: storeName,
       type: "website",
       locale: locale === "zh-HK" ? "zh_HK" : "en_US",
+      // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
+      // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
+      // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
+      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -119,7 +125,7 @@ export default async function AboutPage({
                   rel="noopener noreferrer"
                   className="underline"
                 >
-                  {PLATFORM_WHATSAPP_DISPLAY}
+                  {isZh ? PLATFORM_WHATSAPP_DISPLAY : PLATFORM_WHATSAPP_INTL}
                 </a>
               </li>
               <li>

@@ -4,7 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
-import { platformAlternates } from "@/lib/site-url";
+import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
 import {
   PLATFORM_EMAIL,
   PLATFORM_WHATSAPP,
@@ -21,6 +21,7 @@ export async function generateMetadata({
   // 平台 host 唔好用 default 店個名（會出「Contact Us - B」）—— 用 WoWlix。
   const platform = await isPlatformMode();
   const storeName = platform ? "WoWlix" : await getStoreName();
+  const alt = platform ? platformAlternates(locale, "/contact") : null;
   const title = isZh ? `聯絡我們 - ${storeName}` : `Contact Us - ${storeName}`;
   const description = isZh
     ? `聯絡 ${storeName}，WhatsApp 或電郵查詢`
@@ -29,13 +30,17 @@ export async function generateMetadata({
   return {
     title,
     description,
-    ...(platform ? { alternates: platformAlternates(locale, "/contact") } : {}),
+    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
       siteName: storeName,
       type: "website",
       locale: locale === "zh-HK" ? "zh_HK" : "en_US",
+      // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
+      // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
+      // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
+      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -133,7 +138,8 @@ export default async function ContactPage({
   }
 
   // 非平台（租戶店）先至查 DB —— 平台頁上面已經 return。
-  const storeName = await getStoreName();
+  // （呢度冇 getStoreName()：租戶 contact 兩個 branch 都唔用 storeName，
+  //  call 咗淨係白燒 2 條 query。generateMetadata 嗰邊先真係要。）
   const tenant = await getTenantInfo();
   const content = getContactContent(tenant.slug);
 

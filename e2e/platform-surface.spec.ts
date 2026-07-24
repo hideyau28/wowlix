@@ -60,15 +60,30 @@ for (const locale of ["en", "zh-HK"]) {
       await page.goto(`${PLATFORM}${route}`);
       await expect(page).toHaveTitle(/WoWlix/);
       await expect(page).not.toHaveTitle(/- B$/);
+      // <head> 啱唔代表 body 啱 —— 原本個 bug 正正係 body 出咗 default 店文案。
+      // about/contact 個 h1 本身帶 WoWlix；faq 個 h1 係「常見問題」，所以驗
+      // 副題（platform 版先會寫 WoWlix，租戶版寫店名）。
+      if (p === "faq") {
+        await expect(page.getByText(/WoWlix/).first()).toBeVisible();
+      } else {
+        await expect(page.getByRole("heading", { level: 1 })).toContainText(
+          /WoWlix/,
+        );
+      }
     });
 
     test(`platform ${route} 有 self-canonical + hreflang（唔好裸奔俾人當 dup）`, async ({
       page,
     }) => {
       await page.goto(`${PLATFORM}${route}`);
-      const l = locale === "en" ? "en" : "zh-HK";
-      const canonical = await page.getAttribute('link[rel="canonical"]', "href");
-      expect(canonical).toBe(`https://www.wowlix.com/${l}/${p}`);
+      // normalize 同 lib/site-url.ts platformAlternates 一致（非 zh-HK → en）
+      const l = locale === "zh-HK" ? "zh-HK" : "en";
+      // 用 locator assertion 而唔係 page.getAttribute：canonical 唔見咗會即刻
+      // 出 diff，唔會變一個 60 秒 opaque timeout
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        "href",
+        `https://www.wowlix.com/${l}/${p}`,
+      );
       const langs = await page.$$eval(
         'link[rel="alternate"][hreflang]',
         (els) => els.map((e) => e.getAttribute("hreflang")).sort(),
@@ -93,15 +108,32 @@ for (const t of [
   });
 }
 
-test("租戶 about 唔准滲入平台文案", async ({ page, context }) => {
-  const tenant = loadSharedTenant();
-  await context.addCookies([
-    { name: "__dev_tenant", value: tenant.slug, domain: "localhost", path: "/" },
-  ]);
-  await page.goto(`${APP}/en/about`);
-  // 平台專屬句子唔應該喺租戶店出現
-  await expect(page.getByText("0% platform commission")).toHaveCount(0);
-});
+for (const p of ["about", "faq", "contact"]) {
+  test(`租戶 ${p} 唔准滲入平台文案／唔准 canonical 去平台頁`, async ({
+    page,
+    context,
+  }) => {
+    const tenant = loadSharedTenant();
+    await context.addCookies([
+      { name: "__dev_tenant", value: tenant.slug, domain: "localhost", path: "/" },
+    ]);
+    await page.goto(`${APP}/en/${p}`);
+    // 平台專屬句子唔應該喺租戶店出現
+    await expect(page.getByText("0% platform commission")).toHaveCount(0);
+    // ⚠️ 呢個先係高危方向：platformAlternates 一旦有人 hoist 出 conditional，
+    // 租戶頁就會親口同 Google 講「我係 WoWlix 嗰頁嘅副本」。唔用 toHaveCount(0)
+    //（租戶頁第日加自己嘅 self-canonical 係啱嘅），只禁指住平台 URL。
+    const hrefs = await page.$$eval(
+      'link[rel="canonical"], link[rel="alternate"][hreflang]',
+      (els) => els.map((e) => e.getAttribute("href") ?? ""),
+    );
+    for (const href of hrefs) {
+      expect(href, `租戶 ${p} 指住平台 canonical/hreflang`).not.toMatch(
+        /^https:\/\/www\.wowlix\.com\/(en|zh-HK)\/(about|faq|contact)$/,
+      );
+    }
+  });
+}
 
 test("sitemap 唔准再叫 Google index 租戶個人化頁", async ({ request }) => {
   const res = await request.get(`${PLATFORM}/sitemap.xml`);
@@ -116,7 +148,18 @@ test("sitemap 唔准再叫 Google index 租戶個人化頁", async ({ request })
   }
 
   // 真正嘅平台面要在
-  for (const kept of ["/en", "/zh-HK", "/en/pricing", "/zh-HK/pricing"]) {
+  for (const kept of [
+    "/en",
+    "/zh-HK",
+    "/en/pricing",
+    "/zh-HK/pricing",
+    "/en/about",
+    "/zh-HK/about",
+    "/en/faq",
+    "/zh-HK/faq",
+    "/en/contact",
+    "/zh-HK/contact",
+  ]) {
     expect(xml, `sitemap 少咗 ${kept}`).toContain(
       `<loc>https://www.wowlix.com${kept}</loc>`,
     );

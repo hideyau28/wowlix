@@ -17,12 +17,15 @@
 
 export type PlatformLang = "zh" | "en";
 
-/** wa.me 格式（852 + 8 位）。畫面顯示用 formatWhatsApp()。 */
+/** wa.me href 格式（852 + 8 位）。畫面顯示用 PLATFORM_WHATSAPP_DISPLAY。 */
 export const PLATFORM_WHATSAPP = "85254323686";
 export const PLATFORM_EMAIL = "wowlix@flowstudiohk.com";
 
-/** 54323686 → "5432 3686"（人睇嘅顯示）。 */
+/** 本地顯示（zh 面用）。 */
 export const PLATFORM_WHATSAPP_DISPLAY = "5432 3686";
+
+/** 國際格式（en 面用）—— 一樣由上面個常數砌，唔好再手打號碼。 */
+export const PLATFORM_WHATSAPP_INTL = `+852 ${PLATFORM_WHATSAPP_DISPLAY}`;
 
 export const platformAbout: Record<
   PlatformLang,
@@ -40,7 +43,7 @@ export const platformAbout: Record<
   zh: {
     title: "關於 WoWlix",
     intro: "讓香港每個 IG 小店，2 分鐘就有一個專業網店。",
-    body: "WoWlix 係為香港 Instagram 小店而做嘅開店工具。你唔使識砌網站、唔使請人 —— 揀模板、擺產品、set 收款，一條 link（wowlix.com/你個店名）就開得成，客人撳入嚟直接落單。我哋唔想做一個「乜都有但你揦手唔成」嘅大平台，只想做好一件事：幫你把 followers 變成生意。",
+    body: "WoWlix 係為香港 Instagram 小店而做嘅開店工具。你唔使識砌網站、唔使請人 —— 揀模板、擺產品、set 收款，一條 link（wowlix.com/你個店名）就開得成，客人撳入嚟直接落單。我哋唔想做一個「乜都有但你揦手唔成」嘅大平台，只想做好一件事：幫你將 followers 變成生意。",
     whyTitle: "點解揀 WoWlix",
     why: [
       "0% 平台佣金 —— 你賣幾多全部係你嘅。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，錢唔經我哋手。",
@@ -67,7 +70,7 @@ export const platformAbout: Record<
     ],
     contactTitle: "Get in touch",
     contactBody:
-      "Questions? WhatsApp +852 5432 3686 is fastest, or email wowlix@flowstudiohk.com.",
+      `Questions? WhatsApp ${PLATFORM_WHATSAPP_INTL} is fastest, or email ${PLATFORM_EMAIL}.`,
     footer: "WoWlix is operated by Flow Studio HK.",
   },
 };
@@ -145,7 +148,7 @@ export const platformFaq: Record<
     {
       question: "How do I reach you?",
       answer:
-        "WhatsApp +852 5432 3686, or email wowlix@flowstudiohk.com.",
+        `WhatsApp ${PLATFORM_WHATSAPP_INTL}, or email ${PLATFORM_EMAIL}.`,
     },
   ],
 };
