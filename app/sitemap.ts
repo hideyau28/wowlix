@@ -1,13 +1,15 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/site-url";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // www = 真 host（apex 全路徑 307 → www；Vercel domains 兩個都掛喺 project）。
   // 全份 sitemap 統一一個 host —— 混 host 會踩 sitemap cross-host rule，
   // 商品 URL 嗰家族隨時俾 search engine 當 cross-host 掉咗（Bing 直情硬性
-  // 同 host）。留意 platform 頁 canonical 仲係 apex 形式（歷史遺留），
-  // 唔喺呢度郁 —— apex 307 會令 engine 自己 resolve 落 www。
-  const baseUrl = "https://www.wowlix.com";
+  // 同 host）。platform 頁 canonical 以前仲係 apex 形式（sitemap 講 www、
+  // canonical 講 apex，自己同自己嘈）—— 已經一齊掃埋去 www，全站共用
+  // lib/site-url.ts 個 SITE_URL。
+  const baseUrl = SITE_URL;
 
   // Platform pages
   const platformPages: MetadataRoute.Sitemap = [

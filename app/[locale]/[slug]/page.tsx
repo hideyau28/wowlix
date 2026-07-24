@@ -7,6 +7,7 @@ import {
   productUrl,
   BIOLINK_BASE,
 } from "@/lib/biolink-data";
+import { biolinkUrl } from "@/lib/site-url";
 
 // Force dynamic rendering — tenant slug pages need DB access per request
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export async function generateMetadata({
 
     const title = `${tenant.name} | WoWlix`;
     const description = tenant.description || `Shop at ${tenant.name}`;
-    const pageUrl = `https://www.wowlix.com/${slug}`;
+    const pageUrl = biolinkUrl(slug);
 
     // Note: do NOT set `openGraph.images` / `twitter.images` here. Next.js
     // auto-discovers the dynamic image from `opengraph-image.tsx` co-located

@@ -1,6 +1,7 @@
 import PricingPage from "@/components/marketing/StudioPricingPage";
 import { MARKETING_PLANS } from "@/components/marketing/plans";
 import type { Locale } from "@/lib/i18n";
+import { OG_DEFAULT_IMAGE, platformUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 
 // ── 真 prerender（HANDOFF 跟進 task ②）────────────────────────────────────────
@@ -16,29 +17,47 @@ export function generateStaticParams() {
 // 佔 full-route cache（landing 嗰邊實測過）。鎖死兩個值，其他一律 404。
 export const dynamicParams = false;
 
-export const metadata: Metadata = {
-  title: "Pricing | WoWlix — IG Shop Builder",
-  description:
-    "0% platform fee, $0 to start. Free / Lite $78 / Pro $198 plans for IG shops.",
-  alternates: {
-    canonical: "https://wowlix.com/pricing",
-  },
-  openGraph: {
-    title: "全港最平 IG 網店方案 | WoWlix",
+// ⚠️ 以前呢度係一個 static `metadata` object，兩個 locale 共用同一句
+// `canonical: https://wowlix.com/pricing` —— 即係 /en/pricing 親口同 engine 講
+// 「我嘅正本係光板 /pricing」，而光板 /pricing 307 落 /zh-HK/pricing（#359）。
+// 結果英文版 canonical 去咗中文版，兼夾 apex→www 仲要再 307 一次。
+// 改做 per-locale self-canonical + hreflang（同 landing 一致）。
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  // await params 唔算 dynamic API —— route 照樣 build-time SSG。
+  const { locale } = await params;
+  const pageUrl = platformUrl(locale, "/pricing");
+
+  return {
+    title: "Pricing | WoWlix — IG Shop Builder",
     description:
       "0% platform fee, $0 to start. Free / Lite $78 / Pro $198 plans for IG shops.",
-    url: "https://wowlix.com/pricing",
-    siteName: "WoWlix",
-    type: "website",
-    images: [
-      { url: "https://wowlix.com/og-default.png", width: 1200, height: 630 },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: ["https://wowlix.com/og-default.png"],
-  },
-};
+    alternates: {
+      canonical: pageUrl,
+      languages: {
+        en: platformUrl("en", "/pricing"),
+        "zh-HK": platformUrl("zh-HK", "/pricing"),
+        "x-default": platformUrl("zh-HK", "/pricing"),
+      },
+    },
+    openGraph: {
+      title: "全港最平 IG 網店方案 | WoWlix",
+      description:
+        "0% platform fee, $0 to start. Free / Lite $78 / Pro $198 plans for IG shops.",
+      url: pageUrl,
+      siteName: "WoWlix",
+      type: "website",
+      images: [{ url: OG_DEFAULT_IMAGE, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [OG_DEFAULT_IMAGE],
+    },
+  };
+}
 
 export default async function Page({
   params,
@@ -56,7 +75,7 @@ export default async function Page({
     name: "WoWlix",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    url: "https://wowlix.com/pricing",
+    url: platformUrl(locale, "/pricing"),
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "HKD",
