@@ -4,6 +4,11 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import {
+  PLATFORM_EMAIL,
+  PLATFORM_WHATSAPP,
+  platformContact,
+} from "@/lib/platform-content";
 
 export async function generateMetadata({
   params,
@@ -11,8 +16,9 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const storeName = await getStoreName();
   const isZh = locale === "zh-HK";
+  // 平台 host 唔好用 default 店個名（會出「Contact Us - B」）—— 用 WoWlix。
+  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
   const title = isZh ? `聯絡我們 - ${storeName}` : `Contact Us - ${storeName}`;
   const description = isZh
     ? `聯絡 ${storeName}，WhatsApp 或電郵查詢`
@@ -70,6 +76,61 @@ export default async function ContactPage({
   const waBtnClass = platform
     ? "wlx-cta inline-flex items-center gap-2 rounded-full bg-wlx-ink px-5 py-2.5 text-sm font-medium hover:bg-wlx-ink/90 transition-colors"
     : "inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors";
+
+  // 平台 host：出 WoWlix 自己嘅聯絡（唔好跌落 default 店文案）。租戶店嗰邊
+  // 完全唔行呢個 branch，維持原狀。
+  if (platform) {
+    const c = platformContact[isZh ? "zh" : "en"];
+    return shell(
+      <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+          {c.title}
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+          {c.intro}
+        </p>
+
+        <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none space-y-6">
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+              {c.whatsappTitle}
+            </h2>
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {c.whatsappBody}
+            </p>
+            <a
+              href={`https://wa.me/${PLATFORM_WHATSAPP}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={waBtnClass}
+            >
+              <WhatsAppIcon />
+              {c.whatsappCta}
+            </a>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+              {c.emailTitle}
+            </h2>
+            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {c.emailBody}
+            </p>
+            <a
+              href={`mailto:${PLATFORM_EMAIL}`}
+              className="text-zinc-900 dark:text-zinc-100 underline hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+            >
+              {PLATFORM_EMAIL}
+            </a>
+          </section>
+
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            {c.footer}
+          </p>
+        </div>
+      </div>,
+    );
+  }
 
   // For non-default tenants, always show English
   const showEnglish = tenant.slug !== "maysshop" || !isZh;

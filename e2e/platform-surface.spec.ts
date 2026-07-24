@@ -49,6 +49,38 @@ for (const route of ["/en/shipping", "/en/returns"]) {
   });
 }
 
+// --- 平台 about / faq / contact 出 WoWlix 自己文案，唔好跌落 default 店 ---
+for (const route of ["/en/about", "/en/faq", "/en/contact"]) {
+  test(`platform ${route} 出 WoWlix 唔係 default 店（title 唔含「- B」）`, async ({
+    page,
+  }) => {
+    await page.goto(`${PLATFORM}${route}`);
+    await expect(page).toHaveTitle(/WoWlix/);
+    await expect(page).not.toHaveTitle(/- B$/);
+  });
+}
+
+test("平台 FAQ 老實講信用卡未開放（唔好又賣未起好嘅嘢）", async ({
+  page,
+}) => {
+  await page.goto(`${PLATFORM}/en/faq`);
+  // FAQ 係 <details> accordion，答案預設收埋 —— 撳開條「點收錢」問題先
+  await page.getByText("How do I get paid?").click();
+  await expect(
+    page.getByText(/credit-card checkout is still in the works/i),
+  ).toBeVisible();
+});
+
+test("租戶 about 唔准滲入平台文案", async ({ page, context }) => {
+  const tenant = loadSharedTenant();
+  await context.addCookies([
+    { name: "__dev_tenant", value: tenant.slug, domain: "localhost", path: "/" },
+  ]);
+  await page.goto(`${APP}/en/about`);
+  // 平台專屬句子唔應該喺租戶店出現
+  await expect(page.getByText("0% platform commission")).toHaveCount(0);
+});
+
 test("sitemap 唔准再叫 Google index 租戶個人化頁", async ({ request }) => {
   const res = await request.get(`${PLATFORM}/sitemap.xml`);
   expect(res.status()).toBe(200);
