@@ -4,7 +4,20 @@
 
 ---
 
-## ✅ 2026-07-24：canonical 收口單一 host（PR #363，**等 Yau 收貨**）
+## 🔑 2026-07-24：merge workflow 改咗（新 session 讀呢段先）
+
+**Yau 授權：CI 綠 = Claude Code 自己 squash-merge 出 prod，唔使逐個等佢批。** 之後自己 live 驗證 + 報佢知。
+
+點解保留 PR：**唔係為咗 code review**（呢個 repo 冇第二個 reviewer），係為咗「**e2e 綠先准出 prod**」呢個 gate —— 關鍵事實：**Vercel 唔會等 GitHub Actions**，佢自己只跑 `npm run build`，唔跑 41 條 e2e。直接 `push main` = CI 未出結果之前個版本已經喺 prod 度。CI 本身 `on: push main` + `pull_request` 兩邊都跑。
+
+⚠️ **四類照樣要停低問 Yau**（CI 驗唔到）：① 文案 ② 商業承諾 ③ DB migration ④ 安全改動。
+
+---
+
+## ✅ 2026-07-24：canonical 收口單一 host（#363 **已 merge 出 prod + live 驗證 7/7 過**）
+
+**Live 實測**（merge 後）：`/en/pricing` canonical 終於自指 `www.wowlix.com/en/pricing` + 三條 hreflang 齊；`/zh-HK/pricing` 自指；landing 兩個 locale 自指；`?tenant=solemena-test` 由死 subdomain 變 `www.wowlix.com/solemena-test`；租戶 biolink（solemena-test / maysshop）200 冇跌；landing + pricing `x-vercel-cache: HIT` 冇跌；**四條 platform route 掃 apex 殘留 = 0**。
+
 
 追下面嗰句掛咗好耐嘅「apex→www canonical sweep（要 Yau 決定）」，逐條 live curl 查落去 —— 入面**唔止係靚唔靚，有條真 bug**。
 
