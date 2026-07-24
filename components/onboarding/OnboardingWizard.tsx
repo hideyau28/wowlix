@@ -5,6 +5,7 @@ import { DollarSign, Sparkles, Check, Circle } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import { COVER_TEMPLATES } from "@/lib/cover-templates";
 import type { Locale } from "@/lib/i18n";
+import { storeShareUrl } from "@/lib/site-url";
 
 // --- Bilingual labels ---
 const t = {
@@ -843,7 +844,9 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
   };
 
   const handleCopyLink = async () => {
-    const link = `https://wowlix.com/${createdSlug}`;
+    // 複製出去嗰條唔准經 redirect（apex 307 → www）—— 商戶會擺落 IG bio，
+    // 每個訪客都食多一 hop。畫面下面顯示嗰行短版 wowlix.com/{slug} 照留。
+    const link = storeShareUrl(createdSlug);
     try {
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);

@@ -26,3 +26,19 @@ export function platformUrl(locale: string, path = ""): string {
 export function biolinkUrl(slug: string): string {
   return `${SITE_URL}/${slug}`;
 }
+
+/**
+ * 商戶「攞出去用」嗰條店連結 —— copy-to-clipboard、WhatsApp 追單、
+ * IG bio、QR。**呢個係人真係會撳嘅 URL，唔准出 redirect 或者死 host。**
+ *
+ * 有自訂域名就行自訂域名；否則 path biolink（唔係 subdomain —— wildcard
+ * DNS 唔存在）。留意同**顯示文字**分開：畫面上寫短版 `wowlix.com/{slug}`
+ * 冇問題（apex 307 得到），但複製／send 出去嗰條一定要用呢個。
+ */
+export function storeShareUrl(
+  slug: string | null | undefined,
+  customDomain?: string | null,
+): string {
+  if (customDomain) return `https://${customDomain}`;
+  return slug ? biolinkUrl(slug) : SITE_URL;
+}

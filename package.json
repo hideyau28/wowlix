@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start -p 3012",
     "lint": "eslint",
-    "prebuild": "prisma generate && node scripts/assert-single-app-root.mjs",
+    "prebuild": "prisma generate && node scripts/assert-single-app-root.mjs && node scripts/assert-no-subdomain-store-urls.mjs",
     "db:migrate:deploy": "npx prisma migrate deploy",
     "db:seed": "npx --yes tsx scripts/seed-products.ts",
     "db:health": "node scripts/db-healthcheck.mjs",
