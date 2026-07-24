@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { resolveTemplateId } from "@/lib/cover-templates";
+import { SITE_URL } from "@/lib/site-url";
 import type {
   ProductForBioLink,
   DualVariantData,
@@ -165,11 +166,12 @@ export const loadBioLinkData = cache(async (slug: string) => {
 });
 
 // 商品 canonical URL 單一真相 —— 卡 href（相對形式）、JSON-LD、sitemap、
-// product page canonical 全部由呢度生成。www 形式對齊 [slug] biolink 頁
-// 現有 canonical（https://www.wowlix.com/{slug}）。
+// product page canonical 全部由呢度生成。host 同全站 canonical 共用同一個
+// 常數（lib/site-url.ts）—— 以前呢度自己揸一份 string，platform 頁嗰邊揸另
+// 一份 apex，就係咁樣 drift 出兩個 host 嘅。
 // ⚠️ 唔准用 {slug}.wowlix.com subdomain 形式 —— wildcard DNS 唔存在（見
 // app/sitemap.ts 註釋）。
-export const BIOLINK_BASE = "https://www.wowlix.com";
+export const BIOLINK_BASE = SITE_URL;
 
 export function productPath(
   storeLocale: string,

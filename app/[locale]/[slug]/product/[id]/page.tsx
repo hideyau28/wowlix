@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import BioLinkPage from "@/components/biolink/BioLinkPage";
 import { loadBioLinkData, productUrl } from "@/lib/biolink-data";
+import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
 
 // 商品獨立 URL（path biolink 形式）—— audit 線「商品 URL 出街」嘅可達版本。
 //
@@ -87,7 +88,7 @@ export async function generateMetadata({
     product.imageUrl ||
     tenant.coverPhoto ||
     tenant.logoUrl ||
-    "https://wowlix.com/og-default.png";
+    OG_DEFAULT_IMAGE;
 
   return {
     title,

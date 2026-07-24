@@ -4,6 +4,13 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getSEOContent } from "@/lib/tenant-content";
+import {
+  OG_DEFAULT_IMAGE,
+  ORGANIZATION_ID,
+  SITE_URL,
+  biolinkUrl,
+  platformUrl,
+} from "@/lib/site-url";
 import HeroCarouselCMS from "@/components/home/HeroCarouselCMS";
 import RecommendedGrid from "@/components/home/RecommendedGrid";
 import FeaturedSneakers from "@/components/home/FeaturedSneakers";
@@ -36,24 +43,25 @@ export async function generateMetadata({
     description:
       "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
     alternates: {
-      // Self-referencing canonical per locale（唔好指去會 redirect 嘅 apex）+ 絕對 hreflang
-      canonical: locale === "en" ? "https://wowlix.com/en" : "https://wowlix.com/zh-HK",
+      // Self-referencing canonical per locale（唔好指去會 redirect 嘅 apex ——
+      // apex 全路徑 307 → www，見 lib/site-url.ts）+ 絕對 hreflang
+      canonical: platformUrl(locale === "en" ? "en" : "zh-HK"),
       languages: {
-        en: "https://wowlix.com/en",
-        "zh-HK": "https://wowlix.com/zh-HK",
-        "x-default": "https://wowlix.com/zh-HK",
+        en: platformUrl("en"),
+        "zh-HK": platformUrl("zh-HK"),
+        "x-default": platformUrl("zh-HK"),
       },
     },
     openGraph: {
       title: "WoWlix — Turn Followers into Customers",
       description: "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。",
-      url: "https://wowlix.com",
+      url: SITE_URL,
       siteName: "WoWlix",
       locale: "zh_HK",
       type: "website" as const,
       images: [
         {
-          url: "https://wowlix.com/og-default.png",
+          url: OG_DEFAULT_IMAGE,
           width: 1200,
           height: 630,
           alt: "WoWlix",
@@ -64,7 +72,7 @@ export async function generateMetadata({
       card: "summary_large_image" as const,
       title: "WoWlix — Turn Followers into Customers",
       description: "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。",
-      images: ["https://wowlix.com/og-default.png"],
+      images: [OG_DEFAULT_IMAGE],
     },
   };
 
@@ -89,7 +97,13 @@ export async function generateMetadata({
 
   const title = seo.title.replace("{storeName}", storeName);
   const description = seo.description.replace("{storeName}", storeName);
-  const canonicalUrl = `https://${tenantSlug}.wowlix.com/${locale}`;
+  // ⚠️ 以前係 `https://{slug}.wowlix.com/{locale}` —— wildcard DNS 唔存在
+  // （dig NXDOMAIN），即係 canonical 指住一個開唔到嘅 host。呢個 branch 唔係
+  // 死 code：platform host 加 `?tenant={slug}`（demo 預覽）會令 tenantOverridden
+  // = true → x-is-platform 冇 set → 跌落呢度 render，實測真係出咗死 canonical。
+  // 併軌去 path biolink（同 [slug]/page.tsx self-canonical 同一個 URL），預覽
+  // URL 嘅 signal 直接歸邊間店嘅正本頁。
+  const canonicalUrl = biolinkUrl(tenantSlug);
   const ogImage = seo.ogImage;
 
   return {
@@ -205,17 +219,17 @@ export default async function Home({
       "@graph": [
         {
           "@type": "Organization",
-          "@id": "https://wowlix.com/#organization",
+          "@id": ORGANIZATION_ID,
           name: "WoWlix",
-          url: "https://wowlix.com",
-          logo: "https://wowlix.com/og-default.png",
+          url: SITE_URL,
+          logo: OG_DEFAULT_IMAGE,
         },
         {
           "@type": "SoftwareApplication",
           name: "WoWlix",
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
-          url: "https://wowlix.com",
+          url: SITE_URL,
           description:
             "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
           offers: { "@type": "Offer", price: "0", priceCurrency: "HKD" },
@@ -384,7 +398,9 @@ export default async function Home({
             "@context": "https://schema.org",
             "@type": "Store",
             name: storeDisplayName,
-            url: `https://${storeSlug}.wowlix.com`,
+            // 同上面 canonical 一樣接返 path biolink —— subdomain host 開唔到，
+            // JSON-LD 出個死 url 只會令 engine 對唔到 entity。
+            url: biolinkUrl(storeSlug),
           }),
         }}
       />

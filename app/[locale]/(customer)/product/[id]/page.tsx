@@ -1,8 +1,9 @@
 import { getDict, type Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getStoreName } from "@/lib/get-store-name";
-import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
+import { getServerTenantId } from "@/lib/tenant";
 import { productUrl } from "@/lib/biolink-data";
+import { platformUrl } from "@/lib/site-url";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -47,20 +48,20 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
   // Platform bare host（www/apex）上呢條 route 解析做 default 店 —— 同一件商品
   // 而家有第二個 200 URL（path biolink /[slug]/product/[id]，sitemap 出嗰個）。
-  // 兩邊各自 self-canonical 會分薄 signal（review 抓住）—— platform mode 一律
-  // canonical 併軌去 biolink 形式；subdomain host（第日 (a) 補咗 DNS 先存在）
-  // 先用返自己形式。
-  let canonical = `https://wowlix.com/${locale}/product/${id}`;
-  if (await isPlatformMode()) {
-    const { headers } = await import("next/headers");
-    const tenantSlug = (await headers()).get("x-tenant-slug") || "maysshop";
-    const tenantLangs = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { languages: true },
-    });
-    const storeLocale = tenantLangs?.languages?.[0] || "en";
-    canonical = productUrl(storeLocale, tenantSlug, id);
-  }
+  // 兩邊各自 self-canonical 會分薄 signal（review 抓住）—— 一律 canonical 併軌
+  // 去 path biolink 形式，佢係唯一「邊個 host 都開得到、而且真係指返呢間店呢件
+  // 貨」嘅 URL。
+  // ⚠️ 以前 platform mode 先併軌，non-platform（`?tenant=` 預覽 / 第日 subdomain
+  // 復活）跌返 `/{locale}/product/{id}` —— 但嗰條 URL 淨 host 冇 tenant context，
+  // 淨係解得返 default 店，即係 canonical 指住第二間店件貨。
+  const { headers } = await import("next/headers");
+  const tenantSlug = (await headers()).get("x-tenant-slug") || "maysshop";
+  const tenantLangs = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { languages: true },
+  });
+  const storeLocale = tenantLangs?.languages?.[0] || "en";
+  const canonical = productUrl(storeLocale, tenantSlug, id);
 
   return {
     title: `${product.title} - ${storeName}`,
@@ -144,6 +145,20 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
     })),
   };
 
+  // JSON-LD offer url 一定要同 <link rel="canonical"> 同一條 URL（generateMetadata
+  // 嗰邊併軌落 path biolink）—— 兩處講唔同 URL，engine 會當 offer 係第二版。
+  const { headers: getProductHeaders } = await import("next/headers");
+  const productTenantSlug =
+    (await getProductHeaders()).get("x-tenant-slug") || "maysshop";
+  const productStoreLocale =
+    (
+      await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { languages: true },
+      })
+    )?.languages?.[0] || "en";
+  const offerUrl = productUrl(productStoreLocale, productTenantSlug, p.id);
+
   // Get translated category name
   const categoryName = p.category && categoryTranslations[p.category]
     ? categoryTranslations[p.category][locale as "en" | "zh-HK"] || p.category
@@ -196,7 +211,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
               availability: p.stock > 0
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
-              url: `https://wowlix.com/${locale}/product/${p.id}`,
+              url: offerUrl,
             },
           }),
         }}
@@ -214,13 +229,13 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
                 "@type": "ListItem",
                 position: 1,
                 name: locale === "zh-HK" ? "主頁" : "Home",
-                item: `https://wowlix.com/${locale}`,
+                item: platformUrl(locale),
               },
               ...(p.category ? [{
                 "@type": "ListItem",
                 position: 2,
                 name: categoryName,
-                item: `https://wowlix.com/${locale}/products?category=${p.category}`,
+                item: platformUrl(locale, `/products?category=${p.category}`),
               }] : []),
               {
                 "@type": "ListItem",

@@ -6,6 +6,8 @@
  * has fundamentally different business context (region, policies, etc.).
  */
 
+import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
+
 export type TenantAboutContent = {
   mission: string;
   missionBody: string;
@@ -305,13 +307,13 @@ export type TenantSEO = {
 const seoMaysshop: TenantSEO = {
   title: "{storeName} - 香港波鞋專門店",
   description: "探索最新波鞋及運動裝備，正品保證！",
-  ogImage: "https://wowlix.com/og-default.png",
+  ogImage: OG_DEFAULT_IMAGE,
 };
 
 const seoDefault: TenantSEO = {
   title: "{storeName} | WoWlix",
   description: "Shop quality products at {storeName}. Powered by WoWlix.",
-  ogImage: "https://wowlix.com/og-default.png",
+  ogImage: OG_DEFAULT_IMAGE,
 };
 
 const seoSolemena: TenantSEO = {

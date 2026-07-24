@@ -10,6 +10,7 @@ import {
   Lato,
 } from "next/font/google";
 import "../globals.css";
+import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/Toast";
 import { TenantBrandingProvider } from "@/lib/tenant-branding";
@@ -100,7 +101,7 @@ export const metadata: Metadata = {
     icon: "/favicon.svg",
   },
   openGraph: {
-    images: ["https://wowlix.com/og-default.png"],
+    images: [OG_DEFAULT_IMAGE],
   },
 };
 
