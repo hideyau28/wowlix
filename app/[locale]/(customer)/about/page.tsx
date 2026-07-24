@@ -4,9 +4,11 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getAboutContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import { platformAlternates } from "@/lib/site-url";
 import {
   PLATFORM_EMAIL,
   PLATFORM_WHATSAPP,
+  PLATFORM_WHATSAPP_DISPLAY,
   platformAbout,
 } from "@/lib/platform-content";
 
@@ -18,7 +20,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
   // 平台 host 唔好用 default 店個名（會出「About Us - B」）—— 用 WoWlix。
-  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
+  const platform = await isPlatformMode();
+  const storeName = platform ? "WoWlix" : await getStoreName();
   const title = isZh ? `關於我們 - ${storeName}` : `About Us - ${storeName}`;
   const description = isZh
     ? `了解更多關於 ${storeName}`
@@ -27,6 +30,9 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // 平台版先加 self-canonical + hreflang（同 landing/pricing 一致）。租戶店
+    // 唔加，維持 byte-identical metadata。
+    ...(platform ? { alternates: platformAlternates(locale, "/about") } : {}),
     openGraph: {
       title,
       description,
@@ -48,9 +54,6 @@ export default async function AboutPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const storeName = await getStoreName();
-  const tenant = await getTenantInfo();
-  const content = getAboutContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
@@ -69,6 +72,8 @@ export default async function AboutPage({
 
   // 平台 host：出 WoWlix 自己嘅 About（唔好跌落 default 店文案）。租戶店嗰邊
   // 完全唔行呢個 branch，維持原狀。
+  // ⚠️ 喺 tenant DB query 之前 early-return —— 平台頁唔使 getStoreName /
+  // getTenantInfo（4 條 Postgres query），慳返 TTFB。
   if (platform) {
     const c = platformAbout[isZh ? "zh" : "en"];
     return shell(
@@ -107,18 +112,18 @@ export default async function AboutPage({
             </p>
             <ul className="list-disc pl-5 text-zinc-700 dark:text-zinc-300 space-y-1 mt-2">
               <li>
-                WhatsApp：{" "}
+                WhatsApp:{" "}
                 <a
                   href={`https://wa.me/${PLATFORM_WHATSAPP}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"
                 >
-                  5432 3686
+                  {PLATFORM_WHATSAPP_DISPLAY}
                 </a>
               </li>
               <li>
-                Email：{" "}
+                Email:{" "}
                 <a href={`mailto:${PLATFORM_EMAIL}`} className="underline">
                   {PLATFORM_EMAIL}
                 </a>
@@ -133,6 +138,11 @@ export default async function AboutPage({
       </div>,
     );
   }
+
+  // 非平台（租戶店）先至查 DB —— 平台頁上面已經 return，唔會行到呢度。
+  const storeName = await getStoreName();
+  const tenant = await getTenantInfo();
+  const content = getAboutContent(tenant.slug);
 
   // For non-default tenants (e.g. Bull Kicks), always show English content
   const showEnglish = tenant.slug !== "maysshop" || !isZh;

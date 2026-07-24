@@ -4,6 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import { platformAlternates } from "@/lib/site-url";
 import { platformFaq } from "@/lib/platform-content";
 
 export async function generateMetadata({
@@ -14,7 +15,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
   // 平台 host 唔好用 default 店個名（會出「FAQ - B」）—— 用 WoWlix。
-  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
+  const platform = await isPlatformMode();
+  const storeName = platform ? "WoWlix" : await getStoreName();
   const title = isZh ? `常見問題 - ${storeName}` : `FAQ - ${storeName}`;
   const description = isZh
     ? `${storeName} 常見問題`
@@ -23,6 +25,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    ...(platform ? { alternates: platformAlternates(locale, "/faq") } : {}),
     openGraph: {
       title,
       description,
@@ -44,7 +47,6 @@ export default async function FAQPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const tenant = await getTenantInfo();
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
@@ -53,10 +55,11 @@ export default async function FAQPage({
   const platform = await isPlatformMode();
   // 平台 host：出 WoWlix 自己嘅雙語 FAQ + 用 WoWlix 做名；租戶店維持原狀
   //（同一段 JSX，淨係換 data source，JSON-LD 都跟住出平台 Q&A）。
+  // ⚠️ getTenantInfo / getStoreName 只喺租戶 path 先 call（平台頁唔使查 DB）。
   const storeName = platform ? "WoWlix" : await getStoreName();
   const faqs = platform
     ? platformFaq[isZh ? "zh" : "en"]
-    : getFAQContent(tenant.slug);
+    : getFAQContent((await getTenantInfo()).slug);
   const MarketingLegalShell = platform
     ? (await import("@/components/marketing/MarketingLegalShell")).default
     : null;
@@ -92,9 +95,13 @@ export default async function FAQPage({
         {isZh ? "常見問題" : "Frequently Asked Questions"}
       </h1>
       <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-        {isZh
-          ? `以下係關於 ${storeName} 嘅常見問題。`
-          : `Common questions about shopping with ${storeName}.`}
+        {platform
+          ? isZh
+            ? `以下係關於 ${storeName} 嘅常見問題。`
+            : `Common questions about ${storeName}.`
+          : isZh
+            ? `以下係關於 ${storeName} 嘅常見問題。`
+            : `Common questions about shopping with ${storeName}.`}
       </p>
 
       <div className="space-y-6">

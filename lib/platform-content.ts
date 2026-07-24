@@ -50,7 +50,7 @@ export const platformAbout: Record<
     ],
     contactTitle: "搵我哋",
     contactBody:
-      "有問題想傾？WhatsApp 54323686 最快，或者 email wowlix@flowstudiohk.com。",
+      `有問題想傾？WhatsApp ${PLATFORM_WHATSAPP_DISPLAY} 最快，或者 email ${PLATFORM_EMAIL}。`,
     footer: "WoWlix 由 Flow Studio HK 營運。",
   },
   en: {
@@ -85,7 +85,7 @@ export const platformFaq: Record<
     {
       question: "開店要幾錢？",
       answer:
-        "免費開始。之後有 Lite（$78 一個月）同 Pro（$198 一個月），再加一個免費計劃。",
+        "有免費計劃，另有 Lite（$78 一個月）同 Pro（$198 一個月）。",
     },
     {
       question: "係咪真係 0% 佣金？",
@@ -99,7 +99,7 @@ export const platformFaq: Record<
     },
     { question: "開店要幾耐？", answer: "大約 2 分鐘。" },
     {
-      question: "我需要識砌網站嗎？",
+      question: "使唔使識砌網站？",
       answer: "唔使。揀模板、擺相、打字就得。",
     },
     {
@@ -108,7 +108,7 @@ export const platformFaq: Record<
     },
     {
       question: "點聯絡你哋？",
-      answer: "WhatsApp 54323686，或者 email wowlix@flowstudiohk.com。",
+      answer: `WhatsApp ${PLATFORM_WHATSAPP_DISPLAY}，或者 email ${PLATFORM_EMAIL}。`,
     },
   ],
   en: [
@@ -120,7 +120,7 @@ export const platformFaq: Record<
     {
       question: "How much does it cost?",
       answer:
-        "Free to start. Paid plans are Lite (HK$78/mo) and Pro (HK$198/mo), alongside a free tier.",
+        "There's a free plan, plus Lite (HK$78/mo) and Pro (HK$198/mo).",
     },
     {
       question: "Is it really 0% commission?",

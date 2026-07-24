@@ -4,6 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import { platformAlternates } from "@/lib/site-url";
 import {
   PLATFORM_EMAIL,
   PLATFORM_WHATSAPP,
@@ -18,7 +19,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
   // 平台 host 唔好用 default 店個名（會出「Contact Us - B」）—— 用 WoWlix。
-  const storeName = (await isPlatformMode()) ? "WoWlix" : await getStoreName();
+  const platform = await isPlatformMode();
+  const storeName = platform ? "WoWlix" : await getStoreName();
   const title = isZh ? `聯絡我們 - ${storeName}` : `Contact Us - ${storeName}`;
   const description = isZh
     ? `聯絡 ${storeName}，WhatsApp 或電郵查詢`
@@ -27,6 +29,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    ...(platform ? { alternates: platformAlternates(locale, "/contact") } : {}),
     openGraph: {
       title,
       description,
@@ -54,9 +57,6 @@ export default async function ContactPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const storeName = await getStoreName();
-  const tenant = await getTenantInfo();
-  const content = getContactContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
@@ -131,6 +131,11 @@ export default async function ContactPage({
       </div>,
     );
   }
+
+  // 非平台（租戶店）先至查 DB —— 平台頁上面已經 return。
+  const storeName = await getStoreName();
+  const tenant = await getTenantInfo();
+  const content = getContactContent(tenant.slug);
 
   // For non-default tenants, always show English
   const showEnglish = tenant.slug !== "maysshop" || !isZh;

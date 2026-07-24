@@ -50,26 +50,48 @@ for (const route of ["/en/shipping", "/en/returns"]) {
 }
 
 // --- 平台 about / faq / contact 出 WoWlix 自己文案，唔好跌落 default 店 ---
-for (const route of ["/en/about", "/en/faq", "/en/contact"]) {
-  test(`platform ${route} 出 WoWlix 唔係 default 店（title 唔含「- B」）`, async ({
-    page,
-  }) => {
-    await page.goto(`${PLATFORM}${route}`);
-    await expect(page).toHaveTitle(/WoWlix/);
-    await expect(page).not.toHaveTitle(/- B$/);
-  });
+// 中英兩個 locale 都驗（zh-HK 係主力語言，係本 PR 嘅 headline deliverable）。
+for (const locale of ["en", "zh-HK"]) {
+  for (const p of ["about", "faq", "contact"]) {
+    const route = `/${locale}/${p}`;
+    test(`platform ${route} 出 WoWlix 唔係 default 店（title 唔含「- B」）`, async ({
+      page,
+    }) => {
+      await page.goto(`${PLATFORM}${route}`);
+      await expect(page).toHaveTitle(/WoWlix/);
+      await expect(page).not.toHaveTitle(/- B$/);
+    });
+
+    test(`platform ${route} 有 self-canonical + hreflang（唔好裸奔俾人當 dup）`, async ({
+      page,
+    }) => {
+      await page.goto(`${PLATFORM}${route}`);
+      const l = locale === "en" ? "en" : "zh-HK";
+      const canonical = await page.getAttribute('link[rel="canonical"]', "href");
+      expect(canonical).toBe(`https://www.wowlix.com/${l}/${p}`);
+      const langs = await page.$$eval(
+        'link[rel="alternate"][hreflang]',
+        (els) => els.map((e) => e.getAttribute("hreflang")).sort(),
+      );
+      expect(langs).toEqual(["en", "x-default", "zh-HK"].sort());
+    });
+  }
 }
 
-test("平台 FAQ 老實講信用卡未開放（唔好又賣未起好嘅嘢）", async ({
-  page,
-}) => {
-  await page.goto(`${PLATFORM}/en/faq`);
-  // FAQ 係 <details> accordion，答案預設收埋 —— 撳開條「點收錢」問題先
-  await page.getByText("How do I get paid?").click();
-  await expect(
-    page.getByText(/credit-card checkout is still in the works/i),
-  ).toBeVisible();
-});
+// 信用卡老實話 —— 中英各驗一次（zh/en 係兩條唔同 data path + 唔同字串）
+for (const t of [
+  { locale: "en", q: "How do I get paid?", a: /credit-card checkout is still in the works/i },
+  { locale: "zh-HK", q: "我點收錢？", a: /暫時未開放/ },
+]) {
+  test(`平台 FAQ (${t.locale}) 老實講信用卡未開放（唔好又賣未起好嘅嘢）`, async ({
+    page,
+  }) => {
+    await page.goto(`${PLATFORM}/${t.locale}/faq`);
+    // FAQ 係 <details> accordion，答案預設收埋 —— 撳開條「點收錢」問題先
+    await page.getByText(t.q).click();
+    await expect(page.getByText(t.a)).toBeVisible();
+  });
+}
 
 test("租戶 about 唔准滲入平台文案", async ({ page, context }) => {
   const tenant = loadSharedTenant();
