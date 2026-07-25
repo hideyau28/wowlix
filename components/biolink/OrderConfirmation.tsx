@@ -189,12 +189,18 @@ export default function OrderConfirmation({
       const url = uploadJson.data.url as string;
 
       // 2. Attach proof to order
+      // 帶埋落單嗰個電話 —— server 靠佢認人（order id 唔算憑證，見
+      // api/biolink/orders/[id]/payment-proof/route.ts）。CheckoutPage 落單前
+      // 一定驗過 8 位數字先送得出，所以呢度實有值。
       const proofRes = await fetch(
         `/api/biolink/orders/${order.orderId}/payment-proof`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentProof: url }),
+          body: JSON.stringify({
+            paymentProof: url,
+            phone: order.customer?.phone,
+          }),
         },
       );
       const proofJson = await proofRes.json();
