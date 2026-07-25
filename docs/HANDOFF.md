@@ -4,6 +4,62 @@
 
 ---
 
+## 🚩 2026-07-25 新 session 由呢度開始（上一個 session 收尾狀態）
+
+### ① 🔴 未修：租戶分類頁跨租戶滲漏（**Yau 拍板位 — 租戶隔離，未批唔准郁**）
+
+```ts
+// app/[locale]/(customer)/categories/[slug]/page.tsx:28 同 :62
+const tenant = await resolveTenant();      // ← 冇傳 req
+// lib/tenant.ts:56
+export async function resolveTenant(req?: Request) {
+  let slug = DEFAULT_SLUG;                 // "maysshop"
+  if (req) { …讀 host / x-tenant-slug… }   // ← 冇 req 成段跳過
+```
+
+**任何租戶店嘅 `/{locale}/categories/{slug}` 都 render 緊 maysshop 嘅分類 / 產品 / badges。** 全 repo 掃過，得呢兩個 call site 中招（其他都用 `getServerTenantId()`）。`CategoryBrowseNav` 真係連去呢條 route，客人撳得到。
+
+**嚴重程度（唔好誇大）**：漏嘅係**公開商品目錄**，唔係訂單／客人 PII，所以唔算資料外洩級數；但租戶隔離破咗 + 商業尷尬（Bull Kicks 撳分類彈出 May's Shop 啲鞋）。
+**修法**：照商品頁改用 `getServerTenantId()`。細改動，但屬「安全／租戶隔離」＝ **要 Yau 講咗先做**。
+⚠️ 同時係下面 soft-404 個 500 風險嘅同源問題 —— 拆咗 Suspense boundary 之後，呢頁會由 soft-200 變真 500。**建議次序：先修呢條，再郁 soft-404。**
+
+### ② ✅ soft-404 根因查實咗（3 個獨立調查 + 對照實驗，高信心）—— 但 fix 未落
+
+**舊寫喺下面嗰個「shell 早 stream」假設係錯嘅，已推翻。** 對照組：`app/[locale]/[slug]/product/[id]` 同樣深度、同樣 `force-dynamic`、同一個 root layout —— 佢回**真 404**。
+
+**真兇 = `loading.tsx`：**
+> `loading.tsx` 編譯出嚟就係一個 `<Suspense>`（`node_modules/next/dist/client/components/layout-router.js:415` `LoadingBoundary`）。Next 16 淨係喺 **shell Fizz render 個 catch** 度 set 404（`node_modules/next/dist/server/app-render/app-render.js:1949`，redirect 喺 :1955）。`notFound()` 喺 Suspense boundary 入面掟 → React 用 fallback 填咗個 boundary → shell 完成 → **200 headers 已經寫咗** → 個 404 之後先以 client-side error 送到。
+
+肇事檔案（兩個都坐喺 `notFound()` 之上）：
+- `app/[locale]/(customer)/loading.tsx`（group 級 —— 整死成個 group）
+- `app/[locale]/(customer)/product/[id]/loading.tsx`（segment 級）
+
+**呢個解釋晒點解舊 session 四招全部無效**（client not-found / server not-found / co-located not-found / 改 redirect）—— status 喺 shell flush 嗰陣早就鎖死，唔關 not-found 檔事。亦解釋咗點解 #366 shipping/returns 要迫住行 middleware。
+
+**⚠️ 唔好淨係刪 `loading.tsx` 就算**（兩個 judge 都話 SHIP，但兩個都插旗）：
+- `(customer)/loading.tsx` 罩住成個 storefront（cart / checkout / search / orders / profile / 商品頁）。刪咗 = **租戶店冇晒 skeleton**；force-dynamic route 冇 `loading.tsx` 連 `<Link>` prefetch 都冇嘢 prefetch，手機撳入商品會停喺舊頁等成個 Neon round trip（200–500ms）零反饋。**呢個係郁租戶店手感，CI 驗唔到。**
+- 拆咗 boundary，本來被 soft-200 遮住嘅 throw 會變真 500（`categories/[slug]` 就係一個 —— 見 ①）。
+- **「有品牌嘅 404 body」喺 Next 16.2.4 做唔到**：404 shell 寫死 `<html id="__next_error__">`（`app-render.js:1103-1113` `getErrorRSCPayload` 個 `seedData`，唔會 consult root layout），品牌係 hydrate 之後先出。現有嗰啲「正常」404 頁一樣係咁 —— 呢個係 spec 要放寬，唔係 blocker。
+
+**建議永久形態（judge 推薦，未實作未驗）**：商品頁先做平價存在檢查 → 再喺 `notFound()` **之下**用 explicit `<Suspense>` 包住重 subtree 保住 skeleton。**Suspense boundary 喺 throw 之下係安全嘅**，之上先會出事。以後唔好再喺會 `notFound()` 嘅 page 之上加 `loading.tsx`。
+
+**已否決方案**：有 agent 寫過一個 middleware + `/api/internal/product-404-gate` 嘅 gate（每次睇商品加一次 DB round trip）——兩個 judge 都叫唔好行。code 擺咗喺上個 session 個 scratchpad（`/private/tmp/.../agent-middleware-gate-attempt/`，⚠️ /tmp 會蒸發，冇特登保留，要就重寫）。
+
+### ③ PR #368 open — 等 Yau 文案 sign-off（CI 全綠）
+
+`feat/platform-content-pages`，3 個 commit：平台 about/faq/contact 出 WoWlix 自己文案（唔再跌落 default 店「- B」）+ 兩輪專家會議嘅修正。**CI build + e2e 63/63 + Vercel 全綠，就爭 Yau 過文案。** 唔好自己 merge（文案＝拍板位）。等緊 Yau 三個答覆：文案字眼 OK 未／「0% 佣金 forever」上唔上呢兩頁／要唔要寫回覆時間承諾。
+
+兩輪 review 已修：canonical + hreflang（本來三頁裸奔）、og:url + og:image（本來零分享圖）、`/fr/about` 跨語言 canonical、contact 死 query、多條文案／廣東話語感、e2e 補 zh-HK + body 斷言 + 租戶 canonical guard。
+
+### ④ 仲有嘅 Yau 拍板位
+
+- **terms / privacy**：要 Yau 俾①法律實體全名（Flow Studio HK？定有間有限公司）②data 清單 confirm，先出 skeleton。**唔准 AI 作住 ship。**
+- **`brandColor` schema default 仲係橙 `#FF9500`**（`prisma/schema.prisma:325`）—— DB migration，低優先。
+- **(a) subdomain 復活** —— 要先搬 Namecheap email forwarding 先郁得 NS。
+- **假 `hello@wowlix.com` 仲喺 `lib/email/send.ts:12`** 做交易 email 寄件人 default。Vercel prod 有冇 set `EMAIL_FROM` / `RESEND_API_KEY` 只有 Yau 睇到。改寄件域名要 flowstudiohk.com 喺 Resend 驗過 domain（Yau 嗰邊 infra）。
+
+---
+
 ## ✅ 2026-07-24（續）：#365 + #366 出 prod —— 技術 SEO 尾巴掃乾淨
 
 **#365 死店連結（`fix/dead-store-links`，已 merge + prod）** —— 掃跟進撞返同 #355/#356/#363 同一 class，但喺冇人掃過嘅 admin 工具 + 對外訊息：
@@ -17,7 +73,11 @@
 - **sitemap 主動 index 租戶個人化頁**：`platformPages` 有 `/en/collections`（title「My Wishlist - B」）/`/en/cart`/`/en/orders`。剷咗，換返 `/en/pricing`+`/zh-HK/pricing`（本身漏咗）。
 - Live 驗證 4/4：平台 shipping/returns 4 條全 307→landing、legal 五頁冇誤殺（200）、sitemap 個人化頁 = 0 兼 pricing = 1、租戶 biolink 200。
 
-### ⚠️⚠️ 2026-07-24 揪到嘅結構性坑（新 session 必讀）——「(customer) 深層頁 notFound()/redirect() = soft 200」
+### ⚠️⚠️ 2026-07-24 揪到嘅結構性坑 ——「(customer) 深層頁 notFound()/redirect() = soft 200」
+
+> **📌 2026-07-25 勘誤：下面呢段個「root layout 早 stream」歸因係錯嘅，已由 3 個獨立調查 + 對照實驗推翻。**
+> 真兇係 `loading.tsx` 造出嚟嘅 Suspense boundary 坐喺 `notFound()` 之上 —— **睇返最頂 ② 嗰段**。
+> 下面留底做歷史（同埋記錄「試過乜、點解無效」），但唔好再照住佢去查 root layout。
 
 做 #366 嗰陣 CI e2e 捉到平台 shipping 用 `notFound()` 竟然回 **200 唔係 404**。逐個方案否決後揪到根因：
 
@@ -84,7 +144,7 @@
 1. **platform 內容頁文案（文案＋法律）** —— about/faq/terms/privacy/contact 五頁喺平台 host 上 title 全部「- B」+ body 係 maysshop 波鞋店文案（Phase D 上咗 marketing 殼，但內容仲係 default 店嘅）。⚠️ 唔好自己作 WoWlix 嘅 About/Terms/Privacy（法律敏感）。要 Yau：出 platform copy（然後 wire 一個 platform branch），**或者**話 redirect/隱藏佢哋（同 shipping/returns 一樣喺 middleware 做）。
 2. **`brandColor` schema default 仲係橙 `#FF9500`（DB migration）** —— `prisma/schema.prisma:325`。register 已寫 null，實際好少中，低優先。改 default = migration = 停低問。
 3. **(a) subdomain 復活（infra）** —— 要先搬 Namecheap email forwarding 先郁得 NS，見 2026-07-23 後半 section。
-4. **(customer) soft-404（技術，但 risk 高，開咗 chip `task_56cbe3eb`）** —— 見上面「結構性坑」。未知/已刪商品回 200 soft-404。
+4. **(customer) soft-404（chip `task_56cbe3eb`）** —— 根因 2026-07-25 已查實（`loading.tsx` = Suspense boundary，唔係 root layout stream），**見最頂 ②**。fix 未落，因為粗暴刪 `loading.tsx` 會令租戶店冇晒 skeleton。
 
 ---
 
