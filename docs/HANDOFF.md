@@ -41,21 +41,21 @@
 
 - ✅ **#371 收據 route**（已 merge + prod）—— destructure `tenantId` + `findFirst({ id, tenantId })` 先讀檔；順手揪到**第二個窿：path traversal**（Next 會 `decodeURIComponent` dynamic param，`..%2f` 變真 `../` 爬得出 `/tmp/receipts`，e2e 實證舊 code 回 200 唔係理論）→ 加白名單 regex + 用 DB 攞返嚟嘅 id 砌路徑 + 三種失敗一律同一個 404（唔做 order id 存在性 oracle）。新 `e2e/receipt-isolation.spec.ts` 3 條，RED proof 過。
 - ✅ **#372 補付款截圖**（已 merge + prod + live 驗）—— 憑證改「order id + 落單電話」（同 sibling `track/route.ts` 一致），**特登唔加 tenant 解析**（加咗就會將非 default 店客人拒之門外 = #370 嗰個 bug class 翻兜）；`update` → `updateMany` + status 落 where 收 TOCTOU；**rate limit 電話對唔上先計數** —— 擺喺 handler 頂用 orderId 做 key 嘅話，攻擊者灌爆 bucket 就令啱啱俾完錢嘅客人永遠上載唔到收據（用安全 fix 嚟做 DoS），有 e2e 專門守住。新 `e2e/payment-proof-ownership.spec.ts` 4 條，RED proof 3/4。
-- 🔴 **orders PII（VULN 1）—— 未修，設計俾對抗式 review 打返轉頭，等 Yau 揀方向**。詳見下面 ①c。
+- ✅ **#373 orders PII**（已 merge + prod + live 驗）—— 詳見下面 ①c。**三條全部收晒。**
 
 **📌 嚴重程度更正（我之前講大咗）**：`"orders"` 喺 `ROUTE_RESERVED_SLUGS`（`lib/slug-policy.ts:38`），所以 `www.wowlix.com/{locale}/orders/{id}` 個 `x-tenant-slug` **永遠**係 DEFAULT_SLUG。即係「所有非 default 店客人 checkout 完見唔到自己張單」**唔成立** —— 非 default 店嘅客人根本行 path-biolink（`/{locale}/{slug}/order/{id}`），唔經呢頁。真實影響 = **未認證讀到 default 店（maysshop）啲單嘅客人 PII**，唔係全平台商戶。
 
-### ①c orders PII — 設計被 refute，三個唔可以照抄嘅位（下個 session 由呢度接）
+### ①c orders PII — ✅ #373 已修（agent 原設計被 refute，最後係重寫嘅）
 
-Agent 出咗個「grant cookie + 電話解鎖」方案，adversarial review 揪到**三條真嘢**（我逐條對過 code 證實）：
+**做咗乜**：剷咗個 internal fetch，直接 prisma + `getServerTenantId()`；分兩層 —— 陌生人淨係見單號／狀態／總額，姓名／電話／地址／逐件貨要憑證。憑證 = checkout 成功後 server **自己核對過電話**先派嘅簽名 grant cookie，或者登入會員。**唔要求登入**（checkout 特登容許 guest，迫啱啱俾完錢嘅人開 account = 殺收入），啱啱落完單嗰個瀏覽器零阻力見全單，**零新客人面文案**（Yau 揀咗呢個方向）。
 
-1. **會炸收入路徑**：`await grantOrderAccessAfterCheckout(...)` 擺咗喺 `checkout/page.tsx:583` 個 outer `try` 入面，而 `:678` 個 catch 係 `showToast("訂單創建失敗")` + **唔會跳頁**。server action **invocation** 失敗（Vercel deploy 令舊 tab 個 action id 失效、5xx、斷線）就會 reject 喺 client → 單已經落咗、cart 已經清咗、客人見到「訂單創建失敗」兼卡死喺 checkout 頁。agent 自己寫「失敗都照跳頁」係錯嘅（嗰個 try/catch 喺 server 行）。修法：client 端自己包一層 `try {} catch {}`。
-2. **`notFound()` 取代咗原本嘅 degraded 200**：舊 code 查唔到就出「多謝惠顧 + order id」。新 code 出 `notFound()`，而 `(customer)/loading.tsx` 令佢變 soft-200 `__next_error__` 無品牌錯誤畫面 —— 即係俾完錢嘅客人見到一版爛嘢。`?tenant=` demo 預覽落單就會中。
-3. **測試冇 red-prove 到個 PII fix**：spec header 自己承認（e2e harness 冇 ADMIN_SECRET，舊 action 直接短路去 degraded 頁）。
+**三個唔可以行返轉頭嘅決定（agent 原方案就係喺呢度撞板，refute 揪出嚟）**：
 
-**建議切法（唔使 Yau 決定文案嗰半可以即刻做）**：
-- 可以照做（零新文案、零 UX 改動）：剷咗個 internal fetch，直接 prisma + `getServerTenantId()` 查 —— 順手唔再將 full-privilege `ADMIN_SECRET` 送落一版客人面頁，兼慳一個 lambda round trip。
-- 要 Yau 拍板：陌生人（冇 grant）應該見到幾多。**Tier 1 summary**（單號／狀態／總額，冇姓名電話地址貨品）零新文案；「打電話解鎖睇全單」嗰個 form 就會加新客人面文案 = 拍板位。
+1. **grant 一定要 raw HMAC，唔可以用 JWT** —— `route-helpers` 接受任何用 `TENANT_JWT_SECRET` 簽、payload 有 `tenantId` 嘅 JWT 做 admin auth。派張帶 `tenantId` 嘅 JWT 落客人 browser = 俾佢 replay 做 admin token（**提權**）。
+2. **checkout 個 grant call 一定要包 client-side `try/catch`** —— 嗰個 `await` 坐喺落單 handler 個 outer `try` 入面，佢個 `catch` 係出「訂單創建失敗」兼**唔跳頁**。action **invocation** 失敗（deploy 令舊 tab action id 失效／5xx／斷線）reject 喺 client → 單已落、cart 已清，客人卡死喺 checkout 頁。**action 內部自己嗰個 catch 兜唔到**（佢喺 server 行）。agent 原設計寫「失敗都照跳頁」係錯嘅。
+3. **原本個 degraded 200「多謝惠顧 + 單號」唔可以改做 `notFound()`** —— 加上 `(customer)/loading.tsx` 個 Suspense 坑，俾完錢嘅客人會見到無品牌 `__next_error__` 爛畫面。
+
+**測試教訓（值得記）**：第一版 spec 淨係 red 喺租戶嗰半 —— 陌生人喺舊 code 見到 degraded 頁，一樣冇 PII，所以 **PII gate 本身冇 red-prove 到**。要**特登將張單落喺 default 店**（兩邊都搵到張單）先隔離到真正變數，舊 code 就會喺「陌生人唔准見到客人姓名」嗰句直接紅。以後驗呢類 gate 要留意：fail 喺第一句斷言 = 後面啲斷言根本冇行過。
 
 **另外兩條新掃到、未郁**：`POST /api/orders` 收 `paymentProof` 完全唔驗兼冇 auth（`route.ts:282-285`→`:677`，`(customer)` checkout 真正行嗰條）；`/api/upload` 零認證（任何人可以灌爆你個 Cloudinary）。仲有 `lib/email.ts` `renderReceiptHtml` **stored XSS**（`customerName`/`phone`/`email` 零 escape 插入 HTML 再用 `text/html` 喺自己 origin 送）—— 而家俾 `/tmp` 問題遮住，但如果將來改做 on-demand render 就會即刻解封，**escape 一定要喺嗰個改動之前或者同時落**。
 
