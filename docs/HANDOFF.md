@@ -6,22 +6,38 @@
 
 ## 🚩 2026-07-25 新 session 由呢度開始（上一個 session 收尾狀態）
 
-### ① 🔴 未修：租戶分類頁跨租戶滲漏（**Yau 拍板位 — 租戶隔離，未批唔准郁**）
+### ① ✅ 租戶分類頁跨租戶滲漏 —— **Yau 批咗，#370 已 merge 出 prod + live 驗證 4/4**
 
-```ts
-// app/[locale]/(customer)/categories/[slug]/page.tsx:28 同 :62
-const tenant = await resolveTenant();      // ← 冇傳 req
-// lib/tenant.ts:56
-export async function resolveTenant(req?: Request) {
-  let slug = DEFAULT_SLUG;                 // "maysshop"
-  if (req) { …讀 host / x-tenant-slug… }   // ← 冇 req 成段跳過
-```
+`categories/[slug]/page.tsx:28`（generateMetadata）同 `:62`（page body）兩處 `await resolveTenant()` 冇傳 req → `lib/tenant.ts:59` 冇 Request 就 skip 晒 host/header 解析 → slug 永遠跌返 `DEFAULT_SLUG`（maysshop）。全 repo 得呢兩個 no-arg call site 中招（~46 個 `getTenantId(...)` 全部有傳 req）。
 
-**任何租戶店嘅 `/{locale}/categories/{slug}` 都 render 緊 maysshop 嘅分類 / 產品 / badges。** 全 repo 掃過，得呢兩個 call site 中招（其他都用 `getServerTenantId()`）。`CategoryBrowseNav` 真係連去呢條 route，客人撳得到。
+**修法（唔係照 handoff 原本寫嗰句「改用 getServerTenantId()」）** —— 新 `resolveCategoryTenant()` 經 `next/headers` 讀 `x-tenant-slug`，一 query 攞埋 `id + name + status`。**特登唔用 `getServerTenantId()`**：
+1. 佢淨係 return id，攞唔到 `<title>` 要嘅 `tenant.name`；
+2. 佢租戶唔存在／停用就 **throw** —— soft-404 個 Suspense 坑修好之後會變真 500。「呢間店唔存在」係 404 唔係 server 死咗 → return `null` 由 caller 出 404；
+3. **DB 撲街（timeout / pool 爆）照樣 throw 上去 → 真 500**。冇用 `.catch(() => null)`，唔想 DB 死扮成 404 呃走 monitoring 同 Google。
 
-**嚴重程度（唔好誇大）**：漏嘅係**公開商品目錄**，唔係訂單／客人 PII，所以唔算資料外洩級數；但租戶隔離破咗 + 商業尷尬（Bull Kicks 撳分類彈出 May's Shop 啲鞋）。
-**修法**：照商品頁改用 `getServerTenantId()`。細改動，但屬「安全／租戶隔離」＝ **要 Yau 講咗先做**。
-⚠️ 同時係下面 soft-404 個 500 風險嘅同源問題 —— 拆咗 Suspense boundary 之後，呢頁會由 soft-200 變真 500。**建議次序：先修呢條，再郁 soft-404。**
+順手收埋同檔最後一句 unscoped query：breadcrumb parent `findUnique({ id })` → `findFirst({ id, tenantId })`。
+
+**驗證**：`ci:build` 綠（categories 仍然 `ƒ`、landing/pricing 仍然 `●`）· e2e **49/49**（新 `e2e/tenant-isolation.spec.ts` 3 條）· **RED proof**：還原做舊 code 再跑 → 1 failed（`Tenant not found or inactive at resolveTenant → CategoryPage`）· **live 4/4**：`/zh-HK/categories/jordan?tenant=solemena-test` 出 `Jordan — Wowlix Studio`（舊 code 會 404，因為 maysshop 一個分類都冇）、`nike` 同樣、垃圾 slug → `Category Not Found`、平台 host 冇 `?tenant=` → `Category Not Found` 冇借 solemena 內容。
+
+⚠️ **呢個 PR 修唔到、唔好當已清**：
+- **平台 host 仍然出 default 店 catalogue** —— `www.wowlix.com/{locale}/categories/{slug}` middleware 硬 set `x-tenant-slug = DEFAULT_SLUG`，patch 喺嗰面係 **no-op**。同 #366 **同一 class**，要行同一招（middleware redirect）。`/about` `/faq` `/contact` `/terms` `/collections` `/search` `/product/*` 一樣中招。
+- `lib/tenant.ts:16` `DEFAULT_SLUG` 寫死 `"maysshop"`，唔讀 `DEFAULT_TENANT_SLUG`（淨係 `middleware.ts:5` 讀）—— 兩個 default 來源會 drift。
+- `resolveTenant()` 個 no-req path 仲係靜靜雞跌落 default 店唔 throw —— **今次個 bug 出得世嘅結構原因**。
+
+### ①b 🔴🔴 做 #370 順手全 repo 掃租戶隔離，揪到三條更嚴重嘅（**全部 Yau 拍板位，未郁**）
+
+逐條對住 code 親手覆核過，唔係 agent 空講：
+
+1. **`app/[locale]/(customer)/orders/[id]/actions.ts:14` —— CRITICAL，未認證讀客人 PII**
+   `getOrderById()` server-to-server fetch `/api/orders/{id}` **淨係帶 `x-admin-secret`，冇 forward `x-tenant-slug`**。`app/api/orders/[id]/route.ts:38` `getTenantId(_req)` 冇 header 冇 JWT → 靠 internal URL 個 host 解析（`www` → DEFAULT_HOSTS）→ **永遠 maysshop**。兩個後果：
+   - **(a) 功能爛晒**：所有非 default 店，客人 checkout 完跳落 `/{locale}/orders/{id}` 一律 404，跌落「minimal confirmation」branch —— 商戶啲客**永遠見唔到自己張單**。
+   - **(b) PII**：`orders/[id]/page.tsx:30` 叫 `getOrderById(id)` **零 session／零 phone／零 ownership check**。即係任何人攞到（或者收到人哋 share 嘅）maysshop order cuid，就 render 到成張單 —— `customerName` / phone / email / `fulfillmentAddress` / items / 金額 / `paymentAttempts`。靠 cuid 估唔到做唯一屏障。
+2. **`app/api/admin/orders/[id]/receipt/route.ts:9` —— HIGH，跨租戶 IDOR**
+   `await authenticateAdmin(req);` 個結果**掉咗唔要**，跟住 `fs.readFile("/tmp/receipts/{id}.html")` 齋靠 bare id，**零租戶 check**。任何一間店嘅 admin 都讀到第二間店張收據（入面有姓名／電話／email／貨品／金額）。
+3. **`app/api/biolink/orders/[id]/payment-proof/route.ts` —— HIGH，未認證跨租戶寫入**
+   `withApi(...)` **冇 `{ admin: true }`，成條 route 零 auth**；`findUnique({ where: { id } })` + `update` 都冇 tenantId。任何人攞到任何店嘅 PENDING order id，就寫得個**任意 URL** 落 `paymentProof` 兼把單 flip 做 `PENDING_CONFIRMATION` —— 直接彈入商戶後台叫佢確認收款。對比 sibling `track/route.ts:56` 有驗電話，呢條乜都冇。
+
+**建議次序**：1 → 2 → 3 → 再 `lib/tenant.ts` 結構性收口。**全部係「安全／租戶隔離」＝ 等 Yau 開聲先郁。**
 
 ### ② ✅ soft-404 根因查實咗（3 個獨立調查 + 對照實驗，高信心）—— 但 fix 未落
 
