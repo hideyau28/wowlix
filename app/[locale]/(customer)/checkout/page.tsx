@@ -13,6 +13,7 @@ import CheckoutPaymentSelector, {
   type PaymentProviderOption,
 } from "@/components/CheckoutPaymentSelector";
 import ManualPaymentFlow from "@/components/ManualPaymentFlow";
+import { grantOrderAccessAfterCheckout } from "./../orders/[id]/actions";
 import {
   getRegionConfig,
   validatePhone as validatePhoneRegion,
@@ -464,6 +465,25 @@ export default function CheckoutPage({
     );
   };
 
+  /**
+   * 派 grant cookie，令啱啱俾完錢嘅客人喺確認頁見到全單（server 會自己核對
+   * 電話先簽，見 orders/[id]/actions.ts）。
+   *
+   * ⚠️ 一定要喺呢度包一層 try/catch。呢個 await 坐喺落單 handler 個 outer try
+   * 入面，而嗰個 catch 係出「訂單創建失敗」兼**唔跳頁**。server action 個
+   * invocation 失敗（deploy 之後舊 tab 個 action id 失效、5xx、斷線）會 reject
+   * 喺 client —— 即係單已經落咗、cart 已經清咗，客人卻見到「訂單創建失敗」
+   * 兼卡死喺 checkout 頁。派唔到 grant 最多係確認頁見 summary，
+   * **絕對唔可以連累跳頁**。（action 內部自己都有一層 catch，兜唔到呢種。）
+   */
+  const grantOrderAccess = async (orderId: string, phone: string) => {
+    try {
+      await grantOrderAccessAfterCheckout(orderId, phone);
+    } catch {
+      // 見上面：靜靜哋算數，唔可以阻住跳頁。
+    }
+  };
+
   const buildOrderPayload = (paymentProofUrl?: string) => {
     const recipientName = sameAsContact ? customerName : receiverName;
     const recipientPhone = sameAsContact ? phone : receiverPhone;
@@ -617,6 +637,7 @@ export default function CheckoutPage({
               ? "訂單已提交！我們會盡快確認您的付款。"
               : "Order submitted! We'll confirm your payment shortly.",
           );
+          await grantOrderAccess(result.data.id, payload.phone);
           router.push(`/${locale}/orders/${result.data.id}`);
         } else {
           alert(
@@ -659,6 +680,7 @@ export default function CheckoutPage({
 
       if (sessionData.ok && sessionData.data?.url) {
         clearCart();
+        await grantOrderAccess(result.data.id, payload.phone);
         window.location.href = sessionData.data.url;
       } else {
         alert(
