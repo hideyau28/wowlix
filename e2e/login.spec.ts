@@ -11,9 +11,12 @@ test("wrong password shows an error and stays on login", async ({ page }) => {
   await page.locator('input[type="password"]').fill("definitely-wrong-1");
   await page.getByRole("button", { name: "Log in", exact: true }).click();
 
-  // API 錯誤 message 有中英兩個來源，齋 match 個紅色錯誤段
+  // API 錯誤 message：tenant/login 統一 generic「電郵或密碼不正確」（唔做 enumeration
+  // oracle）；保留舊字眼 alternation 以防其他 auth 來源。齋 match 個紅色錯誤段。
   await expect(
-    page.locator("p.text-red-600", { hasText: /密碼錯誤|Invalid email or password/ }),
+    page.locator("p.text-red-600", {
+      hasText: /電郵或密碼不正確|密碼錯誤|Invalid email or password/,
+    }),
   ).toBeVisible();
   expect(page.url()).toContain("/admin/login");
 });

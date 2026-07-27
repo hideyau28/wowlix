@@ -62,6 +62,12 @@ export default defineConfig({
       // 唔准打真外部服務、唔准產生真 asset。合法上載回假 secure_url，被拒請求
       // 根本行唔到落 adapter。
       UPLOAD_TEST_MODE: "1",
+      // Auth rate-limit test seam：開 /api/test-only/rate-limit-keys（fail-closed，prod
+      // 冇呢個 env → 永遠 404）。俾 auth-rate-limit.spec 驗 raw token 冇入 key。
+      RATE_LIMIT_TEST_SEAM: "1",
+      // Email test seam：開 /api/test-only/email-outbox（fail-closed，prod 冇 env →
+      // 永遠 404）。俾 auth-rate-limit.spec 驗 forgot-password after() send task。
+      EMAIL_TEST_SEAM: "1",
       // 本地：硬性 override 落獨立 e2e DB（即使有人直接 npx playwright test
       // 冇行 bootstrap，都唔會寫入 shared DB —— 頂多 register 失敗 fail fast）。
       ...(process.env.CI ? {} : { DATABASE_URL: LOCAL_E2E_DB_URL }),
