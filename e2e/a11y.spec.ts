@@ -33,25 +33,39 @@ test("platform FAQ stays readable for dark-OS visitors", async ({ page }) => {
   // details.first() 係 live locator，auto-wait 到 stream 後嘅真節點 attached。
   await expect(details.first()).toBeVisible();
 
-  // 等 React hydration 真正 reconcile 完先 mutate DOM —— React 完成 hydration 會
-  // 喺 root container 掛一條 __reactContainer$… internal key。若果喺 hydration 之前
-  // 就將 <details open>，React 會當 server/client 不一致 log console error，
-  // consoleGuard fixture 就會 fail（呢個係 deterministic hydration gate，唔係 sleep）。
-  await page.waitForFunction(() =>
-    Object.keys(document).some((k) => k.startsWith("__reactContainer$")),
-  );
+  // 用 expect.poll 包住「對當刻 live collection 原子展開 + 讀返 state」，一路
+  // retry 到 state 穩定 —— 唔靠任何 framework internal（例如 __reactContainer$…
+  // 呢類 undocumented private key，React 版本一轉就假紅）。<details> 係 server
+  // render 嘅靜態 markup（冇 open prop），HTMLDetailsElement.open 係 uncontrolled，
+  // React 唔會管呢個 attribute，所以純 DOM 展開唔會撞 hydration。
+  //
+  // 一個 poll pass = 對「當刻」DOM 全部 <details> set open=true，即刻讀返幾多真係
+  // open。若 stream / hydration 途中子樹俾替換，evaluateAll 下一個 poll 會攞返
+  // fresh handle 對『新嗰批』重新展開，冇 snapshot-then-click 嘅 detach race。
+  // 穩定條件：count>0 且全部 open —— 回 count（否則回 -1 令 poll 繼續）。
+  await expect
+    .poll(
+      async () =>
+        details.evaluateAll((els) => {
+          for (const el of els) (el as HTMLDetailsElement).open = true;
+          const total = els.length;
+          const open = els.filter(
+            (el) => (el as HTMLDetailsElement).open,
+          ).length;
+          return total > 0 && open === total ? total : -1;
+        }),
+      { message: "platform FAQ <details> 應該全部展開且穩定（純 DOM 觀測）" },
+    )
+    .toBeGreaterThan(0);
 
-  const count = await details.count();
-  expect(count).toBeGreaterThan(0);
-
-  // hydration 已完成，一次過喺瀏覽器 side 將全部 <details open>。
-  // HTMLDetailsElement.open 係 uncontrolled，React 唔會 reset；live locator
-  // evaluateAll 一個 pass 做晒，冇 snapshot-then-click 嘅 detach race window。
-  const openCount = await details.evaluateAll((els) => {
-    for (const el of els) (el as HTMLDetailsElement).open = true;
-    return els.filter((el) => (el as HTMLDetailsElement).open).length;
-  });
-  expect(openCount).toBe(count);
+  // 再用 live locator 對「目前」collection 做一次唯讀 re-verify —— 確認 poll 之後
+  // 冇再被替換、全部仍然 open。同樣 evaluateAll 讀當刻 state，唔影 snapshot。
+  const state = await details.evaluateAll((els) => ({
+    count: els.length,
+    open: els.filter((el) => (el as HTMLDetailsElement).open).length,
+  }));
+  expect(state.count).toBeGreaterThan(0);
+  expect(state.open).toBe(state.count);
 
   // 展開後至少一條答案文字要真係可見 —— 保住條 test 嘅意義：axe 量嘅係
   // 「展開狀態下」答案 div 喺 dark 配色嘅 contrast，唔係摺埋嗰陣量唔到。
