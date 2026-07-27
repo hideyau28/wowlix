@@ -24,7 +24,25 @@ import { v2 as cloudinary } from "cloudinary";
 export type UploadedImage = {
   url: string;
   publicId: string;
+  // Cloudinary 真上載會回光柵尺寸；test adapter 唔知真尺寸，一律 undefined
+  // （唔偽造 production dimensions）。現行 caller 只用 `url`，兩者皆可接受。
+  width?: number;
+  height?: number;
 };
+
+/**
+ * Test-only fault-injection 標記字串。
+ *
+ * e2e 要驗「provider / internal error → generic 500、唔漏內部訊息」呢條 path，但
+ * 唔准打真 Cloudinary。做法：檔案 body 內含呢個 sentinel（前面仍要有合法 magic
+ * bytes 先過 validator）→ **test adapter** 掟 error 模擬 provider 失敗。
+ *
+ * ⚠️ 呢個 sentinel 淨係喺 `shouldUseTestAdapter(process.env) === true` 之內先生效
+ * （即 UPLOAD_TEST_MODE=1 且非 Vercel）。prod / 任何 Vercel 部署 test adapter 根本
+ * disabled，呢段 code 行都行唔到，sentinel 完全 inert —— 冇 prod 攻擊面。
+ */
+export const UPLOAD_TEST_FAIL_SENTINEL = "WOWLIX_FORCE_UPLOAD_FAIL";
+const TEST_FAIL_SENTINEL_BYTES = Buffer.from(UPLOAD_TEST_FAIL_SENTINEL);
 
 /** 只需 upload 決策用到嗰幾個 env key —— 抽做參數令 `shouldUseTestAdapter` 可純測。 */
 export type UploadEnv = {
@@ -91,6 +109,14 @@ export async function uploadStoreImage(
 ): Promise<UploadedImage> {
   // 明確 test mode（CI / 本地 e2e）：回假 URL，零 network。
   if (shouldUseTestAdapter(process.env)) {
+    // Test-only：body 內含 fault sentinel → 模擬 provider 失敗，令 e2e 可以 exercise
+    // 「provider error → generic 500、唔漏內部訊息」呢條 path（唔打真 Cloudinary）。
+    // 只喺 test adapter 之內先行到，prod / Vercel 完全 inert（見 sentinel 註釋）。
+    if (buffer.includes(TEST_FAIL_SENTINEL_BYTES)) {
+      throw new Error(
+        "[upload][test] simulated provider failure — internal-only detail SECRET_should_not_leak",
+      );
+    }
     const rand = Math.abs(hashString(`${folder}:${buffer.length}:${mime}`))
       .toString(36)
       .slice(0, 10);
@@ -122,7 +148,12 @@ export async function uploadStoreImage(
     resource_type: "image",
   });
 
-  return { url: result.secure_url, publicId: result.public_id };
+  return {
+    url: result.secure_url,
+    publicId: result.public_id,
+    width: result.width,
+    height: result.height,
+  };
 }
 
 // 細細個 deterministic hash，淨係為咗喺 test-mode 砌一個唔撞名嘅假 public_id。
