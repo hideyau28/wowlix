@@ -625,11 +625,21 @@ export const POST = withApi(async (req) => {
   // Atomic transaction: stock deduction + order creation + coupon usage
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const order = await (prisma as any).$transaction(async (tx: any) => {
-    // Stock deduction — updateMany with gte guard prevents race conditions
+    // Stock deduction — updateMany with gte guard prevents race conditions.
+    // ⚠️ 租戶隔離：variant 扣庫存嘅 where 一定要同時鎖 tenantId + productId ——
+    // repricing 只驗 productId 屬本店，唔 scope variantId 嘅話，攻擊者可用本店
+    // 真 productId 夾帶人哋店（或本店另一件貨）嘅 variantId 跨租戶／跨產品扣庫存。
+    // 加咗之後：mismatch → count===0 → 統一 400（同「庫存不足」同一句，唔做
+    // 存在性 oracle），原子 guard 一步過驗 ownership + stock，冇 TOCTOU。
     for (const item of repriced.items) {
       if (item.variantId) {
         const result = await tx.productVariant.updateMany({
-          where: { id: item.variantId, stock: { gte: item.quantity } },
+          where: {
+            id: item.variantId,
+            tenantId,
+            productId: item.productId,
+            stock: { gte: item.quantity },
+          },
           data: { stock: { decrement: item.quantity } },
         });
         if (result.count === 0) {
@@ -641,7 +651,7 @@ export const POST = withApi(async (req) => {
         }
       } else {
         const result = await tx.product.updateMany({
-          where: { id: item.productId, stock: { gte: item.quantity } },
+          where: { id: item.productId, tenantId, stock: { gte: item.quantity } },
           data: { stock: { decrement: item.quantity } },
         });
         if (result.count === 0) {
