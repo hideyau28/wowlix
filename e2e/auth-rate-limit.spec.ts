@@ -32,8 +32,13 @@ function hashUid(s: string): number {
   return h;
 }
 
+// 每 test 用獨一 source header 隔離 per-IP coarse bucket。用 x-vercel-forwarded-for
+// —— production 上 Vercel 平台填、client 蓋唔到嘅權威值（clientSource 亦優先讀佢）。
+// local next dev 冇平台 stripping，所以 test 照 set 到（見下面 XVFF-precedence test）。
 function ctxForIp(ip: string): Promise<APIRequestContext> {
-  return apiRequest.newContext({ extraHTTPHeaders: { "x-forwarded-for": ip } });
+  return apiRequest.newContext({
+    extraHTTPHeaders: { "x-vercel-forwarded-for": ip },
+  });
 }
 
 type SeededTenant = { email: string; slug: string; tenantId: string };
@@ -76,6 +81,31 @@ async function loginAttempt(
     failOnStatusCode: false,
   });
   return { status: res.status(), res };
+}
+
+// ── Test seams ────────────────────────────────────────────────────────────────
+
+/** 讀 email test seam：某 email 嘅 after() send task 結果（fail-closed，prod 404）。 */
+async function readOutbox(
+  ctx: APIRequestContext,
+  email: string,
+): Promise<{ count: number; sent: number; failed: number }> {
+  const res = await ctx.get(
+    `${APP}/api/test-only/email-outbox?to=${encodeURIComponent(email)}`,
+    { failOnStatusCode: false },
+  );
+  expect(res.status(), `email seam 應該開咗（200）：${await res.text()}`).toBe(200);
+  return (await res.json()) as { count: number; sent: number; failed: number };
+}
+
+/** 讀 rate-limit key seam：某 exact prefix 下嘅 key（用嚟斷言 coarse source 值）。 */
+async function srcKeys(ctx: APIRequestContext, prefix: string): Promise<string[]> {
+  const res = await ctx.get(
+    `${APP}/api/test-only/rate-limit-keys?prefix=${encodeURIComponent(prefix)}`,
+    { failOnStatusCode: false },
+  );
+  expect(res.status(), `rate-limit-keys seam 應該開咗（200）：${await res.text()}`).toBe(200);
+  return ((await res.json())?.keys ?? []) as string[];
 }
 
 // ── Login：credential-guessing 429（fail limiter）──────────────────────────────
@@ -272,6 +302,131 @@ test.describe("forgot-password — email bombing + enumeration", () => {
         await cExist.dispose();
         await cMiss.dispose();
       }
+    }
+  });
+});
+
+// ── Forgot-password：after() reset-email send task（BLOCKER A）─────────────────
+// 證明 email 由 Next.js after() schedule（response 之後平台仍追蹤嘅 task），
+// 唔係裸 void fire-and-forget（serverless response 後隨時被凍結 → 冇寄出）。
+// 用 email test seam 觀測 send task 有冇執行；唔寄真 email（dev sendEmail 只 log）。
+
+test.describe("forgot-password — after() send task", () => {
+  test("[critical] 存在 account（allowed bucket）→ after() 執行 send task", async () => {
+    for (let rep = 0; rep < 3; rep++) {
+      const tenant = await registerTenant(`send-exist-${rep}`);
+      const ctx = await ctxForIp(freshIp(`send-exist-${rep}`));
+      try {
+        const r = await forgotPost(ctx, tenant.email);
+        expect(r.status, `rep ${rep}: 存在 email 應該 200`).toBe(200);
+        expect(r.ok, `rep ${rep}: body ok:true`).toBe(true);
+        // after() response 之後先跑 → poll 到 outbox 有一次成功 send。
+        await expect
+          .poll(async () => (await readOutbox(ctx, tenant.email)).sent, {
+            timeout: 10_000,
+          })
+          .toBe(1);
+      } finally {
+        await ctx.dispose();
+      }
+    }
+  });
+
+  test("[critical] 不存在 account → 同一 200 body，但唔 schedule / send", async () => {
+    for (let rep = 0; rep < 3; rep++) {
+      const missing = `ghost-send-${uid()}@nowhere.example`;
+      const ctx = await ctxForIp(freshIp(`send-miss-${rep}`));
+      try {
+        const r = await forgotPost(ctx, missing);
+        expect(r.status, `rep ${rep}: 唔存在 email 應該 200`).toBe(200);
+        expect(r.ok, `rep ${rep}: body 同存在一樣 ok:true`).toBe(true);
+        // 俾 after()（如果錯誤 schedule 咗）有足夠時間跑，再確認 outbox 一直係 0。
+        await new Promise((r) => setTimeout(r, 1200));
+        const box = await readOutbox(ctx, missing);
+        expect(box.count, `rep ${rep}: 唔存在 account 唔應該 send`).toBe(0);
+      } finally {
+        await ctx.dispose();
+      }
+    }
+  });
+
+  test("[critical] send 失敗 → 同一 200 response、唔 unhandled reject", async () => {
+    for (let rep = 0; rep < 3; rep++) {
+      // email local-part 含 "forcefail" → seam 逼 send 失敗（見 lib/email/test-outbox）。
+      const tenant = await registerTenant(`forcefail-${rep}`);
+      const ctx = await ctxForIp(freshIp(`send-fail-${rep}`));
+      try {
+        const r = await forgotPost(ctx, tenant.email);
+        // send 成敗都唔可以改 response —— 一律同成功一樣即回 200 ok:true。
+        expect(r.status, `rep ${rep}: send 失敗都要回 200`).toBe(200);
+        expect(r.ok, `rep ${rep}: body 一律 ok:true`).toBe(true);
+        // after() 內部 catch 咗 → outbox 記錄一次 failed（冇 unhandled reject 炸咗個 task）。
+        await expect
+          .poll(async () => (await readOutbox(ctx, tenant.email)).failed, {
+            timeout: 10_000,
+          })
+          .toBe(1);
+        // server 仍健康：後續 forgot 照正常 200（唔係崩咗）。
+        const health = await forgotPost(ctx, `after-${uid()}@nowhere.example`);
+        expect(health.status, `rep ${rep}: send 失敗後 server 仍要正常`).toBe(200);
+      } finally {
+        await ctx.dispose();
+      }
+    }
+  });
+});
+
+// ── clientSource 優先次序：Vercel 平台 XVFF > client 偽造 XFF（BLOCKER B）───────
+// 用 203.0.113.0/24（另一保留測試網段）避免同 freshIp 嘅 198.51.100.0/24 撞。
+
+test.describe("clientSource 優先次序（平台值 > client XFF）", () => {
+  test("[critical] x-vercel-forwarded-for 蓋過 client 偽造 x-forwarded-for", async () => {
+    for (let rep = 0; rep < 3; rep++) {
+      const authoritative = `203.0.113.${10 + rep}`; // 平台 XVFF（可信）
+      const spoof = `203.0.113.${100 + rep}`; // client 偽造 XFF（唔可以當真）
+      const ctx = await apiRequest.newContext({
+        extraHTTPHeaders: {
+          "x-vercel-forwarded-for": authoritative,
+          "x-forwarded-for": spoof,
+        },
+      });
+      try {
+        // 打一次 login（唔存在 email）→ 生成 auth:login:src:<source> coarse key。
+        await loginAttempt(
+          ctx,
+          "/api/tenant/login",
+          `nobody-${uid()}@nowhere.example`,
+          "whatever-1",
+        );
+        const hit = await srcKeys(ctx, `auth:login:src:${authoritative}`);
+        const spoofed = await srcKeys(ctx, `auth:login:src:${spoof}`);
+        expect(hit.length, `rep ${rep}: coarse source 應該用平台 XVFF`).toBeGreaterThan(0);
+        expect(
+          spoofed.length,
+          `rep ${rep}: client 偽造 XFF 唔可以蓋過 XVFF`,
+        ).toBe(0);
+      } finally {
+        await ctx.dispose();
+      }
+    }
+  });
+
+  test("XVFF 缺席 → fallback 落 x-forwarded-for（local / 其他 runtime）", async () => {
+    const only = "203.0.113.200";
+    const ctx = await apiRequest.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": only },
+    });
+    try {
+      await loginAttempt(
+        ctx,
+        "/api/tenant/login",
+        `nobody-${uid()}@nowhere.example`,
+        "whatever-1",
+      );
+      const hit = await srcKeys(ctx, `auth:login:src:${only}`);
+      expect(hit.length, "冇 XVFF 時應該 fallback 用 XFF").toBeGreaterThan(0);
+    } finally {
+      await ctx.dispose();
     }
   });
 });

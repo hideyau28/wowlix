@@ -17,6 +17,11 @@ export const runtime = "nodejs";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// 統一 login 失敗訊息 —— 帳號唔存在 / 冇 passwordHash / 密碼錯誤全部回同一句，
+// 唔俾 error body 區分「帳號存唔存在」（account enumeration oracle）。timing 已由
+// constantWorkCompare 抹平，訊息／status 亦一致（401，爆 quota 先 429）。
+const GENERIC_LOGIN_ERROR = "電郵或密碼不正確";
+
 export const POST = withApi(async (req: Request) => {
   // ── Layer 1：coarse pre-auth source limiter（喺 bcrypt 之前）──
   // 封頂每來源／全域嘅 login 嘗試，保護 bcrypt CPU + 擋單源狂 loop。
@@ -56,10 +61,10 @@ export const POST = withApi(async (req: Request) => {
   });
 
   // 帳號唔存在 / 冇 passwordHash：行一次等價 bcrypt work 抹平 timing，
-  // 再行同「密碼錯誤」一致嘅失敗計數（唔做存在性 oracle）。
+  // 再行同「密碼錯誤」一致嘅失敗計數 + 同一句 generic 訊息（唔做存在性 oracle）。
   if (!admin || !admin.passwordHash) {
     await constantWorkCompare(password);
-    return failLogin(req, failKey, "帳號不存在或未設定密碼");
+    return failLogin(req, failKey, GENERIC_LOGIN_ERROR);
   }
 
   if (admin.tenant.status !== "active") {
@@ -68,7 +73,7 @@ export const POST = withApi(async (req: Request) => {
 
   const valid = await bcrypt.compare(password, admin.passwordHash);
   if (!valid) {
-    return failLogin(req, failKey, "密碼錯誤");
+    return failLogin(req, failKey, GENERIC_LOGIN_ERROR);
   }
   // ✅ 正確 credential —— 直接發 token，唔查／唔累積 failure bucket。
   // 攻擊者灌爆呢個 email 嘅 failKey 都鎖唔死真店主：成功 path 根本冇經過佢。

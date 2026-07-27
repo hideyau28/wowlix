@@ -18,9 +18,12 @@ import { rateLimit } from "@/lib/rate-limit";
  *   2. **針對 credential guessing 嘅細粒度策略只計失敗、唔 gate 成功 path** ——
  *      正確店主任何時候（除非同一來源 coarse flood）都入到，攻擊者灌爆一個
  *      normalized email 嘅失敗 bucket 都鎖唔死真店主（成功 path 根本唔查佢）。
- *   3. **Client IP 只係 best-effort**（x-forwarded-for spoofable）——per-source 之外
- *      再有固定 global cap 防 IP 輪換／偽造，但 cap 設得遠高於現階段合理流量，
- *      避免 noisy-neighbor 誤殺真商戶。
+ *   3. **Client IP 分兩級信任**：Vercel 平台填嘅 `x-vercel-forwarded-for` 係
+ *      **權威值**（Vercel 官方 request-headers 文檔：平台會 overwrite `X-Forwarded-For`
+ *      防 client 偽造，除非 Enterprise trusted proxy），優先用佢；fallback 落
+ *      `x-forwarded-for`（local／其他 runtime）只當 **best-effort、可偽造**。所以
+ *      per-source 之外再有固定 global cap 兜 IP 輪換／偽造，cap 設得遠高於現階段
+ *      合理流量避免 noisy-neighbor 誤殺真商戶。
  *   4. **raw token / email / password 一律唔入 rate-limit key / log** —— 敏感值先
  *      經 SHA-256 fingerprint 再做 key。
  */
@@ -53,11 +56,24 @@ export const RESET_MISS = { interval: 15 * 60 * 1000, maxRequests: 12 };
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 /**
- * 盡力攞 client IP 做 coarse limiter dimension。x-forwarded-for 第一跳 client
- * 可偽造 → 只當 best-effort（配合固定 global bucket），攞唔到 fallback 去共享
- * "unknown" bucket。同 lib/api/route-helpers.ts、app/api/upload/route.ts 一致。
+ * 攞 client IP 做 coarse limiter dimension。優先次序 = 由「最可信」去「best-effort」：
+ *
+ *   1. `x-vercel-forwarded-for` —— **Vercel 平台權威值**，client 蓋唔到（平台
+ *      overwrite XFF 防偽造，XVFF 就係平台自己填嘅同一個值）。喺 Vercel 上一律信。
+ *   2. `x-forwarded-for`（第一段）—— **best-effort fallback**，俾 local dev／其他
+ *      runtime（冇 XVFF）用；呢個 client 可偽造，只靠固定 global cap 兜底。
+ *   3. `x-real-ip` —— 再 fallback（部分 proxy 先有）。
+ *   4. 攞唔到 → 共享 "unknown" bucket。
+ *
+ * 注意：lib/api/route-helpers.ts、app/api/upload/route.ts 目前仍淨係讀 XFF
+ * （best-effort）；本次只硬化 auth 端點，優先信平台 XVFF。
  */
 export function clientSource(req: Request): string {
+  const vercel = req.headers.get("x-vercel-forwarded-for");
+  if (vercel) {
+    const first = vercel.split(",")[0]?.trim();
+    if (first) return first;
+  }
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();

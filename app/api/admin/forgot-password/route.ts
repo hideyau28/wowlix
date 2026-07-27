@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withApi, ok, ApiError, rateLimited } from "@/lib/api/route-helpers";
 import { randomUUID } from "crypto";
@@ -11,10 +12,42 @@ import {
   FORGOT_GLOBAL,
   FORGOT_EMAIL,
 } from "@/lib/auth/auth-rate-limit";
+import {
+  recordEmailAttempt,
+  isForcedFailRecipient,
+} from "@/lib/email/test-outbox";
 
 export const runtime = "nodejs";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * 送 reset email —— 喺 `after()` callback 入面跑。**自己 catch 曬**，任何失敗
+ * 只落 server log，唔會 rethrow（唔會 unhandled reject、唔會影響已回嘅 response）。
+ * `sendEmail` 本身 Resend 出錯回 `{ ok:false }`（唔 throw），但 render 等仍可能
+ * throw → 一律喺呢度兜。
+ */
+async function deliverResetEmail(to: string, resetUrl: string): Promise<void> {
+  const fp = fingerprint(to);
+  try {
+    // Test-only fault injection（seam 關咗就永遠 false）：證明 send 失敗 path。
+    if (isForcedFailRecipient(to)) {
+      throw new Error("[test-seam] forced email failure");
+    }
+    const result = await sendEmail({
+      to,
+      subject: "Reset your WoWlix password",
+      template: PasswordResetEmail({ resetUrl, expiresInMinutes: 60 }),
+    });
+    recordEmailAttempt(fp, result.ok);
+    if (!result.ok) {
+      console.error("[forgot-password] email send failed:", result.error);
+    }
+  } catch (err) {
+    recordEmailAttempt(fp, false);
+    console.error("[forgot-password] email send threw:", err);
+  }
+}
 
 export const POST = withApi(async (req: Request) => {
   // ── Layer 1：coarse pre-lookup source limiter ──
@@ -68,16 +101,15 @@ export const POST = withApi(async (req: Request) => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const resetUrl = `${baseUrl}/${locale}/admin/reset-password?token=${resetToken}`;
 
-    // Fire-and-forget：唔 await send。原本 await 令「存在 + send 失敗 → throw →
-    // 500」而「唔存在 → 200」，係一個 enumeration oracle（兼 timing 洩漏）。
-    // 而家兩條 path 都即刻回同一個 200，send 失敗只落 server log。
-    void sendEmail({
-      to: cleanEmail,
-      subject: "Reset your WoWlix password",
-      template: PasswordResetEmail({ resetUrl, expiresInMinutes: 60 }),
-    }).catch((err) => {
-      console.error("[forgot-password] email send failed:", err);
-    });
+    // 用 Next.js `after()` schedule send —— response 之後先跑，但係平台會追蹤呢個
+    // task（Vercel serverless 收工前會 await after() callback），確保 reset email
+    // 真係送得出。裸 `void sendEmail().catch()` fire-and-forget 喺 serverless
+    // response 之後隨時被凍結／回收 → email 可能根本冇寄出。
+    //
+    // 兩條 path 嘅 enumeration parity 唔變：唔存在 email 根本入唔到呢個 block；存在
+    // 都只係 schedule（唔 await send），response body/status 一律同一個即回嘅 200，
+    // 冇因為 send 成敗而多出任何可觀測差異（唔造 status oracle）。
+    after(() => deliverResetEmail(cleanEmail, resetUrl));
   }
 
   return ok(req, { ok: true });
