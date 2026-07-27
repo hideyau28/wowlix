@@ -376,12 +376,22 @@ export const POST = withApi(async (req) => {
 
   // Atomic: stock deduction + order creation in a single transaction
   const order = await (prisma as any).$transaction(async (tx: any) => {
-    // Single-variant stock deduction (updateMany with gte guard)
+    // Single-variant stock deduction (updateMany with gte guard).
+    // ⚠️ 租戶隔離：where 一定要同時鎖 tenantId + productId —— 只驗 productId
+    // 屬本店（repricing 嗰度）但唔 scope variantId 嘅話，攻擊者可用本店真
+    // productId 夾帶人哋店（或本店另一件貨）嘅 variantId 跨租戶／跨產品扣庫存。
+    // 加咗之後：任何 mismatch → count===0 → 統一 400（同「庫存不足」同一句，
+    // 唔做存在性 oracle），原子 guard 一步過驗 ownership + stock，冇 TOCTOU。
     for (const item of payload.items) {
       if (!item.variantId) continue;
 
       const result = await tx.productVariant.updateMany({
-        where: { id: item.variantId, stock: { gte: item.qty } },
+        where: {
+          id: item.variantId,
+          tenantId: tenant.id,
+          productId: item.productId,
+          stock: { gte: item.qty },
+        },
         data: { stock: { decrement: item.qty } },
       });
       if (result.count === 0) {
@@ -392,9 +402,14 @@ export const POST = withApi(async (req) => {
         );
       }
 
-      // Deactivate variant if stock hits zero
+      // Deactivate variant if stock hits zero（同樣 scope tenantId + productId）
       await tx.productVariant.updateMany({
-        where: { id: item.variantId, stock: { lte: 0 } },
+        where: {
+          id: item.variantId,
+          tenantId: tenant.id,
+          productId: item.productId,
+          stock: { lte: 0 },
+        },
         data: { active: false },
       });
     }
