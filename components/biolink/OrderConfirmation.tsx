@@ -173,9 +173,13 @@ export default function OrderConfirmation({
 
     try {
       // 1. Upload file to /api/upload
+      // 憑證 = order id + 落單電話（同下面 attach 一致）；server 驗過先接受上載，
+      // folder 綁返嗰張單自己個 tenantId。唔再由 client 指定 folder。
       const formData = new FormData();
       formData.append("file", proofFile);
-      formData.append("folder", "payments");
+      formData.append("intent", "payment-proof");
+      formData.append("orderId", order.orderId);
+      formData.append("phone", order.customer?.phone || "");
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         body: formData,

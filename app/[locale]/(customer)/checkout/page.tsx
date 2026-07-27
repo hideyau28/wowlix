@@ -600,25 +600,17 @@ export default function CheckoutPage({
     setProcessing(true);
 
     try {
-      // Manual flow: upload proof → create order
+      // Manual flow: order-first → 上載截圖（綁 orderId + 落單電話）→ attach。
+      // 以前係「先匿名上載截圖，再落單」，個上載零 auth / 零 ownership，任何人可以
+      // 灌爆 Cloudinary。而家倒轉次序：先落單攞 orderId，再用 orderId + 電話做憑證
+      // 上載（同 biolink OrderConfirmation 一致）。/api/orders 有 idempotency key，
+      // 上載／attach 失敗時重試唔會整多張單。
       if (selectedProvider.type === "manual") {
-        setUploadingProof(true);
+        // 落單電話（本地 8 位，去咗 dial code）—— payment-proof 憑證要呢個格式。
+        const recipientPhone = sameAsContact ? phone : receiverPhone;
 
-        const formData = new FormData();
-        formData.append("file", paymentProofFile!);
-        formData.append("folder", "payments");
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const uploadData = await uploadRes.json();
-
-        if (!uploadData.ok)
-          throw new Error(uploadData.error?.message || "上傳失敗");
-        setUploadingProof(false);
-
-        const payload = buildOrderPayload(uploadData.data.url);
+        // 1. 落單（唔帶截圖）→ PENDING
+        const payload = buildOrderPayload();
         const response = await fetch("/api/orders", {
           method: "POST",
           headers: {
@@ -630,21 +622,56 @@ export default function CheckoutPage({
 
         const result = await response.json();
 
-        if (result.ok) {
-          clearCart();
-          showToast(
-            locale === "zh-HK"
-              ? "訂單已提交！我們會盡快確認您的付款。"
-              : "Order submitted! We'll confirm your payment shortly.",
-          );
-          await grantOrderAccess(result.data.id, payload.phone);
-          router.push(`/${locale}/orders/${result.data.id}`);
-        } else {
+        if (!result.ok) {
           alert(
             `${t.common.error}: ${result.error?.code || "ERROR"}: ${result.error?.message || t.common.unknownError}`,
           );
           setProcessing(false);
+          return;
         }
+
+        const orderId = result.data.id as string;
+
+        // 2. 上載付款截圖（憑證 = orderId + 落單電話；server 驗過先接受）
+        setUploadingProof(true);
+        const formData = new FormData();
+        formData.append("file", paymentProofFile!);
+        formData.append("intent", "payment-proof");
+        formData.append("orderId", orderId);
+        formData.append("phone", recipientPhone);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        setUploadingProof(false);
+        if (!uploadData.ok)
+          throw new Error(uploadData.error?.message || "上傳失敗");
+
+        // 3. Attach 截圖落單（flip → PENDING_CONFIRMATION）
+        const attachRes = await fetch(
+          `/api/biolink/orders/${orderId}/payment-proof`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentProof: uploadData.data.url,
+              phone: recipientPhone,
+            }),
+          },
+        );
+        const attachData = await attachRes.json();
+        if (!attachData.ok)
+          throw new Error(attachData.error?.message || "提交付款證明失敗");
+
+        clearCart();
+        showToast(
+          locale === "zh-HK"
+            ? "訂單已提交！我們會盡快確認您的付款。"
+            : "Order submitted! We'll confirm your payment shortly.",
+        );
+        await grantOrderAccess(orderId, payload.phone);
+        router.push(`/${locale}/orders/${orderId}`);
         return;
       }
 

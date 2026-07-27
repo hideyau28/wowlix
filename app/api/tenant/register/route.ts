@@ -11,11 +11,14 @@ import {
 } from "@/lib/slug-policy";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { uploadStoreImage } from "@/lib/upload/cloudinary";
+import { validateImageBytes } from "@/lib/upload/image-signature";
 
 export const runtime = "nodejs";
 
 const WHATSAPP_REGEX = /^\+?\d{6,15}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_QR_BYTES = 5 * 1024 * 1024; // 5MB，同 /api/upload 一致
 
 // QR 連結只准 https（合法上傳 = Cloudinary secure_url）。register 係公開端點，
 // 唔擋就會將任意 URL 存落 DB 再喺公開 checkout render 做 <img src>（tracking pixel /
@@ -28,6 +31,57 @@ const isHttpsUrl = (v: unknown): boolean => {
     return false;
   }
 };
+
+// Onboarding QR 上載嘅授權 = 完成註冊本身。以前 wizard 喺客人未有 tenant / 未登入
+// 嘅時候，匿名打 /api/upload 攞 Cloudinary URL 再塞入 register —— 即係一條人人可
+// 反覆灌爆 quota 兼可任意指定 folder 嘅上載路徑。而家 wizard 揸住 QR 檔案（data
+// URL）到 register 先上載：data URL 喺 tenant.create 之前淨係驗（magic bytes / size，
+// 唔燒 slug），真正上載留到 tenant 建立成功之後（非致命）先做。
+type PreparedQr = { url: string } | { buffer: Buffer; mime: string };
+
+function prepareQr(value: unknown, label: string): PreparedQr | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new ApiError(400, "BAD_REQUEST", `${label} QR 連結格式唔啱`);
+  }
+  // Legacy / 已經係 https（例如舊 client 傳嘅 Cloudinary URL）→ 保留（backward compat）
+  if (isHttpsUrl(value)) return { url: value };
+  // data URL → server-side 上載前先驗真實 bytes
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/i.exec(value);
+  if (!m) {
+    throw new ApiError(400, "BAD_REQUEST", `${label} QR 連結格式唔啱（需要 https 或圖片檔）`);
+  }
+  const mime = m[1].toLowerCase();
+  const buffer = Buffer.from(m[2].replace(/\s/g, ""), "base64");
+  if (buffer.length === 0 || buffer.length > MAX_QR_BYTES) {
+    throw new ApiError(400, "BAD_REQUEST", `${label} QR 檔案太大或無效`);
+  }
+  // Magic-byte 驗證：偽造 MIME / SVG / 任意 binary 一律拒。
+  if (!validateImageBytes(mime, new Uint8Array(buffer)).ok) {
+    throw new ApiError(400, "BAD_REQUEST", `${label} QR 圖片格式無效`);
+  }
+  return { buffer, mime };
+}
+
+async function resolveQr(
+  prepared: PreparedQr | null,
+  tenantId: string,
+): Promise<string | null> {
+  if (!prepared) return null;
+  if ("url" in prepared) return prepared.url;
+  try {
+    const uploaded = await uploadStoreImage(
+      prepared.buffer,
+      prepared.mime,
+      `hk-marketplace/tenants/${tenantId}/store`,
+    );
+    return uploaded.url;
+  } catch (e) {
+    // 非致命：店已經開咗，商戶可以喺後台再上載 QR。唔好因為 Cloudinary 撲街炸註冊。
+    console.error("[tenant/register] QR upload failed (store created ok):", e);
+    return null;
+  }
+}
 
 export const POST = withApi(async (req: Request) => {
   try {
@@ -81,13 +135,10 @@ export const POST = withApi(async (req: Request) => {
     throw new ApiError(500, "INTERNAL", "伺服器設定有誤，請稍後再試");
   }
 
-  // QR 連結 https 驗證（喺 tenant.create 之前，先 fail 唔燒 slug）（PR #346）
-  if (paymeQrUrl != null && paymeQrUrl !== "" && !isHttpsUrl(paymeQrUrl)) {
-    throw new ApiError(400, "BAD_REQUEST", "PayMe QR 連結格式唔啱（需要 https）");
-  }
-  if (alipayQrUrl != null && alipayQrUrl !== "" && !isHttpsUrl(alipayQrUrl)) {
-    throw new ApiError(400, "BAD_REQUEST", "AlipayHK QR 連結格式唔啱（需要 https）");
-  }
+  // QR 驗證（喺 tenant.create 之前，data URL 只驗 magic bytes / size，唔上載、
+  // 唔燒 slug）（PR #346 + upload hardening）
+  const paymeQrPrepared = prepareQr(paymeQrUrl, "PayMe");
+  const alipayQrPrepared = prepareQr(alipayQrUrl, "AlipayHK");
 
   const cleanName = name.trim();
   const cleanWhatsapp = whatsapp?.trim() || "";
@@ -140,6 +191,10 @@ export const POST = withApi(async (req: Request) => {
       throw adminErr;
     }
 
+    // tenant.create 成功 = registration proof；而家先 server-side 上載 QR（非致命）
+    const paymeQrResolved = await resolveQr(paymeQrPrepared, tenant.id);
+    const alipayQrResolved = await resolveQr(alipayQrPrepared, tenant.id);
+
     // --- Payment configs: use selected methods or default to FPS ---
     const PAYMENT_DISPLAY_NAMES: Record<string, string> = {
       fps: "FPS 轉數快",
@@ -186,14 +241,14 @@ export const POST = withApi(async (req: Request) => {
     }
 
     // --- PayMe PaymentMethod record ---
-    if (paymeQrUrl && typeof paymeQrUrl === "string") {
+    if (paymeQrResolved) {
       await prisma.paymentMethod.create({
         data: {
           name: "PayMe",
           type: "payme",
           active: true,
           sortOrder: 1,
-          qrCodeUrl: paymeQrUrl,
+          qrCodeUrl: paymeQrResolved,
           tenantId: tenant.id,
         },
       }).catch(() => {}); // 非致命
@@ -202,20 +257,20 @@ export const POST = withApi(async (req: Request) => {
         where: { id: tenant.id },
         data: {
           paymeEnabled: true,
-          paymeQrCodeUrl: paymeQrUrl,
+          paymeQrCodeUrl: paymeQrResolved,
         },
       }).catch(() => {});
     }
 
     // --- AlipayHK PaymentMethod record ---
-    if (alipayQrUrl && typeof alipayQrUrl === "string") {
+    if (alipayQrResolved) {
       await prisma.paymentMethod.create({
         data: {
           name: "AlipayHK",
           type: "alipay_hk",
           active: true,
           sortOrder: 2,
-          qrCodeUrl: alipayQrUrl,
+          qrCodeUrl: alipayQrResolved,
           tenantId: tenant.id,
         },
       }).catch(() => {}); // 非致命
