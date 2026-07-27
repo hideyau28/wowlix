@@ -4,8 +4,10 @@
  * 兩個原因要收窄喺一個 module：
  * 1. 安全 —— 全部上載都行 `resource_type: "image"`（唔係 "auto"）。auto 會接受
  *    raw / video / 任意檔案；image 迫 Cloudinary 真係 decode 做光柵圖，decode
- *    唔到就佢自己 reject，係 magic-byte 檢查之外多一層 server-side 防線。順手
- *    strip metadata（EXIF / GPS 等）。
+ *    唔到就佢自己 reject，係 magic-byte 檢查之外多一層 server-side 防線。
+ *    （注意：本 task 只驗到「magic-byte + provider image decode」呢兩層；
+ *    metadata / EXIF strip 今次冇驗，唔會喺註釋度聲稱已 strip，留低風險 follow-up
+ *    —— 詳見下面 uploader options 註釋。）
  * 2. 可測 —— e2e 唔准打真 Cloudinary。CI / 本地 e2e 落 `UPLOAD_TEST_MODE=1`
  *    （playwright.config.ts webServer.env），回一個假 secure_url，零 network call。
  *    因為所有上載都經呢度，一個 4xx 回應就結構性證明咗「Cloudinary uploader
