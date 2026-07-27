@@ -74,6 +74,36 @@ export function fail(req: Request, err: unknown, init?: ResponseInit) {
   );
 }
 
+/**
+ * 統一嘅 429 回應（同 fail() 一樣嘅 envelope）+ Retry-After header。
+ * 俾 auth rate-limit 直接 early-return 用（唔經 throw ApiError，因為要帶 Retry-After）。
+ */
+export function rateLimited(
+  req: Request,
+  opts?: { retryAfterSec?: number; message?: string }
+) {
+  const requestId = getRequestId(req);
+  const retryAfter = Math.max(1, Math.floor(opts?.retryAfterSec ?? 60));
+  return Response.json(
+    {
+      ok: false,
+      requestId,
+      error: {
+        code: "RATE_LIMITED" as ApiErrorCode,
+        message: opts?.message ?? "試得太密，請稍後再試 | Too many attempts, try later",
+      },
+    },
+    {
+      status: 429,
+      headers: {
+        "x-request-id": requestId,
+        "content-type": "application/json; charset=utf-8",
+        "Retry-After": String(retryAfter),
+      },
+    }
+  );
+}
+
 type WithApiOptions = {
   admin?: boolean; // true = require admin secret
 };
