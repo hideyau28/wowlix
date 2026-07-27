@@ -27,6 +27,16 @@ import { allowedMimeTypes, validateImageBytes } from "@/lib/upload/image-signatu
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// GAP B — payment-proof 查 order 之前嘅 coarse rate limit。
+// 攻擊者每次用 random orderId 都開新 per-order bucket，令 DB order lookup 無限行；
+// 呢層喺任何 DB lookup 之前封頂。兩層：
+//  • per-IP（best-effort）：x-forwarded-for 係 spoofable，唔當唯一權威，但擋到
+//    最普遍嘅單源狂 loop。真客人各有自己 IP bucket，唔會被其他人 DoS。
+//  • global（固定 bucket）：就算攻擊者連 IP 都偽造輪換，都封頂「miss path 總 DB
+//    lookup 量」。cap 遠高於正常量，正常客人唔會撞到（defense-in-depth，唔作假）。
+const PROOF_COARSE_PER_IP = { interval: 60 * 1000, maxRequests: 30 };
+const PROOF_COARSE_GLOBAL = { interval: 60 * 1000, maxRequests: 600 };
+
 type UploadIntent = "admin" | "payment-proof";
 
 function badRequest(message: string) {
@@ -56,6 +66,37 @@ function tooMany() {
     { ok: false, error: { code: "RATE_LIMITED", message: "試得太密，請稍後再試 | Too many attempts" } },
     { status: 429 },
   );
+}
+
+/**
+ * 盡力攞 client IP 做 coarse limiter dimension。x-forwarded-for 第一跳係
+ * client 可偽造，所以只當 best-effort（配合 global bucket），唔當唯一權威。
+ * 攞唔到（如本地直連）一律 fallback 去共享 "unknown" bucket。
+ */
+function clientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+  return "unknown";
+}
+
+/**
+ * Coarse pre-lookup guard：喺查 order 之前擋 random-orderId 輪換灌爆 DB lookup。
+ * per-IP 先擋單源狂 loop，再過 global bucket 封頂總量。任何一層爆 → 唔畀落 lookup。
+ */
+async function proofCoarseAllowed(req: NextRequest): Promise<boolean> {
+  const perIp = await rateLimit(
+    `upload:proof:ip:${clientIp(req)}`,
+    PROOF_COARSE_PER_IP,
+  );
+  if (!perIp.allowed) return false;
+
+  const global = await rateLimit("upload:proof:coarse-global", PROOF_COARSE_GLOBAL);
+  return global.allowed;
 }
 
 /** 讀 file + 驗 size / MIME / magic bytes。回 buffer + mime 或者一個錯誤 response。 */
@@ -116,8 +157,13 @@ async function handleAdminUpload(
 }
 
 async function handlePaymentProofUpload(
+  req: NextRequest,
   formData: FormData,
 ): Promise<NextResponse> {
+  // GAP B：coarse limiter 一定要喺任何 DB order lookup 之前 —— random orderId
+  // 輪換一律喺呢度封頂，唔會每次都真去 findUnique。
+  if (!(await proofCoarseAllowed(req))) return tooMany();
+
   const orderId = String(formData.get("orderId") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
 
@@ -177,7 +223,7 @@ export async function POST(req: NextRequest) {
     const intent = String(formData.get("intent") || "").trim() as UploadIntent;
 
     if (intent === "admin") return await handleAdminUpload(req, formData);
-    if (intent === "payment-proof") return await handlePaymentProofUpload(formData);
+    if (intent === "payment-proof") return await handlePaymentProofUpload(req, formData);
 
     // 冇 / 未知 intent（包括舊 client 淨係傳 folder）一律拒 —— 唔再有匿名上載路徑。
     return badRequest("未知上載類型 | Unknown upload intent");
