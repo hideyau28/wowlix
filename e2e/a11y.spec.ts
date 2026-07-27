@@ -19,10 +19,44 @@ const PAGES: Array<{ name: string; url: string }> = [
 // FAQ 之後喺 dark 配色下跑 axe。
 test("platform FAQ stays readable for dark-OS visitors", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto(`${PLATFORM}/en/faq`);
-  for (const summary of await page.locator("summary").all()) {
-    await summary.click();
-  }
+  // networkidle：等 (customer)/loading.tsx Suspense 邊界嘅 streamed RSC payload
+  // 收晒 + 所有 hydration JS chunk load 完，之後嗰個 <details> 子樹先唔會再被替換。
+  // 舊寫法用 page.locator("summary").all() 喺 stream 完成前影低一批 ElementHandle
+  // 再逐個 click，被替換嗰刻 handle 就 detach（CI 三次 timeout：waiting for
+  // locator('summary').nth(4) — element was detached from the DOM）。
+  await page.goto(`${PLATFORM}/en/faq`, { waitUntil: "networkidle" });
+
+  const shell = page.locator(".wlx-legal-content");
+  await expect(shell).toBeVisible();
+
+  const details = shell.locator("details");
+  // details.first() 係 live locator，auto-wait 到 stream 後嘅真節點 attached。
+  await expect(details.first()).toBeVisible();
+
+  // 等 React hydration 真正 reconcile 完先 mutate DOM —— React 完成 hydration 會
+  // 喺 root container 掛一條 __reactContainer$… internal key。若果喺 hydration 之前
+  // 就將 <details open>，React 會當 server/client 不一致 log console error，
+  // consoleGuard fixture 就會 fail（呢個係 deterministic hydration gate，唔係 sleep）。
+  await page.waitForFunction(() =>
+    Object.keys(document).some((k) => k.startsWith("__reactContainer$")),
+  );
+
+  const count = await details.count();
+  expect(count).toBeGreaterThan(0);
+
+  // hydration 已完成，一次過喺瀏覽器 side 將全部 <details open>。
+  // HTMLDetailsElement.open 係 uncontrolled，React 唔會 reset；live locator
+  // evaluateAll 一個 pass 做晒，冇 snapshot-then-click 嘅 detach race window。
+  const openCount = await details.evaluateAll((els) => {
+    for (const el of els) (el as HTMLDetailsElement).open = true;
+    return els.filter((el) => (el as HTMLDetailsElement).open).length;
+  });
+  expect(openCount).toBe(count);
+
+  // 展開後至少一條答案文字要真係可見 —— 保住條 test 嘅意義：axe 量嘅係
+  // 「展開狀態下」答案 div 喺 dark 配色嘅 contrast，唔係摺埋嗰陣量唔到。
+  await expect(shell.locator("details > div").first()).toBeVisible();
+
   const results = await new AxeBuilder({ page })
     .include(".wlx-legal-content")
     .withRules(["color-contrast"])
