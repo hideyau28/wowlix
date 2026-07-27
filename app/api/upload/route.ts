@@ -5,7 +5,11 @@ import { authenticateAdmin } from "@/lib/auth/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { uploadStoreImage } from "@/lib/upload/cloudinary";
-import { allowedMimeTypes, validateImageBytes } from "@/lib/upload/image-signature";
+import { readValidatedFile } from "@/lib/upload/validate-upload";
+import {
+  ADMIN_UPLOAD_RATE_LIMIT,
+  adminUploadRateLimitKey,
+} from "@/lib/upload/admin-upload-policy";
 
 // POST /api/upload — 上載圖片去 Cloudinary。
 //
@@ -24,8 +28,6 @@ import { allowedMimeTypes, validateImageBytes } from "@/lib/upload/image-signatu
 //
 // 注意：onboarding（開店未有 tenant）唔經呢條 route —— 佢冇任何可驗證身份。
 // QR 上載改咗喺 /api/tenant/register 內部 server-side 做，憑證 = 完成註冊本身。
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // GAP B — payment-proof 查 order 之前嘅 coarse rate limit。
 // 攻擊者每次用 random orderId 都開新 per-order bucket，令 DB order lookup 無限行；
@@ -99,31 +101,6 @@ async function proofCoarseAllowed(req: NextRequest): Promise<boolean> {
   return global.allowed;
 }
 
-/** 讀 file + 驗 size / MIME / magic bytes。回 buffer + mime 或者一個錯誤 response。 */
-async function readValidatedFile(
-  formData: FormData,
-): Promise<{ buffer: Buffer; mime: string } | { error: NextResponse }> {
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return { error: badRequest("未有提供檔案 | No file provided") };
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    return { error: badRequest("檔案太大，最大 5MB | File too large (max 5MB)") };
-  }
-  if (!allowedMimeTypes().includes(file.type)) {
-    return { error: badRequest("只接受圖片檔案 (JPG, PNG, WebP, GIF) | Images only") };
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  // Magic-byte 驗證：declared MIME 信唔過，睇真實 header bytes；偽造 MIME / SVG /
-  // 任意 binary 一律拒。
-  const check = validateImageBytes(file.type, new Uint8Array(buffer));
-  if (!check.ok) {
-    return { error: badRequest("圖片格式無效 | Invalid image file") };
-  }
-  return { buffer, mime: file.type };
-}
-
 async function handleAdminUpload(
   req: NextRequest,
   formData: FormData,
@@ -139,14 +116,16 @@ async function handleAdminUpload(
   if (!tenantId) return unauthorized();
 
   // Defense-in-depth rate limit，key = 已驗證 tenantId（唔係 attacker-controlled）。
-  const limit = await rateLimit(`upload:admin:${tenantId}`, {
-    interval: 60 * 1000,
-    maxRequests: 60,
-  });
+  // 同 /api/admin/upload 共用同一個 key + policy —— 兩條 route 同一 bucket，唔畀
+  // 分開繞過雙倍額度（見 lib/upload/admin-upload-policy.ts）。
+  const limit = await rateLimit(
+    adminUploadRateLimitKey(tenantId),
+    ADMIN_UPLOAD_RATE_LIMIT,
+  );
   if (!limit.allowed) return tooMany();
 
   const validated = await readValidatedFile(formData);
-  if ("error" in validated) return validated.error;
+  if (!validated.ok) return badRequest(validated.message);
 
   const uploaded = await uploadStoreImage(
     validated.buffer,
@@ -207,7 +186,7 @@ async function handlePaymentProofUpload(
   if (!okLimit.allowed) return tooMany();
 
   const validated = await readValidatedFile(formData);
-  if ("error" in validated) return validated.error;
+  if (!validated.ok) return badRequest(validated.message);
 
   const uploaded = await uploadStoreImage(
     validated.buffer,
