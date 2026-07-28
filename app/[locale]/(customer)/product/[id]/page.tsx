@@ -4,6 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getServerTenantId } from "@/lib/tenant";
 import { productUrl } from "@/lib/biolink-data";
 import { platformUrl } from "@/lib/site-url";
+import { serializeJsonLd } from "@/lib/escape";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -197,7 +198,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "Product",
             name: p.title,
@@ -221,7 +222,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import BioLinkPage from "@/components/biolink/BioLinkPage";
 import { loadBioLinkData, productUrl } from "@/lib/biolink-data";
 import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
+import { serializeJsonLd } from "@/lib/escape";
 
 // 商品獨立 URL（path biolink 形式）—— audit 線「商品 URL 出街」嘅可達版本。
 //
@@ -52,7 +53,7 @@ export default async function BiolinkProductPage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(productJsonLd) }}
       />
       <BioLinkPage
         tenant={tenant}

@@ -8,6 +8,7 @@ import {
   BIOLINK_BASE,
 } from "@/lib/biolink-data";
 import { biolinkUrl } from "@/lib/site-url";
+import { serializeJsonLd } from "@/lib/escape";
 
 // Force dynamic rendering — tenant slug pages need DB access per request
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export default async function SlugPage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(storeJsonLd) }}
       />
       <BioLinkPage tenant={tenant} products={products} />
     </>

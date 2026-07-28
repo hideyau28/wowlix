@@ -2,6 +2,7 @@ import PricingPage from "@/components/marketing/StudioPricingPage";
 import { MARKETING_PLANS } from "@/components/marketing/plans";
 import type { Locale } from "@/lib/i18n";
 import { OG_DEFAULT_IMAGE, platformUrl } from "@/lib/site-url";
+import { serializeJsonLd } from "@/lib/escape";
 import type { Metadata } from "next";
 
 // ── 真 prerender（HANDOFF 跟進 task ②）────────────────────────────────────────
@@ -95,7 +96,7 @@ export default async function Page({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(pricingJsonLd) }}
       />
       <PricingPage locale={locale as Locale} />
     </>
