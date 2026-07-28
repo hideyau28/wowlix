@@ -4,6 +4,7 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getSEOContent } from "@/lib/tenant-content";
+import { serializeJsonLd } from "@/lib/escape";
 import {
   OG_DEFAULT_IMAGE,
   ORGANIZATION_ID,
@@ -241,7 +242,7 @@ export default async function Home({
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(platformJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(platformJsonLd) }}
         />
         <LandingPage locale={l} />
       </>
@@ -394,7 +395,7 @@ export default async function Home({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "Store",
             name: storeDisplayName,
