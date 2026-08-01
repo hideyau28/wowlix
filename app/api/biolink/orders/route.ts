@@ -281,7 +281,18 @@ export const POST = withApi(async (req) => {
       hidden: false,
       deletedAt: null,
     },
-    select: { id: true, title: true, price: true, sizes: true },
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      sizes: true,
+      // 逐個款自己個價 —— 以前重算齋用 product.price，商戶標 $200 嘅碼
+      // 實收 $128，冇任何錯誤提示（純蝕錢，唔會 400）。
+      variants: {
+        where: { active: true },
+        select: { id: true, price: true },
+      },
+    },
   });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -301,7 +312,12 @@ export const POST = withApi(async (req) => {
         "BAD_REQUEST",
         `Product not found: ${item.productId}`,
       );
-    const lineTotal = product.price * item.qty;
+    // variant 冇自己個價（price null）就跌返 base price —— legacy variant 完全唔變。
+    const variant = item.variantId
+      ? product.variants.find((v) => v.id === item.variantId)
+      : undefined;
+    const unitPrice = variant?.price ?? product.price;
+    const lineTotal = unitPrice * item.qty;
     serverTotal += lineTotal;
     const variantDisplay = item.variant
       ? item.variant.replace(/\|/g, " · ")
@@ -309,7 +325,7 @@ export const POST = withApi(async (req) => {
     repricedItems.push({
       productId: item.productId,
       name: `${product.title}${variantDisplay ? ` · ${variantDisplay}` : ""}`,
-      unitPrice: product.price,
+      unitPrice,
       quantity: item.qty,
     });
   }

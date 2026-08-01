@@ -32,6 +32,12 @@ type FulfillmentType = "delivery" | "sf-locker" | "pickup";
 type CheckoutFulfillment =
   | {
       type: "delivery";
+      /**
+       * 送貨方式 id —— server 重算運費靠佢分辨順豐櫃同上門。冇咗就一律當上門，
+       * 順豐櫃單會 client 收 sfLockerFee(35) / server 收 homeDeliveryFee(40)，
+       * subtotal 未夠免運嘅話 100% 撞 "deliveryFee mismatch" 400。
+       */
+      deliveryMethod?: string;
       address: {
         line1: string;
         district?: string;
@@ -499,6 +505,7 @@ export default function CheckoutPage({
         if (fulfillmentType === "sf-locker") {
           return {
             type: "delivery",
+            deliveryMethod: "sf-locker",
             address: {
               line1: `SF Locker: ${sfLockerCode}`,
               district: locale === "zh-HK" ? "順豐智能櫃" : "SF Locker",
@@ -507,6 +514,7 @@ export default function CheckoutPage({
         }
         return {
           type: "delivery",
+          deliveryMethod: "home-delivery",
           address: {
             line1: addressLine,
             district: district || undefined,

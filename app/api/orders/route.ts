@@ -17,6 +17,28 @@ const ROUTE = "/api/orders";
 const DEFAULT_SHIPPING_FEE = 40;
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 600;
 const OUTLYING_ISLANDS_SURCHARGE = 20;
+// 同 app/[locale]/(customer)/checkout/page.tsx 個 DEFAULT_SF_LOCKER_* 對齊 ——
+// 兩邊 default 一 drift，未夠免運門檻嘅順豐櫃單就會重算唔對數兼 400。
+const DEFAULT_SF_LOCKER_FEE = 35;
+const DEFAULT_SF_LOCKER_FREE_ABOVE = 600;
+
+/**
+ * HK checkout 呢兩個送貨方式嘅價由 StoreSettings 話事（client 都係讀嗰度），
+ * 唔可以行 tenant.deliveryOptions —— 兩個來源唔同就會重算唔對數。
+ */
+const STORE_SETTINGS_DELIVERY_METHODS = new Set(["sf-locker", "home-delivery"]);
+
+/**
+ * 離島判斷唔可以齋 match 中文 —— client 個 district 係跟 locale 出嘅
+ * （checkout/page.tsx DISTRICTS_ZH / DISTRICTS_EN）。英文版客人揀「離島」
+ * 會送 "Outlying Islands"，server 只認 "離島" 就會少收 $20 附加費，
+ * client 60 / server 40 一樣撞 400。
+ */
+const OUTLYING_ISLANDS_LABELS = new Set(["離島", "Outlying Islands"]);
+
+function isOutlyingIslandsRegion(region?: string): boolean {
+  return !!region && OUTLYING_ISLANDS_LABELS.has(region.trim());
+}
 
 // Order number: WX + YYMMDD + - + 6-char alphanumeric nanoid
 const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
@@ -301,7 +323,7 @@ type RepricedOrder = {
 
 // Calculate shipping fee using hardcoded defaults (legacy fallback for maysshop)
 function calculateShippingFeeLegacy(subtotal: number, region?: string): number {
-  const isOutlyingIslands = region === "離島";
+  const isOutlyingIslands = isOutlyingIslandsRegion(region);
   const qualifiesForFreeShipping = subtotal >= DEFAULT_FREE_SHIPPING_THRESHOLD;
   const baseShipping = qualifiesForFreeShipping ? 0 : DEFAULT_SHIPPING_FEE;
   const islandSurcharge = isOutlyingIslands ? OUTLYING_ISLANDS_SURCHARGE : 0;
@@ -321,7 +343,11 @@ async function resolveDeliveryFee(
     select: { deliveryOptions: true, freeShippingThreshold: true },
   });
 
-  if (deliveryMethod && tenant?.deliveryOptions) {
+  if (
+    deliveryMethod &&
+    !STORE_SETTINGS_DELIVERY_METHODS.has(deliveryMethod) &&
+    tenant?.deliveryOptions
+  ) {
     const options = tenant.deliveryOptions as DeliveryOption[];
     const matched = options.find((o) => o.id === deliveryMethod && o.enabled);
     if (matched) {
@@ -345,10 +371,21 @@ async function resolveDeliveryFee(
       homeDeliveryFee: true,
       homeDeliveryFreeAbove: true,
       homeDeliveryIslandExtra: true,
+      sfLockerFee: true,
+      sfLockerFreeAbove: true,
     },
   });
 
   if (ss) {
+    // 順豐智能櫃自己一套價（schema 有 sfLockerFee/sfLockerFreeAbove，client 一直
+    // 讀緊，server 以前完全冇睇 → 一律當上門收 homeDeliveryFee）。冇離島附加費：
+    // 櫃就係櫃，client 嗰邊都冇加（checkout/page.tsx calculatedSfFee）。
+    if (deliveryMethod === "sf-locker") {
+      const fee = ss.sfLockerFee ?? DEFAULT_SF_LOCKER_FEE;
+      const freeAbove = ss.sfLockerFreeAbove ?? DEFAULT_SF_LOCKER_FREE_ABOVE;
+      return subtotal >= freeAbove ? 0 : fee;
+    }
+
     const baseFee =
       ss.homeDeliveryFee ?? ss.shippingFee ?? DEFAULT_SHIPPING_FEE;
     const freeAbove =
@@ -357,12 +394,17 @@ async function resolveDeliveryFee(
       DEFAULT_FREE_SHIPPING_THRESHOLD;
     const islandExtra =
       ss.homeDeliveryIslandExtra ?? OUTLYING_ISLANDS_SURCHARGE;
-    const isOutlyingIslands = region === "離島";
     const free = subtotal >= freeAbove;
-    return (free ? 0 : baseFee) + (isOutlyingIslands ? islandExtra : 0);
+    return (
+      (free ? 0 : baseFee) + (isOutlyingIslandsRegion(region) ? islandExtra : 0)
+    );
   }
 
   // 3. Final fallback: legacy hardcoded constants (keeps maysshop unaffected)
+  // 冇 StoreSettings row 嘅店，順豐櫃一樣要行櫃嘅 default，唔可以跌落上門價。
+  if (deliveryMethod === "sf-locker") {
+    return subtotal >= DEFAULT_SF_LOCKER_FREE_ABOVE ? 0 : DEFAULT_SF_LOCKER_FEE;
+  }
   return calculateShippingFeeLegacy(subtotal, region);
 }
 
@@ -381,7 +423,20 @@ async function repriceOrder(
       hidden: false,
       deletedAt: null,
     },
-    select: { id: true, title: true, price: true, active: true },
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      active: true,
+      // 逐個 size / 款自己個價。以前呢個 select 冇攞 variants，unitPrice 齋用
+      // product.price —— 商戶標 $200 嘅碼，客人 client 顯示 $200（
+      // ProductDetailClient.tsx:79 displayPrice）但 server 重算 $128 →
+      // "subtotal mismatch (repriced)" 400，張單根本落唔到。
+      variants: {
+        where: { active: true },
+        select: { id: true, price: true },
+      },
+    },
   });
 
   const productMap = new Map(products.map((product) => [product.id, product]));
@@ -398,7 +453,13 @@ async function repriceOrder(
     if (product.active === false) {
       throw new ApiError(400, "BAD_REQUEST", "Product not available");
     }
-    const unitPrice = product.price;
+    // variant 冇自己個價（price null）就跌返 base price —— legacy variant 完全唔變。
+    // 認唔到嘅 variantId 一樣跌返 base：唔喺度做存在性 oracle，落單 transaction
+    // 個 updateMany(tenantId + productId) guard 會攔住（見 #375）。
+    const variant = item.variantId
+      ? product.variants.find((v) => v.id === item.variantId)
+      : undefined;
+    const unitPrice = variant?.price ?? product.price;
     const lineTotal = unitPrice * item.quantity;
     subtotal += lineTotal;
     return {
