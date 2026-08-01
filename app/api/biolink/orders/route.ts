@@ -357,12 +357,9 @@ export const POST = withApi(async (req) => {
           const maxDiscount = serverTotal + deliveryFee;
           if (couponDiscount > maxDiscount) couponDiscount = maxDiscount;
           validatedCouponCode = coupon.code;
-
-          // Increment usage count
-          await prisma.coupon.update({
-            where: { id: coupon.id },
-            data: { usageCount: { increment: 1 } },
-          });
+          // ⚠️ 唔喺度 increment usageCount —— 落單 transaction 未開，一件斷貨
+          // rollback 咗張單，個 usage 一樣照入數。真正 increment 喺 tx 入面，
+          // 用一句有 maxUsage / expiry guard 嘅原子 UPDATE（同 /api/orders 一致）。
         }
       }
     }
@@ -414,15 +411,29 @@ export const POST = withApi(async (req) => {
       });
     }
 
-    // Dual-variant stock deduction (JSONB sizes, read-then-write inside tx)
-    for (const item of payload.items) {
-      if (item.variantId) continue;
-      if (!item.variant || !item.variant.includes("|")) continue;
+    // Dual-variant stock deduction（JSONB sizes）
+    //
+    // ⚠️ 舊 code 攞嘅 `product.sizes` 係 transaction 外面嗰個 findMany 讀返嚟嘅
+    // snapshot，喺 tx 入面 in-place mutate 再成舊 blob 寫返 —— 兩張同時嘅單
+    // 兩邊都讀到 qty 5，兩邊都寫 4，賣咗兩件淨係扣咗一件（lost update）。
+    // 而家：喺 tx 入面 SELECT ... FOR UPDATE 重讀，鎖住行到 commit 為止，
+    // immutable 砌一個新 blob 再寫。同一張單有多件同款貨時，第二次重讀會見到
+    // 自己 tx 未 commit 嘅寫入，扣數會累加，啱。
+    //
+    // 落鎖次序按 productId 排 —— 兩張單各自鎖唔同次序嘅話會死鎖。
+    const dualItems = payload.items
+      .filter((i) => !i.variantId && !!i.variant && i.variant.includes("|"))
+      .slice()
+      .sort((a, b) => a.productId.localeCompare(b.productId));
 
-      const product = productMap.get(item.productId);
-      if (!product) continue;
+    for (const item of dualItems) {
+      const locked = (await tx.$queryRaw`
+        SELECT "sizes" FROM "Product"
+        WHERE "id" = ${item.productId} AND "tenantId" = ${tenant.id}
+        FOR UPDATE
+      `) as Array<{ sizes: unknown }>;
 
-      const sizes = product.sizes as Record<string, unknown> | null;
+      const sizes = locked[0]?.sizes as Record<string, unknown> | null;
       if (!sizes || !("dimensions" in sizes) || !("combinations" in sizes))
         continue;
 
@@ -431,21 +442,32 @@ export const POST = withApi(async (req) => {
           combinations: Record<string, { qty: number; status: string }>;
         }
       ).combinations;
-      const combo = combinations[item.variant];
+      const combo = combinations[item.variant!];
       if (!combo || combo.qty < item.qty) {
         throw new ApiError(
           400,
           "BAD_REQUEST",
-          `INSUFFICIENT_STOCK: ${item.variant.replace(/\|/g, " · ")} 庫存不足`,
+          `INSUFFICIENT_STOCK: ${item.variant!.replace(/\|/g, " · ")} 庫存不足`,
         );
       }
 
-      combo.qty -= item.qty;
-      if (combo.qty === 0) combo.status = "hidden";
+      const nextQty = combo.qty - item.qty;
+      const nextSizes = {
+        ...sizes,
+        combinations: {
+          ...combinations,
+          [item.variant!]: {
+            ...combo,
+            qty: nextQty,
+            status: nextQty === 0 ? "hidden" : combo.status,
+          },
+        },
+      };
 
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { sizes: sizes as object },
+      // where 加返 tenantId —— 唔好淨係靠上面個 findMany 嘅 scope（latent hole）。
+      await tx.product.updateMany({
+        where: { id: item.productId, tenantId: tenant.id },
+        data: { sizes: nextSizes as object },
       });
     }
 
@@ -483,6 +505,29 @@ export const POST = withApi(async (req) => {
         note: payload.note || null,
       },
     });
+
+    // Coupon usage —— 喺 tx 入面用一句原子 UPDATE 收 maxUsage / expiry。
+    // 上面 validation 嗰度係 check-then-act：兩張單同時見到 usageCount 9 < 10，
+    // 兩張都用得，最後 count 變 11。呢句 WHERE 帶住 guard，超額嗰張會 count===0
+    // → 拒單兼連張單一齊 rollback（同 /api/orders 一致）。
+    if (validatedCouponCode) {
+      const updated = await tx.$executeRaw`
+        UPDATE "Coupon"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "code" = ${validatedCouponCode}
+          AND "tenantId" = ${tenant.id}
+          AND "active" = true
+          AND ("maxUsage" IS NULL OR "usageCount" < "maxUsage")
+          AND ("expiresAt" IS NULL OR "expiresAt" >= NOW())
+      `;
+      if (updated === 0) {
+        throw new ApiError(
+          400,
+          "BAD_REQUEST",
+          "Coupon is no longer valid (expired or usage limit reached)",
+        );
+      }
+    }
 
     return created;
   });
