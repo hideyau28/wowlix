@@ -12,6 +12,10 @@ import {
   PRODUCT_TYPES,
   getProductTypePreset,
 } from "@/lib/product-type-presets";
+import {
+  isLegacyEditableShape,
+  parseLegacySizes,
+} from "@/lib/products/variant-model";
 import { GripVertical, X, Plus } from "lucide-react";
 
 // Legacy shoe size systems (kept for backward compatibility)
@@ -181,13 +185,11 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Parse existing sizeInventory (legacy)
-  const existingSizeInventory = (() => {
-    const sizes = (product as any)?.sizes;
-    if (sizes && typeof sizes === "object" && !Array.isArray(sizes)) {
-      return sizes as Record<string, number>;
-    }
-    return {};
-  })();
+  // ⚠️ 一定要行 parseLegacySizes —— 呢個 modal 淨係識 legacy shape。dashboard
+  // ProductEditSheet 砌嘅 single / dual blob 喺度會返 {}，而且下面 handleSubmit
+  // 完全唔會送 sizes / sizeSystem / stock 出去，唔好再靜靜清走人哋盤庫存。
+  const existingSizeInventory = parseLegacySizes((product as any)?.sizes);
+  const sizesEditableHere = isLegacyEditableShape((product as any)?.sizes);
   const detectedSizeSystem = detectSizeSystem(existingSizeInventory);
 
   // --- Core product fields ---
@@ -561,7 +563,6 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
 
       // Calculate total stock: from variants if using variant system, otherwise from legacy sizes
       const hasNewVariants = useVariantSystem && variantRows.length > 0;
-      const totalStock = hasNewVariants ? variantTotalStock : legacyTotalStock;
 
       const productData: any = {
         brand: brand.trim() || null,
@@ -578,17 +579,27 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
         active,
         featured,
         shoeType: shoeType || null,
-        sizeSystem: sizeSystem || null,
-        sizes:
-          Object.keys(filteredSizeInventory).length > 0
-            ? filteredSizeInventory
-            : null,
-        stock: totalStock,
         promotionBadges:
           promotionBadges.length > 0 ? promotionBadges : undefined,
         productType: productType || null,
         inventoryMode,
       };
+
+      // 款式／庫存三條 field 只可以由揸旗嗰個編輯器送。
+      // dashboard 砌嘅 single / dual blob 喺呢個 modal 渲染唔到，sizeInventory
+      // 一定係空 —— 照送就會變成 sizes:null + stock:0，靜靜清走成盤庫存。
+      if (sizesEditableHere) {
+        productData.sizeSystem = sizeSystem || null;
+        productData.sizes =
+          Object.keys(filteredSizeInventory).length > 0
+            ? filteredSizeInventory
+            : null;
+      }
+      if (hasNewVariants) {
+        productData.stock = variantTotalStock;
+      } else if (sizesEditableHere) {
+        productData.stock = legacyTotalStock;
+      }
 
       let result;
       if (product) {
@@ -1212,6 +1223,19 @@ export function ProductModal({ product, onClose, locale }: ProductModalProps) {
                 </div>
               </div>
             </div>
+
+            {/* 款式由 dashboard 編輯器揸旗 —— 呢度渲染唔到，亦都唔會改到 */}
+            {!sizesEditableHere && (
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-medium text-amber-900">
+                  呢件貨嘅款式／庫存喺 Dashboard 商品編輯器設定
+                </p>
+                <p className="mt-1 text-sm text-amber-800">
+                  喺呢度改價錢、圖片、描述唔會影響到佢。要加減款式或者改庫存，請返
+                  Dashboard 編輯呢件貨。
+                </p>
+              </div>
+            )}
 
             {/* FULL WIDTH — Variant System (new types) */}
             {useVariantSystem && typePreset && (
