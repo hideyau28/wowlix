@@ -761,10 +761,19 @@ export default function ProductEditSheet({ isOpen, onClose, onSave, product, isN
         body.sortOrder = 0;
       }
 
-      // Always send sizes/sizeSystem so clearing variants works
+      // 個 comment 本來寫「Always send sizes/sizeSystem so clearing variants
+      // works」，但下面個 `if (sizes)` 令 buildSizesPayload 返 null 嗰陣（撳咗
+      // 「重新設定」→ variantMode === "none"）成個 field 唔會出現喺 body，
+      // PATCH route 見唔到就當冇改過 —— 商戶清咗款式，前台照舊出晒啲款。
+      // 而家真係 always send：清空要明示 clearVariants，先過到 PATCH route 個
+      // 結構化 blob 保護（嗰個 guard 係擋 /admin/products modal 靜音清零嘅）。
       if (sizes) {
         body.sizes = sizes;
         if (sizeSystem) body.sizeSystem = sizeSystem;
+      } else if (!isNew) {
+        body.sizes = null;
+        body.sizeSystem = null;
+        body.clearVariants = true;
       }
 
       const url = isNew
