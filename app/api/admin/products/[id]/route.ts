@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
 import { authenticateAdmin } from "@/lib/auth/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { isStructuredSizes } from "@/lib/products/variant-model";
 
 // PATCH /api/admin/products/[id] (admin partial update)
 export const PATCH = withApi(
@@ -20,7 +21,7 @@ export const PATCH = withApi(
     // Verify product belongs to tenant
     const existing = await prisma.product.findUnique({
       where: { id },
-      select: { tenantId: true },
+      select: { tenantId: true, sizes: true },
     });
 
     if (!existing) {
@@ -54,7 +55,23 @@ export const PATCH = withApi(
     if (body.brand !== undefined) updateData.brand = body.brand;
     if (body.badges !== undefined) updateData.badges = body.badges;
     if (body.sizeSystem !== undefined) updateData.sizeSystem = body.sizeSystem;
-    if (body.sizes !== undefined) updateData.sizes = body.sizes;
+    if (body.sizes !== undefined) {
+      // dashboard 砌嘅結構化款式（single {qty,status} / dual 色×碼）唔准俾一個
+      // 渲染唔到佢嘅 client 用 `sizes: null` 靜靜清走。要清就要明示 clearVariants。
+      // legacy shape（{"US 9": 3}）唔受限 —— 嗰個係 /admin/products modal 自己嘅嘢。
+      if (
+        body.sizes === null &&
+        body.clearVariants !== true &&
+        isStructuredSizes(existing.sizes)
+      ) {
+        throw new ApiError(
+          409,
+          "CONFLICT",
+          "This product's variants were built in the dashboard editor. Edit them there, or send clearVariants:true to clear them.",
+        );
+      }
+      updateData.sizes = body.sizes;
+    }
     if (body.stock !== undefined) updateData.stock = body.stock;
     if (body.productType !== undefined)
       updateData.productType = body.productType;
