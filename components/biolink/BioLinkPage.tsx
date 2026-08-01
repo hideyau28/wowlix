@@ -164,15 +164,22 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
   const handleAddToCart = useCallback(
     (product: ProductForBioLink, variant: string | null, qty: number = 1) => {
       let variantId: string | undefined;
+      // 揀咗嘅款自己個價要跟得住 —— 以前齋用 product.price，商戶標 $200 嘅碼
+      // 客人由頭到尾見到同埋只係俾 $128。server 而家會用 variant price 重算，
+      // 呢度唔跟就會變成 total mismatch 400。price null = 冇獨立價，跌返 base。
+      let unitPrice = product.price;
       if (variant && product.variants) {
         const match = product.variants.find((v) => v.name === variant);
-        if (match) variantId = match.id;
+        if (match) {
+          variantId = match.id;
+          unitPrice = match.price ?? product.price;
+        }
       }
 
       const item: BioCartItem = {
         productId: product.id,
         name: product.title,
-        price: product.price,
+        price: unitPrice,
         image: product.imageUrl,
         variant: variant || undefined,
         variantLabel: variant ? variant.replace(/\|/g, " · ") : undefined,
