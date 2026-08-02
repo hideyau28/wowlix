@@ -5,6 +5,7 @@ import { loadBioLinkData, productUrl, BIOLINK_BASE } from "@/lib/biolink-data";
 import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
 import { serializeJsonLd } from "@/lib/escape";
 import { isSoldOut } from "@/lib/biolink-helpers";
+import { storefrontFontVars } from "@/lib/storefront-fonts";
 
 // 商品獨立 URL（path biolink 形式）—— audit 線「商品 URL 出街」嘅可達版本。
 //
@@ -95,11 +96,15 @@ export default async function BiolinkProductPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
-      <BioLinkPage
-        tenant={tenant}
-        products={products}
-        initialProductId={id}
-      />
+      {/* storefrontFontVars：template font 嘅 CSS variable 以前住喺全站共用
+          layout 個 <body>，而家淨係掛喺真正用得着嘅 biolink subtree。 */}
+      <div className={storefrontFontVars}>
+        <BioLinkPage
+          tenant={tenant}
+          products={products}
+          initialProductId={id}
+        />
+      </div>
     </>
   );
 }

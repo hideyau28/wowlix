@@ -1,14 +1,6 @@
 import { ReactNode } from "react";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import {
-  Bebas_Neue,
-  Playfair_Display,
-  Montserrat,
-  Cormorant_Garamond,
-  Inter,
-  Lato,
-} from "next/font/google";
 import "../globals.css";
 import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
@@ -41,51 +33,12 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-// ── Template fonts (self-hosted via next/font) ───────────────────────────────
-// These CSS variables are available on every page.
-// Browsers only download the woff2 files when font-family var is actually used.
-
-const bebasNeue = Bebas_Neue({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-bebas-neue",
-  display: "swap",
-});
-
-const playfairDisplay = Playfair_Display({
-  weight: ["400", "700"],
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
-
-const montserrat = Montserrat({
-  weight: ["400", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
-
-const cormorantGaramond = Cormorant_Garamond({
-  weight: ["400", "600"],
-  subsets: ["latin"],
-  variable: "--font-cormorant",
-  display: "swap",
-});
-
-const inter = Inter({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const lato = Lato({
-  weight: ["400", "700"],
-  subsets: ["latin"],
-  variable: "--font-lato",
-  display: "swap",
-});
+// ── Template fonts 已經唔喺呢度 ──────────────────────────────────────────────
+// 六隻 storefront template font（Bebas / Playfair / Montserrat / Cormorant /
+// Inter / Lato）搬咗去 lib/storefront-fonts.ts。next/font 個 preload hint 跟
+// module graph 行，擺喺呢個全站共用 layout = 每一條 route 都 preload 足六隻
+//（實測 192 KB），但 admin 一隻都冇用、marketing 面全部改用 Fraunces。
+// 而家由真正用到嘅 (customer)/layout 同 [slug] 兩條 route 自己 import。
 
 // 靜態 defaults（manifest / icons / og）。以前 root generateMetadata 用
 // isPlatformMode() + getStoreName()（兩個都讀 headers）出 storeName title —
@@ -119,7 +72,7 @@ export default async function LocaleLayout({
   return (
     <html lang={lang} suppressHydrationWarning className={cn("font-sans", geistSansShadcn.variable)}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${montserrat.variable} ${cormorantGaramond.variable} ${inter.variable} ${lato.variable} bg-white text-zinc-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-white text-zinc-900 antialiased`}
       >
         <TenantBrandingProvider>
           {/* client nav 切 locale 時 belt-and-braces sync（server 端 lang 已由 param 嚟） */}

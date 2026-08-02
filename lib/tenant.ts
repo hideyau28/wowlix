@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth/jwt";
 
@@ -140,14 +141,15 @@ export async function isPlatformMode(): Promise<boolean> {
 }
 
 /**
- * Get tenantId inside Next.js Server Components / Server Actions.
- * Reads the x-tenant-slug header set by middleware via next/headers.
+ * 一個 render pass 入面同一個 slug 只查一次。
+ *
+ * ⚠️ 特登**用 slug 做參數**，而唔係將成個無參數嘅 getServerTenantId() 包
+ * cache()。React cache() 本身係逐個 request 嘅，但呢個 repo 出過幾單跨租戶
+ * 滲漏，而「cache key 唔含租戶身份、租戶身份由 header 嚟」正正就係嗰個 bug
+ * 嘅形狀。keyed by slug 之後，就算 cache scope 有咩意外，租戶 A 都攞唔到
+ * 租戶 B 個 id —— key 對唔上。同 lib/biolink-data.ts 個 loadBioLinkData 一致。
  */
-export async function getServerTenantId(): Promise<string> {
-  const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const slug = headersList.get("x-tenant-slug") || DEFAULT_SLUG;
-
+const loadActiveTenantIdBySlug = cache(async (slug: string): Promise<string> => {
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, status: true },
@@ -158,6 +160,21 @@ export async function getServerTenantId(): Promise<string> {
   }
 
   return tenant.id;
+});
+
+/**
+ * Get tenantId inside Next.js Server Components / Server Actions.
+ * Reads the x-tenant-slug header set by middleware via next/headers.
+ *
+ * 一次 storefront render 會經唔同途徑叫呢個 function 4–6 次（layout、page、
+ * generateMetadata、getStoreName、getTenantInfo…），以前每次都真係打一轉 DB。
+ */
+export async function getServerTenantId(): Promise<string> {
+  const { headers } = await import("next/headers");
+  const headersList = await headers();
+  const slug = headersList.get("x-tenant-slug") || DEFAULT_SLUG;
+
+  return loadActiveTenantIdBySlug(slug);
 }
 
 /**

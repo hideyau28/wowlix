@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { type Locale } from "@/lib/i18n";
 import type { Product } from "@prisma/client";
-import { ProductModal } from "./product-modal";
-import CsvUpload from "@/components/admin/CsvUpload";
 import {
   Search,
   Check,
@@ -25,6 +24,22 @@ import {
   updatePrice,
   updateProduct,
 } from "./actions";
+
+// 兩個 modal 都係「開咗先 render」（見下面兩處 `(selectedProduct || isCreating) &&`
+// 同 `isCsvOpen &&`），所以拆做獨立 chunk，唔好塞落 /admin/products 初次載入。
+// ⚠️ 一定要喺 module scope declare：呢個 component 每打一個搜尋字都 re-render，
+// 喺 component body 入面叫 dynamic() 會每次造一個新 component type，React 就會
+// unmount／remount 個 modal，用戶打緊嘅嘢全部冇晒。
+// ProductModal 係 named export，唔 unwrap 就會 render undefined 直接爆
+// "Element type is invalid"。
+const loadProductModal = () => import("./product-modal");
+const ProductModal = dynamic(
+  () => loadProductModal().then((m) => m.ProductModal),
+  { ssr: false },
+);
+
+const loadCsvUpload = () => import("@/components/admin/CsvUpload");
+const CsvUpload = dynamic(loadCsvUpload, { ssr: false });
 
 const ITEMS_PER_PAGE = 50;
 
@@ -511,6 +526,18 @@ export function ProductsTable({
       loadBadges();
     }
   }, [isBadgeModalOpen, badges.length]);
+
+  // 兩個 modal 嘅 chunk 一 idle 就靜靜預載。拆 chunk 之後撳落去要等一個
+  // round-trip（4G 大概 100–400ms），呢個後台主要喺電話用，會 feel 到「撳咗
+  // 冇反應」。擺喺呢度一個位就蓋晒所有入口（新增 / 空狀態 / 逐行編輯 / CSV），
+  // 唔使逐個掣加 onPointerDown 靠記性。
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadProductModal();
+      void loadCsvUpload();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
