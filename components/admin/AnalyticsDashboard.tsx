@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import { TrendLine, TopBar } from "./charts/LazyCharts";
 import { ShoppingCart, DollarSign, TrendingUp } from "lucide-react";
 
 type Summary = {
@@ -195,20 +186,13 @@ export default function AnalyticsDashboard() {
           </div>
           <div className="h-64">
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="orders"
-                    stroke="#4b5e3c"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <TrendLine
+                data={chartData}
+                xKey="date"
+                yKey="orders"
+                stroke="#4b5e3c"
+                allowDecimals={false}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-wlx-stone text-sm">
                 未有數據
@@ -224,20 +208,12 @@ export default function AnalyticsDashboard() {
           </div>
           <div className="h-64">
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#4b5e3c"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <TrendLine
+                data={chartData}
+                xKey="date"
+                yKey="revenue"
+                stroke="#4b5e3c"
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-wlx-stone text-sm">
                 未有數據
@@ -309,20 +285,15 @@ export default function AnalyticsDashboard() {
         {/* Bar chart for top products */}
         {topProducts.length > 0 && (
           <div className="mt-4 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={topProducts.slice(0, 5).map((p) => ({
-                  name:
-                    p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name,
-                  quantity: p.quantity,
-                }))}
-              >
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="quantity" fill="#4b5e3c" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <TopBar
+              data={topProducts.slice(0, 5).map((p) => ({
+                name: p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name,
+                quantity: p.quantity,
+              }))}
+              xKey="name"
+              yKey="quantity"
+              fill="#4b5e3c"
+            />
           </div>
         )}
       </div>
