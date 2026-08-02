@@ -705,14 +705,16 @@ export default function ProductSheet({
                   />
                 </svg>
               </button>
-              {showDescription && (
-                <div
-                  className="mt-3 text-sm whitespace-pre-wrap"
-                  style={{ color: tmpl.subtext }}
-                >
-                  {product.description}
-                </div>
-              )}
+              {/* 一定要 render 出 DOM，唔可以收喺 `showDescription &&` 後面 ——
+                  呢個 sheet 喺商品 share link 落地時係 SSR 出嚟嘅，摺埋唔 render
+                  即係 crawler 同 AI 引擎喺 HTML 度完全見唔到商品描述。
+                  摺疊改用 CSS hidden，DOM 一直有字。 */}
+              <div
+                className={`mt-3 text-sm whitespace-pre-wrap ${showDescription ? "" : "hidden"}`}
+                style={{ color: tmpl.subtext }}
+              >
+                {product.description}
+              </div>
             </div>
           )}
 
