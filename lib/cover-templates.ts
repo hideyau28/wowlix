@@ -24,6 +24,56 @@ export interface CoverTemplate {
   defaultBanner: string; // path to default cover image in /public
 }
 
+/** accent 底色之上嘅深色字 —— 同 noir 個 card 差唔多，唔會好似純黑咁硬。 */
+const ACCENT_FG_DARK = "#1A1A1A";
+const ACCENT_FG_LIGHT = "#FFFFFF";
+
+function srgbToLinear(channel: number): number {
+  const c = channel / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/** WCAG relative luminance。認唔到嘅色值當中灰，兩邊都唔會過分自信。 */
+function relativeLuminance(hex: string): number {
+  const clean = hex.trim().replace("#", "");
+  const full =
+    clean.length === 3
+      ? clean
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : clean;
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return 0.5;
+  const r = srgbToLinear(parseInt(full.slice(0, 2), 16));
+  const g = srgbToLinear(parseInt(full.slice(2, 4), 16));
+  const b = srgbToLinear(parseInt(full.slice(4, 6), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(lumA: number, lumB: number): number {
+  const [hi, lo] = lumA > lumB ? [lumA, lumB] : [lumB, lumA];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * accent 色之上應該用邊隻字色。
+ *
+ * 點解要即場計，唔用一個寫死喺 template 嘅 token：storefront 到處都係
+ * `tenant.brandColor || tmpl.accent`（ProfileSection.tsx:102、
+ * StickyHeader.tsx:44）—— 商戶自訂咗品牌色，固定 token 就會錯，隨時由
+ * 「白字睇唔清」變成「深字睇唔清」。
+ *
+ * 修之前全部硬寫 text-white：noir #FF9500 = 2.20:1、studio #C9A961 = 2.25:1、
+ * linen 2.40、petal 2.83 —— WCAG AA 要 4.5:1，5 個 template 得 mochi 過關，
+ * 而中招嗰粒係「確認落單」最後一掣。
+ */
+export function getAccentForeground(accent: string): string {
+  const lum = relativeLuminance(accent);
+  const onLight = contrastRatio(lum, relativeLuminance(ACCENT_FG_LIGHT));
+  const onDark = contrastRatio(lum, relativeLuminance(ACCENT_FG_DARK));
+  return onDark >= onLight ? ACCENT_FG_DARK : ACCENT_FG_LIGHT;
+}
+
 export const COVER_TEMPLATES: CoverTemplate[] = [
   {
     id: "noir",

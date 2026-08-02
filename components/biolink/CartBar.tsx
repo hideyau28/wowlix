@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { formatPrice } from "@/lib/biolink-helpers";
 import { useTemplate } from "@/lib/template-context";
+import { getAccentForeground } from "@/lib/cover-templates";
 
 type Props = {
   count: number;
@@ -102,7 +103,12 @@ export default function CartBar({
             <button
               onClick={handleCheckout}
               className="px-5 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-transform min-h-[44px]"
-              style={{ backgroundColor: tmpl.accent, color: tmpl.text }}
+              style={{
+                backgroundColor: tmpl.accent,
+                // tmpl.text 係「頁面底色之上」嘅字色，唔係 accent 之上嘅 ——
+                // noir 就係白字疊落橙色掣，2.20:1。
+                color: getAccentForeground(tmpl.accent),
+              }}
             >
               結帳
             </button>
