@@ -45,6 +45,10 @@ export type ProductForBioLink = {
   images: string[];
   videoUrl?: string | null;
   description?: string | null;
+  brand?: string | null;
+  sku?: string | null;
+  /** 產品層庫存（冇 variant 嗰啲貨用）—— JSON-LD availability 靠佢 */
+  stock?: number | null;
   sizes: Record<string, number> | DualVariantData | null;
   sizeSystem?: string | null;
   badges: string[] | null;

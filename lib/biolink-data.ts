@@ -91,6 +91,14 @@ export const loadBioLinkData = cache(async (slug: string) => {
         imageUrl: true,
         images: true,
         videoUrl: true,
+        // ⚠️ description / brand / sku / stock 以前完全冇 select，所以
+        // ProductSheet.tsx 個 `product.description &&` gate 永遠 falsy ——
+        // 商戶喺 product-modal 打嘅描述、CSV import 入嘅描述，客人一世睇唔到，
+        // AI 搜尋引擎亦都抽唔到「呢間店賣緊乜」。
+        description: true,
+        brand: true,
+        sku: true,
+        stock: true,
         sizes: true,
         sizeSystem: true,
         badges: true,
@@ -126,6 +134,10 @@ export const loadBioLinkData = cache(async (slug: string) => {
     imageUrl: p.imageUrl,
     images: p.images,
     videoUrl: p.videoUrl,
+    description: p.description,
+    brand: p.brand,
+    sku: p.sku,
+    stock: p.stock,
     sizes: p.sizes as Record<string, number> | DualVariantData | null,
     sizeSystem: p.sizeSystem,
     badges: p.badges as string[] | null,

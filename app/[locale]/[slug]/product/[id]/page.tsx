@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import BioLinkPage from "@/components/biolink/BioLinkPage";
-import { loadBioLinkData, productUrl } from "@/lib/biolink-data";
+import { loadBioLinkData, productUrl, BIOLINK_BASE } from "@/lib/biolink-data";
 import { OG_DEFAULT_IMAGE } from "@/lib/site-url";
 import { serializeJsonLd } from "@/lib/escape";
+import { isSoldOut } from "@/lib/biolink-helpers";
 
 // 商品獨立 URL（path biolink 形式）—— audit 線「商品 URL 出街」嘅可達版本。
 //
@@ -34,19 +35,54 @@ export default async function BiolinkProductPage({ params }: PageProps) {
   const product = products.find((p) => p.id === id);
   if (!product) notFound();
 
-  // Product JSON-LD — offers 用店 currency；url = canonical 自身
+  const canonical = productUrl(storeLocale, slug, id);
+
+  // Product JSON-LD — offers 用店 currency；url = canonical 自身。
+  //
+  // description / sku / brand / availability 以前全部冇 —— 呢條係 canonical
+  // 商品 URL，但個 JSON-LD 由頭到尾冇講過件貨係乜。legacy 嗰條
+  // (customer)/product/[id] 反而有齊。AI 搜尋引擎（ChatGPT / Perplexity /
+  // AI Overview）抽唔到商品描述同存貨狀態就冇嘢可以引用。
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.title,
+    ...(product.description ? { description: product.description } : {}),
+    ...(product.sku ? { sku: product.sku } : {}),
+    ...(product.brand
+      ? { brand: { "@type": "Brand", name: product.brand } }
+      : {}),
     ...(product.imageUrl ? { image: product.imageUrl } : {}),
-    url: productUrl(storeLocale, slug, id),
+    url: canonical,
     offers: {
       "@type": "Offer",
       price: String(product.price),
       priceCurrency: tenant.currency || "HKD",
-      url: productUrl(storeLocale, slug, id),
+      availability: isSoldOut(product)
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      url: canonical,
     },
+  };
+
+  // 店 → 商品。俾引擎知呢件貨屬邊間店，亦都令 search result 出返個層級。
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: tenant.name,
+        item: `${BIOLINK_BASE}/${slug}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: product.title,
+        item: canonical,
+      },
+    ],
   };
 
   return (
@@ -54,6 +90,10 @@ export default async function BiolinkProductPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <BioLinkPage
         tenant={tenant}
@@ -77,8 +117,12 @@ export async function generateMetadata({
   if (!product) return {};
 
   const title = `${product.title} | ${tenant.name}`;
+  // 件貨自己嘅描述行先 —— 以前一律用店描述，同一間店所有商品頁 meta
+  // description 一模一樣，搜尋引擎當重複內容。
   const description =
-    tenant.description || `${product.title} — ${tenant.name} on WoWlix`;
+    product.description?.trim() ||
+    tenant.description ||
+    `${product.title} — ${tenant.name} on WoWlix`;
   const pageUrl = productUrl(storeLocale, slug, id);
 
   // 商品頁特登 override 咗 [slug] 級 opengraph-image（og 圖要係件商品）。
