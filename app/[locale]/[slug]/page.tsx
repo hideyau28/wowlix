@@ -9,6 +9,7 @@ import {
 } from "@/lib/biolink-data";
 import { biolinkUrl } from "@/lib/site-url";
 import { serializeJsonLd } from "@/lib/escape";
+import { storefrontFontVars } from "@/lib/storefront-fonts";
 
 // Force dynamic rendering — tenant slug pages need DB access per request
 export const dynamic = "force-dynamic";
@@ -53,7 +54,11 @@ export default async function SlugPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(storeJsonLd) }}
       />
-      <BioLinkPage tenant={tenant} products={products} />
+      {/* storefrontFontVars：template font 嘅 CSS variable 以前住喺全站共用
+          layout 個 <body>，而家淨係掛喺真正用得着嘅 biolink subtree。 */}
+      <div className={storefrontFontVars}>
+        <BioLinkPage tenant={tenant} products={products} />
+      </div>
     </>
   );
 }
