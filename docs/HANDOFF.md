@@ -4,6 +4,43 @@
 
 ---
 
+## 🚩 2026-08-02 — WS6 減磅出咗 prod（#388），WS4 仲未做
+
+上一個 session 尾聲講「下一步開 WS6」，呢個 session 接手做完。**四個 commit 全部零功能改動**，數字全部實測（唔係估）：
+
+| Surface | first-load JS gzip | preload 字體 |
+|---|---|---|
+| admin dashboard | 389K → 269K（**-120K**） | 251K → 58K（**-192K**） |
+| admin analytics | 356K → 241K（**-115K**） | 251K → 58K（**-192K**） |
+| admin products | 264K → 252K（-12K） | 251K → 58K（**-192K**） |
+| 平台 landing / pricing | 冇變 | 396K → 204K（**-192K**） |
+| biolink 店頁 | 冇變 | 冇變（**control** —— 佢真係用緊） |
+
+storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、StoreSettings ×4→×1）。
+
+**量法**（下次想再量照抄）：JS 讀 `.next/diagnostics/route-bundle-stats.json` 嘅 first-load chunk 逐個 gzip；字體讀 `.next/server/next-font-manifest.js` 對住 `.next/static/media` 逐個 stat；query 喺 `lib/prisma.ts` 臨時加 `log:["query"]` 數 warm dev render（記得還原）。
+
+**Live 驗證做到咩程度**：landing 係 static route，直接 curl HTML 數到得 4 個 `<link as=font>`（Fraunces + Geist ×2 + Geist Mono），template font **零洩漏**；biolink 係 dynamic route，字體 hint 行 React Flight `:HL[...]` 唔係 `<link>`，要 grep HTML 入面啲 `.woff2` 再對返 CSS 嘅 `@font-face` 先反查到 family —— 查完六隻齊（control 正確）。⚠️ **淨數 `<link as=font>` 會將動態 route 誤判成「零字體」**，我第一次就係咁差啲當咗 regression。
+
+**三件過程中改咗計劃／要記低嘅事**：
+
+1. **`{isSheetOpen && ...}` 先係真正慳到 bytes 嗰句** —— next/dynamic 係 component **mount** 嗰陣攞 chunk，唔係個 prop 由 false 轉 true 嗰陣。ProductEditSheet 以前一直 render（自己內部 `if (!isOpen) return null`），淨係包 `dynamic()` 一樣會每次入 dashboard 都照落個 chunk。
+2. **modal 有一處行為真係變咗（比舊行為安全）** —— 以前 sheet 閂咗仲 mount，A 商品開緊個 image upload 喺閂咗、再開 B 之後先 resolve，`setImages(prev => [...prev, url])` 會將 A 張相靜雞雞貼落 B。而家 unmount 會丟咗嗰個 late setState：修咗跨商品串相，但閂到一半嗰張相唔會自動貼返（檔案照上到 Cloudinary，只係冇 attach）。
+3. **cache key 一律明示帶住租戶身份** —— 特登唔將無參數嘅 `getServerTenantId()` 直接包 `cache()`。React cache() 本身逐 request，但呢個 repo 出過幾單跨租戶滲漏，而「key 唔含租戶身份、身份由 header 嚟」正正係嗰個 bug 嘅形狀。keyed by slug / tenantId 之後，就算 cache scope 有意外，租戶 A 都攞唔到租戶 B 嘅嘢。
+
+**新 e2e**：`font-preload-scope.spec.ts` 3 條（本地 full suite **136/136**，fresh DB）。特登**唔斷言「preload 幾多個」**（加隻新字體就無辜紅）—— 改為由頁面自己嘅 CSS 反查每個 preload 落嚟嘅檔屬邊個 font-family 再斷言 family 名。RED proof：還原字體改動 → admin 同 landing 兩條紅（訊息列晒六隻名），biolink 嗰條 control 新舊都綠。
+
+⚠️ **e2e 積存 state 陷阱**：連跑幾次之後，`auth-rate-limit` 同 `upload-proof-coarse-limit` 嗰啲 DB-backed rate limit spec 會紅（`Expected 400, Received 429`，而且每次紅唔同條）。**唔係 code 壞** —— `dropdb wowlix_e2e && bash scripts/e2e-local-db.sh` 重置就返晒綠。見紅先睇係咪呢個。
+
+### 仲欠（按優先次序）
+
+- **WS4** —— 取消／拒收還 variant 庫存（`orders/[id]/route.ts` PATCH→CANCELLED、`payment/route.ts` reject 喺同一 tx 還貨，用 `updateMany` status transition guard 防雙重還貨）+ `idempotencyKey.create` 搬入 `$transaction`（`orders/route.ts:754`、`biolink:568`，catch P2002 回讀 responseJson）。**Yau 已拍板**：唔寫 cron sweep（手動）、普通貨唔補扣（`ProductEditSheet` 個 body 冇 `stock` field、schema default 0，商戶根本冇 UI 設得到，照加 `gte` guard = 每張普通貨嘅單即刻 400）。
+- **租戶共用 route 仲食緊 146 KB Fraunces preload** —— `components/marketing/fonts.ts` 記低嘅紀律係「租戶共用 route 一律 `await import()` marketing fonts」，`(customer)/page.tsx` 同五頁法律頁都照做咗，但實測 Next 16 / turbopack 將 dynamic `import()` 都算落 per-page font manifest，個 lazy 兜法**冇生效**。方向：(a) `(customer)/page` 個 platform fallback 由 inline render LandingPage 改做 `redirect()` 去 `/[locale]/landing`（middleware 正常已經 rewrite，呢個淨係 edge fallback）；(b) 五頁法律頁係真雙用途，冇得 redirect，要另諗。⚠️ 唔好開多一個 `preload:false` 副本 module —— fonts.ts 記低 2026-07-23 實測過會出兩份檔雙倍下載。
+- **商品深連應該係商品做 h1** —— `[slug]/product/[id]` 落地時 `ProfileSection.tsx:131` 個店名仍然係 `<h1>`，商品標題喺 ProductSheet 入面唔係 heading。要由 BioLinkPage（收到 `initialProductId`）thread 個 flag 落 ProfileSection（降 h2）同 ProductSheet（升 h1）。純 SEO heading hierarchy。
+- **#368 平台文案** 仍然等 Yau sign-off（open PR）。
+
+---
+
 ## 🚩 2026-07-25 新 session 由呢度開始（上一個 session 收尾狀態）
 
 ### ① ✅ 租戶分類頁跨租戶滲漏 —— **Yau 批咗，#370 已 merge 出 prod + live 驗證 4/4**
