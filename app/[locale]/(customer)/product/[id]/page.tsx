@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getDict, type Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getStoreName } from "@/lib/get-store-name";
@@ -13,6 +14,30 @@ import { ChevronRight } from "lucide-react";
 import ProductDetailClient from "@/components/ProductDetailClient";
 import ProductImageCarousel from "@/components/ProductImageCarousel";
 import CurrencyPrice from "@/components/CurrencyPrice";
+
+/**
+ * generateMetadata 同 page body 以前各自查一次同一件貨（一次冇 variants、
+ * 一次有），即係每次開商品頁都行兩轉 DB。而家共用呢個 cache()d loader，
+ * 一個 render pass 得一 query。
+ *
+ * cache key 含 tenantId —— 唔係淨靠 product id。呢條 route 靠 header 解析
+ * 租戶，key 冇租戶身份就正正係呢個 repo 出過嗰幾單跨租戶滲漏嘅形狀。
+ * where 本身照樣 tenant-scoped（雙重保險）。
+ *
+ * 用 variants 嗰個 superset：metadata 用唔着就由得佢，好過為咗慳一個 join
+ * 而保留兩條 query。
+ */
+const loadProduct = cache(async (tenantId: string, id: string) =>
+  prisma.product.findFirst({
+    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
+    include: {
+      variants: {
+        where: { active: true },
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+  }),
+);
 
 // Category translations for breadcrumb
 const categoryTranslations: Record<string, { en: string; "zh-HK": string }> = {
@@ -33,9 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
   const tenantId = await getServerTenantId();
 
-  const product = await prisma.product.findFirst({
-    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
-  });
+  const product = await loadProduct(tenantId, id);
 
   if (!product) {
     return {
@@ -93,15 +116,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
 
   // Fetch product from database with variants (scoped to current tenant)
   const tenantId = await getServerTenantId();
-  const product = await prisma.product.findFirst({
-    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
-    include: {
-      variants: {
-        where: { active: true },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
+  const product = await loadProduct(tenantId, id);
 
   if (!product) {
     notFound();
