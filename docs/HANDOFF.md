@@ -4,6 +4,42 @@
 
 ---
 
+## 🚩 2026-08-20 — 租戶店首頁減 145.6 KB 字體（#391）
+
+`(customer)/page.tsx` 一直 preload 緊 marketing 嘅 Fraunces（normal + italic），即係每個租戶店客人入首頁都白落 **145.6 KB** 完全用唔著嘅字體。
+
+**⚠️ 最重要嗰句：舊 handoff 寫嘅「lazy import 兜法」係假嘅，`fonts.ts` 都記錯咗，而家改正咗。**
+
+> Next 16 / turbopack 個 **per-page font manifest 連 dynamic `import()` 都照計**。個 module 一出現喺條 route 嘅 graph 就照 preload，你點 import 都冇分別。**唯一斷得開嘅界線係 route 邊界。**
+
+| route | font preload |
+|---|---|
+| `(customer)/page`（前） | 396.1 KB |
+| `(customer)/page`（後） | **250.6 KB** |
+| `[slug]/page`（純租戶對照） | 250.6 KB |
+| `landing`（control，要有 Fraunces） | 203.8 KB |
+
+量法同 WS6 一樣：`.next/server/next-font-manifest.json` 逐個檔對住 `.next/static/media` stat。
+
+**兩個 branch 點拆**（platform landing 本身已經有自己條 `/[locale]/landing`，middleware 正常流量早就 rewrite 過去，連 JSON-LD 都喺嗰邊）：
+
+- **platform branch** → `redirect(/{locale}/landing)`。middleware 冇捕到嘅邊緣 case 先行到呢度。
+- **unknown tenant** → `StoreNotFoundScreen`（新抽出嚟，同 `[slug]/not-found.tsx` 共用同一個 component —— 冇新文案）。⚠️ 呢個 branch **唔可以** redirect 去 `/landing`：middleware 對非平台 host 嘅 `/{locale}/landing` 會彈返 `/{locale}`（「/landing 收口」），即刻**無限 redirect loop**。
+
+**行為改動一項**：租戶 host 解唔到店（或者 `?tenant=` 打錯 slug）由「出成版 WoWlix 平台 landing」變成「呢間店唔存在」404 畫面。
+
+**新 e2e 2 條，兩條都 RED proof 過**：`font-preload-scope`「租戶店首頁唔會 preload Fraunces」（舊 code 紅，`Fraunces` 真係喺 preload family list 入面）、`not-found`「租戶唔存在 → 呢間店唔存在」（舊 code 出成版 landing）。本地 full suite **146/146**（fresh DB）。
+
+**Live 驗證（prod `66e866c`）5/5**：租戶首頁（`?tenant=maysshop`）嘅 woff2 集**同 biolink 店頁一模一樣**（= 零 marketing 洩漏）· landing 仲有 Fraunces（control）· `?tenant=` 打錯 slug 出「呢間店唔存在」· `/zh-HK` `/pricing` `/maysshop` `/terms` `/en` 全 200。量法：直接 curl HTML 抽 `.woff2` 檔名做差集 —— **唔好淨數 `<link as=font>`**，dynamic route 行 React Flight `:HL[...]`，會誤判成「零字體」。
+
+### 仲欠：五頁法律頁
+
+terms/privacy/contact/faq/about（→ `MarketingLegalShell`）一樣係 **396.1 KB**。要開 platform-only route 先斷到（同 `/landing` 一樣：middleware rewrite 平台 host 過去），但 **about/faq/contact 撞住 open PR #368**（等緊 Yau 文案 sign-off），硬做會 conflict。**等 #368 埋咗身先郁。** `components/marketing/fonts.ts` 記低咗新紀律同進度。
+
+⚠️ 本地連跑幾次之後，DB-backed rate-limit spec（`auth-rate-limit` / `payment-proof-ownership` / `upload-proof-coarse-limit`）會間唔中紅，每次紅唔同條。呢次特登對住**乾淨 main tree** 跑過同一個 full suite 確認同樣會發生 —— 唔關改動事，reset DB 就綠。CI 有 `retries: 2`，冇中過。
+
+---
+
 ## 🚩 2026-08-20 — WS4 還庫存出咗 prod（#389 + #390）
 
 落單一直會扣庫存，但成個 repo **冇任何一條路會還返**。客人落完單唔俾錢、商戶撳「取消」，嗰幾件貨就永遠鎖死喺一張死單度 —— 賣得越耐，帳面同倉底差得越遠。
@@ -65,7 +101,7 @@ storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、Store
 ### 仲欠（按優先次序）
 
 - ~~**WS4**~~ —— ✅ **2026-08-20 #389 已 merge + prod**，見最頂。⚠️ 有一個位冇照呢粒 bullet 做：`payment/route.ts` reject **唔還貨**（還咗會超賣，原因見最頂）。
-- **租戶共用 route 仲食緊 146 KB Fraunces preload** —— `components/marketing/fonts.ts` 記低嘅紀律係「租戶共用 route 一律 `await import()` marketing fonts」，`(customer)/page.tsx` 同五頁法律頁都照做咗，但實測 Next 16 / turbopack 將 dynamic `import()` 都算落 per-page font manifest，個 lazy 兜法**冇生效**。方向：(a) `(customer)/page` 個 platform fallback 由 inline render LandingPage 改做 `redirect()` 去 `/[locale]/landing`（middleware 正常已經 rewrite，呢個淨係 edge fallback）；(b) 五頁法律頁係真雙用途，冇得 redirect，要另諗。⚠️ 唔好開多一個 `preload:false` 副本 module —— fonts.ts 記低 2026-07-23 實測過會出兩份檔雙倍下載。
+- **租戶共用 route 仲食緊 145.6 KB Fraunces preload** —— (a) `(customer)/page` ✅ **2026-08-20 #391 出咗 prod**（396.1 → 250.6 KB，同純租戶 route 一樣）；(b) **五頁法律頁仲係 396.1 KB**，撞住 open PR #368 未郁，詳情見最頂。
 - **商品深連應該係商品做 h1** —— `[slug]/product/[id]` 落地時 `ProfileSection.tsx:131` 個店名仍然係 `<h1>`，商品標題喺 ProductSheet 入面唔係 heading。要由 BioLinkPage（收到 `initialProductId`）thread 個 flag 落 ProfileSection（降 h2）同 ProductSheet（升 h1）。純 SEO heading hierarchy。
 - **#368 平台文案** 仍然等 Yau sign-off（open PR）。
 
