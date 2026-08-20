@@ -23,6 +23,36 @@ test("unknown store slug shows store-not-found", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("店首頁解到嘅租戶唔存在 → 出「呢間店唔存在」，唔再出平台 landing", async ({
+  request,
+}) => {
+  // ⚠️ 特登唔用 `page`：呢條 URL 個 generateMetadata 會行 getStoreName()，租戶
+  // 唔存在時佢本身就會 console.error（pre-existing，唔係呢個改動嚟）——用瀏覽器
+  // 就會俾 fixtures 個 consoleGuard 攔住。呢度只需要驗 server render 出咗乜。
+  //
+  // `?tenant=` 由 middleware 直接 set x-tenant-slug（唔係 resolveTenant 個 dev
+  // fallback，所以 next start / next dev 兩邊都行到 —— 見 canonical.spec.ts）。
+  const res = await request.get(
+    `${APP}/zh-HK?tenant=e2e-tenant-that-never-existed-xyz`,
+  );
+  const html = await res.text();
+
+  expect(
+    html,
+    "租戶唔存在應該出「呢間店唔存在」（舊 code 出成版平台 landing）",
+  ).toContain("呢間店唔存在");
+  // ⚠️ 唔好用 "Turn Followers into Customers" 做反向斷言 —— 呢個 case 個
+  // generateMetadata 會 catch 住 fallback 返 platformMeta，即係 <title> 本身
+  // 就有嗰句，同 body render 咗乜完全無關（試過，白紅一次）。
+
+  // ⚠️ 特登唔 assert HTTP 404：呢度係 render 一個畫面，唔係 notFound()。
+  // (customer) 有 loading.tsx（= Suspense），notFound() 掟喺 boundary 入面
+  // 只會變 soft 200 兼出無品牌 `__next_error__` 光板（HANDOFF soft-404 根因）。
+  //
+  // 亦都唔可以 redirect 去 /landing —— 非平台 host 嘅 /{locale}/landing 會俾
+  // middleware 彈返 /{locale}，即刻無限 loop。
+});
+
 test("3-seg deep path under a real store slug hits the branded 404", async ({
   page,
 }) => {
