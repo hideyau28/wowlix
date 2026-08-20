@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
 import { prisma } from "@/lib/prisma";
 import { isValidTransition, getTransitionError } from "@/lib/orders/status-transitions";
+import { isDeadOrderStatus, restockOrderItems } from "@/lib/orders/restock";
 import { getTenantId } from "@/lib/tenant";
 
 const ORDER_STATUSES = [
@@ -123,7 +124,7 @@ export const PATCH = withApi(
         // Fetch current order to validate transition
         const currentOrder = await prisma.order.findFirst({
             where: { id, tenantId },
-            select: { status: true, paymentStatus: true, statusHistory: true },
+            select: { status: true, paymentStatus: true, statusHistory: true, items: true },
         });
 
         if (!currentOrder) {
@@ -195,9 +196,40 @@ export const PATCH = withApi(
             updateData.refundReason = refundReason || null;
         }
 
-        const order = await prisma.order.update({
-            where: { id },
-            data: updateData,
+        // 張單由生變死（CANCELLED / PAYMENT_REJECTED）就要還返落單扣走嘅貨。
+        // `currentOrder.status !== status` 唔可以少：同一個 status 再 PATCH 一次
+        // （撳兩下、兩個 tab、refresh 慢咗）係 no-op，唔係「又死多次」。
+        const entersDeadStatus =
+            !!status && isDeadOrderStatus(status) && currentOrder.status !== status;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const order = await (prisma as any).$transaction(async (tx: any) => {
+            // CAS —— where 帶住「頭先驗 transition 嗰陣睇到嘅 status」。中間俾人
+            // 改咗就 count===0，唔會盲寫落去。呢句同時係防雙重還貨嗰道閘：
+            // CANCELLED / PAYMENT_REJECTED 係 terminal，兩個同時嘅取消只可以有
+            // 一個令 status 真係由生變死，還貨嗰段就唔會行兩次。
+            const result = await tx.order.updateMany({
+                where: {
+                    id,
+                    tenantId,
+                    ...(status ? { status: currentOrder.status } : {}),
+                },
+                data: updateData,
+            });
+
+            if (result.count === 0) {
+                throw new ApiError(
+                    409,
+                    "CONFLICT",
+                    "Order status changed by another request — reload and retry",
+                );
+            }
+
+            if (entersDeadStatus) {
+                await restockOrderItems(tx, tenantId, currentOrder.items);
+            }
+
+            return tx.order.findFirst({ where: { id, tenantId } });
         });
 
         return ok(req, order);

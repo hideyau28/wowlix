@@ -87,10 +87,29 @@ export const PATCH = withApi(
             }
         }
 
-        const order = await prisma.order.update({
-            where: { id },
+        // updateMany + paymentStatus 落 where：上面個 "uploaded" 檢查同寫入變成
+        // 原子操作，收返「查完 uploaded → 中間俾人 confirm 咗 → 照寫」個 TOCTOU。
+        //
+        // ⚠️ reject 特登**唔還庫存**。撳完「拒絕付款」張單仲係
+        // PENDING_CONFIRMATION，admin 個「確認收款」掣照樣喺度撳得
+        // （payment-actions.tsx:181-192）—— 客人影錯截圖、商戶拒一拒等佢重發，
+        // 係真實流程。喺嗰刻放貨返上架，同一張單之後一撳確認就要出一件已經
+        // 賣咗俾人嘅貨。庫存要鎖到張單真係死（CANCELLED / PAYMENT_REJECTED）
+        // 嗰刻先還 —— 見 lib/orders/restock.ts。
+        const result = await prisma.order.updateMany({
+            where: { id, tenantId, paymentStatus: "uploaded" },
             data: updateData,
         });
+
+        if (result.count === 0) {
+            throw new ApiError(
+                409,
+                "CONFLICT",
+                "Payment status changed by another request — reload and retry",
+            );
+        }
+
+        const order = await prisma.order.findFirst({ where: { id, tenantId } });
 
         return ok(req, order);
     },
