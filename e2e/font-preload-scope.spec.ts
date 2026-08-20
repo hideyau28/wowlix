@@ -112,6 +112,26 @@ test("平台 landing 唔會 preload storefront template font", async ({ page }) 
   ).toContain("Fraunces");
 });
 
+test("租戶店首頁唔會 preload marketing 嘅 Fraunces（145.6 KB）", async ({
+  page,
+}) => {
+  // localhost host = 租戶 mode（isPlatformBare 只認 wowlix.* / *.vercel.app），
+  // 所以 /zh-HK 就係 (customer)/page 條租戶首頁 route。
+  await page.goto(`${APP}/zh-HK`);
+  await page.waitForLoadState("networkidle");
+
+  const families = await preloadedFontFamilies(page);
+
+  expect(
+    families,
+    `租戶店首頁 preload 咗 Fraunces（${families.join(", ")}）——` +
+      `(customer)/page.tsx 一定係 import 返 marketing module。⚠️ 改成 ` +
+      `\`await import()\` 都冇用：Next 16 / turbopack 個 per-page font manifest ` +
+      `連 dynamic import 都照計（實測 396 KB vs 251 KB）。platform landing 要行 ` +
+      `/[locale]/landing 條 route，unknown tenant 行 StoreNotFoundScreen。`,
+  ).not.toContain("Fraunces");
+});
+
 test("biolink 店頁照樣 preload 到自己 template 嗰隻字", async ({ page }) => {
   const tenant = loadSharedTenant();
   await page.goto(`${APP}/zh-HK/${tenant.slug}`);
