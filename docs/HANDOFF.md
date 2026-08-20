@@ -4,7 +4,7 @@
 
 ---
 
-## 🚩 2026-08-20 — WS4 還庫存出咗 prod（#389）
+## 🚩 2026-08-20 — WS4 還庫存出咗 prod（#389 + #390）
 
 落單一直會扣庫存，但成個 repo **冇任何一條路會還返**。客人落完單唔俾錢、商戶撳「取消」，嗰幾件貨就永遠鎖死喺一張死單度 —— 賣得越耐，帳面同倉底差得越遠。
 
@@ -22,11 +22,11 @@
 
 **idempotency 記錄搬入 transaction** —— 以前 `idempotencyKey.create` 喺 tx **外面**：同一條 key 兩個 request 同時入嚟，兩邊都過得 `findFirst`（嗰陣仲未有 row），兩邊都扣一次庫存、開一張單，輸嗰個先至喺最後食 P2002 掟 500 —— 客人見到出錯，實際上兩張單兩份貨都已經落咗。而家輸嗰個成個 tx（連扣庫存連張單）rollback，再回讀贏家嗰份 `responseJson`。biolink 嗰邊個 response 連 `fpsInfo` / `paymeInfo` 都要喺 tx 入面砌好先存得低，所以商戶收款資料嗰句 query 提咗上 tx 之前。
 
-**#390 followup（同一 session 自己揪返出嚟）** —— #389 收咗 `confirm-payment` 嗰道閘，但漏咗 sibling `PATCH /api/orders/:id/payment`。**取消唔會郁 `paymentStatus`**，所以一張已取消嘅單個 paymentStatus 照樣停喺 `"uploaded"`，佢個「一定要 uploaded」檢查攔唔到 —— 死單仲 confirm 得，寫低 `paidAt` + 收咗錢，但貨已經還晒上架。加咗 `isDeadOrderStatus` 明示 guard（sequential）+ `status` 落 `updateMany` where（race）。RED proof：舊 code 嗰句回 200。
+**#390 followup（同一 session 自己揪返出嚟，已 merge + prod `c82c3ef`）** —— #389 收咗 `confirm-payment` 嗰道閘，但漏咗 sibling `PATCH /api/orders/:id/payment`。**取消唔會郁 `paymentStatus`**，所以一張已取消嘅單個 paymentStatus 照樣停喺 `"uploaded"`，佢個「一定要 uploaded」檢查攔唔到 —— 死單仲 confirm 得，寫低 `paidAt` + 收咗錢，但貨已經還晒上架。加咗 `isDeadOrderStatus` 明示 guard（sequential）+ `status` 落 `updateMany` where（race）。RED proof：舊 code 嗰句回 200。
 
-**Live 驗證（prod `eb6e051`）5/5**：三條改過嘅 admin route 無 auth 全部回 401 `ADMIN_AUTH_MISSING`（唔係 500 —— 即係新 module `lib/orders/restock` / `lib/api/prisma-errors` 喺 prod 載入到），兩條落單 route 空 body 回 400（`Missing tenantId` 等），storefront `/zh-HK`、`/pricing`、`/maysshop` 全 200。
+**Live 驗證（prod `eb6e051` 5/5、`c82c3ef` 再驗一次）**：所有改過嘅 admin route 無 auth 一律回 401 `ADMIN_AUTH_MISSING`（唔係 500 —— 即係新 module `lib/orders/restock` / `lib/api/prisma-errors` 喺 prod 載入到），兩條落單 route 空 body 回 400（`Missing tenantId` 等），storefront `/zh-HK`、`/pricing`、`/maysshop` 全 200。
 
-⚠️ **還貨本身冇喺 prod 驗** —— 要驗就要喺真商戶度落一張真單再取消（會入商戶個 queue、可能寄真 email、郁真庫存）。呢件事嘅證據係 CI 對住真 build 跑嗰 7 條 e2e，唔係 prod write。
+⚠️ **還貨本身冇喺 prod 驗** —— 要驗就要喺真商戶度落一張真單再取消（會入商戶個 queue、可能寄真 email、郁真庫存）。呢件事嘅證據係 CI 對住真 build 跑嗰 8 條 e2e，唔係 prod write。
 
 **新 e2e**：`order-restock.spec.ts` 8 條（本地 full suite **144/144**，fresh DB）。**RED proof 7/8**：並發嗰條紅成 `[200,500,500,200]`（正正係 P2002）。「拒絕付款唔還貨」嗰條係 **control** —— 舊 code 都綠，佢守嘅係將來有人手多多喺 reject 度加還貨嗰下要即刻紅。
 
