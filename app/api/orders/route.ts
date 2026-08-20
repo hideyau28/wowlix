@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import crypto from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
+import { isUniqueConstraintError } from "@/lib/api/prisma-errors";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { saveReceiptHtml } from "@/lib/email";
@@ -683,17 +684,35 @@ export const POST = withApi(async (req) => {
 
   const appliedCouponCode = (repriced.amounts as any)?.couponCode;
 
+  // 每件貨標明「扣邊度嘅貨」，跟住連 marker 一齊存落 Order.items —— 之後取消
+  // 張單要還返邊度，讀返個 marker 就得，唔使靠估（見 lib/orders/restock.ts）。
+  // 下面個扣庫存 loop 亦都係 branch 呢個 marker，兩邊唔會 drift。
+  const stockedItems = repriced.items.map((item) =>
+    item.variantId
+      ? { ...item, variantId: item.variantId, stockSource: "variant" as const }
+      : { ...item, stockSource: "product" as const },
+  );
+
+  // `$transaction` 經 `prisma as any` 出嚟係 any（driver adapter 令 overload
+  // 唔 resolve 到）—— 明寫個 union，落面 `outcome.replayed` 先至真係窄到，
+  // 唔會打錯字都靜靜雞過。
+  type CreateOutcome =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | { replayed: false; order: any }
+    | { replayed: true; response: Prisma.JsonValue };
+
   // Atomic transaction: stock deduction + order creation + coupon usage
+  //                     + idempotency 記錄（見 tx 尾嗰段註）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const order = await (prisma as any).$transaction(async (tx: any) => {
+  const outcome: CreateOutcome = await (prisma as any).$transaction(async (tx: any) => {
     // Stock deduction — updateMany with gte guard prevents race conditions.
     // ⚠️ 租戶隔離：variant 扣庫存嘅 where 一定要同時鎖 tenantId + productId ——
     // repricing 只驗 productId 屬本店，唔 scope variantId 嘅話，攻擊者可用本店
     // 真 productId 夾帶人哋店（或本店另一件貨）嘅 variantId 跨租戶／跨產品扣庫存。
     // 加咗之後：mismatch → count===0 → 統一 400（同「庫存不足」同一句，唔做
     // 存在性 oracle），原子 guard 一步過驗 ownership + stock，冇 TOCTOU。
-    for (const item of repriced.items) {
-      if (item.variantId) {
+    for (const item of stockedItems) {
+      if (item.stockSource === "variant") {
         const result = await tx.productVariant.updateMany({
           where: {
             id: item.variantId,
@@ -734,7 +753,7 @@ export const POST = withApi(async (req) => {
         phone: payload.phone,
         email: payload.email ?? null,
         userId: payload.userId ?? null,
-        items: repriced.items,
+        items: stockedItems,
         amounts: repriced.amounts,
         fulfillmentType:
           payload.fulfillment.type === "pickup" ? "PICKUP" : "DELIVERY",
@@ -770,8 +789,56 @@ export const POST = withApi(async (req) => {
       }
     }
 
+    // Idempotency 記錄同張單喺同一個 tx。以前佢喺 tx **外面**：同一條 key 兩個
+    // request 同時入嚟，兩邊都過得上面個 findFirst（嗰陣仲未有 row），兩邊都扣
+    // 一次庫存、開一張單，輸嗰個先至喺最後食 P2002 掟 500 —— 客人見到出錯，
+    // 實際上兩張單兩份貨都已經落咗。而家輸嗰個成個 tx（連扣庫存連張單）
+    // rollback，落面 catch 回讀贏家嗰份 responseJson 交返同一個答案。
+    await tx.idempotencyKey.create({
+      data: {
+        tenantId,
+        key: idemKey,
+        route: ROUTE,
+        method: "POST",
+        requestHash,
+        status: 200,
+        responseJson: created,
+      },
+    });
+
     return created;
-  });
+  }).then(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (created: any) => ({ replayed: false as const, order: created }),
+    async (error: unknown) => {
+      if (!isUniqueConstraintError(error)) throw error;
+
+      // P2002 可以嚟自第二個 unique（例如 orderNumber 撞）—— 搵唔返同 key 嘅
+      // 記錄就唔好扮 idempotent replay，照掟返上去。
+      const winner = await prisma.idempotencyKey.findFirst({
+        where: { key: idemKey, route: ROUTE, method: "POST", tenantId },
+      });
+      if (!winner) throw error;
+
+      if (winner.requestHash !== requestHash) {
+        throw new ApiError(
+          409,
+          "CONFLICT",
+          "Idempotency key already used with different payload",
+        );
+      }
+
+      return { replayed: true as const, response: winner.responseJson };
+    },
+  );
+
+  // Replay：張單同收據／email 都係贏嗰個 request 做晒，落面嗰啲 side effect
+  // 唔可以再行一次。
+  if (outcome.replayed) {
+    return ok(req, outcome.response);
+  }
+
+  const order = outcome.order;
 
   await saveReceiptHtml({
     id: order.id,
@@ -811,18 +878,6 @@ export const POST = withApi(async (req) => {
       console.error("[order email] send failed:", error);
     });
   }
-
-  await prisma.idempotencyKey.create({
-    data: {
-      tenantId,
-      key: idemKey,
-      route: ROUTE,
-      method: "POST",
-      requestHash,
-      status: 200,
-      responseJson: order as any,
-    },
-  });
 
   return ok(req, order);
 });

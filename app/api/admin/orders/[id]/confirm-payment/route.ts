@@ -49,8 +49,11 @@ export const POST = withApi(
       by: confirmedBy,
     });
 
-    const updated = await prisma.order.update({
-      where: { id },
+    // 上面個 status 檢查 + 呢句 update 中間有窗口：同一刻有人取消張單，取消
+    // 嗰邊會還晒庫存，跟住呢句照寫 CONFIRMED —— 貨已經放返上架，張單又要出貨。
+    // status 落 where 令「仲係未收錢」同寫入變成原子操作，輸嗰邊 count===0。
+    const result = await prisma.order.updateMany({
+      where: { id, tenantId, status: { in: ["PENDING", "PENDING_CONFIRMATION"] } },
       data: {
         status: "CONFIRMED",
         paidAt: now,
@@ -60,6 +63,16 @@ export const POST = withApi(
         statusHistory: JSON.stringify(history),
       },
     });
+
+    if (result.count === 0) {
+      throw new ApiError(
+        409,
+        "CONFLICT",
+        "Order status changed by another request — reload and retry",
+      );
+    }
+
+    const updated = await prisma.order.findFirst({ where: { id, tenantId } });
 
     return ok(req, updated);
   },
