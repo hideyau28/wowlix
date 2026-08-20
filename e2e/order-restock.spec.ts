@@ -341,6 +341,36 @@ test.describe("訂單死咗要還庫存", () => {
     ).toBe(200);
   });
 
+  test("取消完唔准再確認收款 —— 貨已經放咗返上架", async () => {
+    const productId = await createProduct(store, "Confirm After Cancel");
+    const variantId = await createVariant(store, productId, "cancelled-v", 4);
+
+    const order = await apiOrder(
+      store,
+      { productId, variantId, quantity: 1 },
+      { paymentProof: "https://example.com/proof.jpg" },
+    );
+    expect(order.status, `落單應該 200：${order.text}`).toBe(200);
+
+    const cancelled = await patchStatus(store, order.orderId!, "CANCELLED");
+    expect(cancelled.status, `取消應該 200：${cancelled.text}`).toBe(200);
+    expect((await readVariant(store, productId, variantId)).stock).toBe(4);
+
+    // ⚠️ 取消**唔會**郁 paymentStatus —— 一張已取消嘅單個 paymentStatus 照樣
+    // 停喺 "uploaded"，所以「paymentStatus 一定要係 uploaded」嗰個檢查攔唔到。
+    const confirm = await store.ctx.patch(
+      `${APP}/api/orders/${order.orderId}/payment`,
+      { data: { action: "confirm" }, failOnStatusCode: false },
+    );
+    expect(
+      confirm.status(),
+      "死單唔准再確認收款（舊 code 200：寫低 paidAt + 收咗錢，但貨已經放返上架）",
+    ).toBe(400);
+
+    const after = await readVariant(store, productId, variantId);
+    expect(after.stock, "確認失敗就唔可以再郁庫存").toBe(4);
+  });
+
   test("biolink 變體單 → 取消 → 還貨兼重新上架", async () => {
     const productId = await createProduct(store, "Biolink Variant");
     // 得 1 件：賣完會俾落單 route 自動落架（active:false），還貨要一齊救返。
