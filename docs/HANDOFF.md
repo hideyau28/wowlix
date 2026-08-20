@@ -4,6 +4,36 @@
 
 ---
 
+## 🚩 2026-08-20 — WS4 還庫存出咗 prod（#389）
+
+落單一直會扣庫存，但成個 repo **冇任何一條路會還返**。客人落完單唔俾錢、商戶撳「取消」，嗰幾件貨就永遠鎖死喺一張死單度 —— 賣得越耐，帳面同倉底差得越遠。
+
+**三個唔可以行返轉頭嘅決定：**
+
+1. **還貨嘅 trigger 係「張單入咗死狀態」，唔係「付款俾人拒絕」** —— HANDOFF 原本寫「`payment/route.ts` reject 喺同一 tx 還貨」，**冇照做**。撳完「拒絕付款」張單仲係 `PENDING_CONFIRMATION`，admin 個「確認收款」掣照樣撳得（`payment-actions.tsx:181-192` 只 gate order status，唔 gate paymentStatus）。客人影錯截圖、商戶拒一拒等佢重發係真實流程；喺嗰刻放貨返上架，同一張單之後一撳確認就要出一件已經賣咗俾人嘅貨。**庫存鎖到張單真係死（`CANCELLED` / `PAYMENT_REJECTED`）嗰刻先還。** 商戶要放貨，就係喺 status dropdown 揀嗰兩個之一（本身已經有）。
+
+2. **防雙重還貨唔使加 column** —— 靠 status CAS：`updateMany` 個 where 帶住「頭先驗 transition 嗰陣睇到嘅 status」，贏咗（`count===1`）先還貨。兩個死狀態喺 `status-transitions.ts` 都係 terminal，一世只入得一次 → 最多還一次。同一個 status 再 PATCH 一次（撳兩下／兩個 tab）係 no-op，唔會當「又死多次」。順手收埋同 class 嘅兩個 TOCTOU：payment reject（`paymentStatus` 落 where）、`confirm-payment`（`status` 落 where）—— 後者唔收嘅話「同一刻取消 + 確認」會變成貨已經還晒上架、張單又要出貨。
+
+3. **還幾多、還去邊，讀 marker 唔准估** —— 落單嗰陣每件貨寫低 `stockSource`（`variant` / `product` / `combination` / `none`）落 `Order.items`。兩條落單 route 扣貨形狀唔同（`/api/orders` 冇 variant 就扣 `Product.stock`；biolink 冇 variant 就乜都唔扣），淨係睇 `variantId` 在唔在係分唔開嘅。biolink 個 items snapshot 以前淨係留低顯示名（`貨名 · 黑 · M`），variant 身份完全冇存低 —— 就算想還都冇資料還；而家連 `variantId` / `variantKey` 一齊存。
+
+⚠️ **舊單（冇 marker）一律唔還**，包括 2026-08-20 呢個 deploy 之前落嘅所有 pending 單。寧願少還（商戶自己加返，睇得見）都好過亂加（睇唔見，直到出唔到貨）。商戶要清返嗰批舊單嘅貨，要手動改庫存。
+
+還 variant 會順手救返「賣到 0 自動落架」個 flag（雙維格同樣由 `hidden` 開返 `available`）—— 淨係加返個數但仍然落架，客人一樣買唔到，等於冇還過。
+
+**idempotency 記錄搬入 transaction** —— 以前 `idempotencyKey.create` 喺 tx **外面**：同一條 key 兩個 request 同時入嚟，兩邊都過得 `findFirst`（嗰陣仲未有 row），兩邊都扣一次庫存、開一張單，輸嗰個先至喺最後食 P2002 掟 500 —— 客人見到出錯，實際上兩張單兩份貨都已經落咗。而家輸嗰個成個 tx（連扣庫存連張單）rollback，再回讀贏家嗰份 `responseJson`。biolink 嗰邊個 response 連 `fpsInfo` / `paymeInfo` 都要喺 tx 入面砌好先存得低，所以商戶收款資料嗰句 query 提咗上 tx 之前。
+
+**#390 followup（同一 session 自己揪返出嚟）** —— #389 收咗 `confirm-payment` 嗰道閘，但漏咗 sibling `PATCH /api/orders/:id/payment`。**取消唔會郁 `paymentStatus`**，所以一張已取消嘅單個 paymentStatus 照樣停喺 `"uploaded"`，佢個「一定要 uploaded」檢查攔唔到 —— 死單仲 confirm 得，寫低 `paidAt` + 收咗錢，但貨已經還晒上架。加咗 `isDeadOrderStatus` 明示 guard（sequential）+ `status` 落 `updateMany` where（race）。RED proof：舊 code 嗰句回 200。
+
+**Live 驗證（prod `eb6e051`）5/5**：三條改過嘅 admin route 無 auth 全部回 401 `ADMIN_AUTH_MISSING`（唔係 500 —— 即係新 module `lib/orders/restock` / `lib/api/prisma-errors` 喺 prod 載入到），兩條落單 route 空 body 回 400（`Missing tenantId` 等），storefront `/zh-HK`、`/pricing`、`/maysshop` 全 200。
+
+⚠️ **還貨本身冇喺 prod 驗** —— 要驗就要喺真商戶度落一張真單再取消（會入商戶個 queue、可能寄真 email、郁真庫存）。呢件事嘅證據係 CI 對住真 build 跑嗰 7 條 e2e，唔係 prod write。
+
+**新 e2e**：`order-restock.spec.ts` 8 條（本地 full suite **144/144**，fresh DB）。**RED proof 7/8**：並發嗰條紅成 `[200,500,500,200]`（正正係 P2002）。「拒絕付款唔還貨」嗰條係 **control** —— 舊 code 都綠，佢守嘅係將來有人手多多喺 reject 度加還貨嗰下要即刻紅。
+
+⚠️ **踩過一次**：`scripts/e2e-local-db.sh` 個 `dropdb` 撞到仲未收工嘅 e2e dev server 就會失敗，`>/dev/null 2>&1 &&` 會靜靜雞令成個 playwright run **冇行過**；跟住再跑就係積存 state，一次過紅 10 條（`createVariant` 200 → 唔係 200 嗰類）。見呢個形狀先 `lsof -ti:3100 | xargs kill -9` 再 reset。
+
+---
+
 ## 🚩 2026-08-02 — WS6 減磅出咗 prod（#388），WS4 仲未做
 
 上一個 session 尾聲講「下一步開 WS6」，呢個 session 接手做完。**四個 commit 全部零功能改動**，數字全部實測（唔係估）：
@@ -34,7 +64,7 @@ storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、Store
 
 ### 仲欠（按優先次序）
 
-- **WS4** —— 取消／拒收還 variant 庫存（`orders/[id]/route.ts` PATCH→CANCELLED、`payment/route.ts` reject 喺同一 tx 還貨，用 `updateMany` status transition guard 防雙重還貨）+ `idempotencyKey.create` 搬入 `$transaction`（`orders/route.ts:754`、`biolink:568`，catch P2002 回讀 responseJson）。**Yau 已拍板**：唔寫 cron sweep（手動）、普通貨唔補扣（`ProductEditSheet` 個 body 冇 `stock` field、schema default 0，商戶根本冇 UI 設得到，照加 `gte` guard = 每張普通貨嘅單即刻 400）。
+- ~~**WS4**~~ —— ✅ **2026-08-20 #389 已 merge + prod**，見最頂。⚠️ 有一個位冇照呢粒 bullet 做：`payment/route.ts` reject **唔還貨**（還咗會超賣，原因見最頂）。
 - **租戶共用 route 仲食緊 146 KB Fraunces preload** —— `components/marketing/fonts.ts` 記低嘅紀律係「租戶共用 route 一律 `await import()` marketing fonts」，`(customer)/page.tsx` 同五頁法律頁都照做咗，但實測 Next 16 / turbopack 將 dynamic `import()` 都算落 per-page font manifest，個 lazy 兜法**冇生效**。方向：(a) `(customer)/page` 個 platform fallback 由 inline render LandingPage 改做 `redirect()` 去 `/[locale]/landing`（middleware 正常已經 rewrite，呢個淨係 edge fallback）；(b) 五頁法律頁係真雙用途，冇得 redirect，要另諗。⚠️ 唔好開多一個 `preload:false` 副本 module —— fonts.ts 記低 2026-07-23 實測過會出兩份檔雙倍下載。
 - **商品深連應該係商品做 h1** —— `[slug]/product/[id]` 落地時 `ProfileSection.tsx:131` 個店名仍然係 `<h1>`，商品標題喺 ProductSheet 入面唔係 heading。要由 BioLinkPage（收到 `initialProductId`）thread 個 flag 落 ProfileSection（降 h2）同 ProductSheet（升 h1）。純 SEO heading hierarchy。
 - **#368 平台文案** 仍然等 Yau sign-off（open PR）。
