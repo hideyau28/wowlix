@@ -42,8 +42,8 @@ export const platformAbout: Record<
 > = {
   zh: {
     title: "關於 WoWlix",
-    intro: "讓香港每個 IG 小店，2 分鐘就有一個專業網店。",
-    body: "WoWlix 係為香港 Instagram 小店而做嘅開店工具。你唔使識砌網站、唔使請人 —— 揀模板、擺產品、set 收款，一條 link（wowlix.com/你個店名）就開得成，客人撳入嚟直接落單。我哋唔想做一個「乜都有但你揦手唔成」嘅大平台，只想做好一件事：幫你將 followers 變成生意。",
+    intro: "香港每個 IG 小店，2 分鐘就有一個專業網店。",
+    body: "WoWlix 係為香港 Instagram 小店而做嘅開店工具。你唔使識砌網站、唔使請人 —— 揀模板、擺產品、set 收款，一條 link（wowlix.com/你個店名）就開得成，客人撳入嚟直接落單。我哋唔想做一個「乜都有但你揦手唔成勢」嘅大平台，只想做好一件事：幫你將 followers 變成生意。",
     whyTitle: "點解揀 WoWlix",
     why: [
       "0% 平台佣金 —— 你賣幾多全部係你嘅。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，錢唔經我哋手。",
@@ -171,7 +171,7 @@ export const platformContact: Record<
     intro: "有問題想搵我哋？WhatsApp 最快。",
     whatsappTitle: "WhatsApp",
     whatsappBody: "撳掣直接同我哋傾。",
-    whatsappCta: "WhatsApp 聯絡我們",
+    whatsappCta: "WhatsApp 聯絡我哋",
     emailTitle: "電郵",
     emailBody: "想詳細啲？可以電郵我哋：",
     footer: "WoWlix 由 Flow Studio HK 營運。",

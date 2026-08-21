@@ -56,8 +56,13 @@ export default async function FAQPage({
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
-  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
-  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
+  //
+  // ⚠️ 呢個 `await import()` **唔會**幫到 font preload —— #391 實測推翻咗舊講法：
+  // Next 16 / turbopack 個 per-page font manifest 連 dynamic import() 都照計，
+  // 一入條 route 個 graph 就照 preload。唯一斷得開嘅界線係 route 邊界
+  //（見 components/marketing/fonts.ts）。呢五頁法律頁而家仍然食 396.1 KB，
+  // 要開 platform-only route 先斷到 —— 呢個 PR 埋咗身之後先做。
+  // lazy import 留返係因為佢起碼慳返 JS chunk，唔係因為佢慳到字體。
   const platform = await isPlatformMode();
   // 平台 host：出 WoWlix 自己嘅雙語 FAQ + 用 WoWlix 做名；租戶店維持原狀
   //（同一段 JSX，淨係換 data source，JSON-LD 都跟住出平台 Q&A）。
