@@ -23,6 +23,9 @@ type Props = {
   ) => void;
   wishlisted?: boolean;
   onToggleWishlist?: () => void;
+  /** 見 ProductSheet 同名 prop。呢邊舊 code 一律寫死 `<h1>`，喺店頁撳開個
+   *  sheet 就會同 StudioHero 撞成兩個 h1 —— 唔係 page heading 就降 `<h2>`。 */
+  titleAsPageHeading?: boolean;
 };
 
 export default function StudioProductSheet({
@@ -32,7 +35,9 @@ export default function StudioProductSheet({
   onAddToCart,
   wishlisted = false,
   onToggleWishlist,
+  titleAsPageHeading = false,
 }: Props) {
+  const TitleHeading = titleAsPageHeading ? "h1" : "h2";
   // Dialog a11y — focus 入 sheet / Tab trap / Escape 閂 / 閂咗 focus 還原
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogA11y(dialogRef, onClose);
@@ -213,9 +218,9 @@ export default function StudioProductSheet({
 
         {/* Title + price */}
         <div className="px-5 pt-7 sm:px-8 sm:pt-10">
-          <h1 id="studio-product-sheet-title" className="font-wlx-display text-2xl sm:text-3xl tracking-tight leading-tight text-wlx-ink">
+          <TitleHeading id="studio-product-sheet-title" className="font-wlx-display text-2xl sm:text-3xl tracking-tight leading-tight text-wlx-ink">
             {product.title}
-          </h1>
+          </TitleHeading>
           <p className="mt-3 text-base tabular-nums">
             {onSale && product.originalPrice && (
               <span className="mr-3 text-wlx-stone line-through">

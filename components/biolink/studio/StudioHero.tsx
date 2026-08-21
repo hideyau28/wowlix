@@ -4,8 +4,14 @@ import Image from "next/image";
 import type { TenantForBioLink } from "@/lib/biolink-helpers";
 import { getAvatarFallback } from "@/lib/biolink-helpers";
 
+/**
+ * `demoteHeading`：同 ProfileSection 一樣 —— 商品深連落地時店名讓返 `<h1>`
+ * 俾 StudioProductSheet 個商品標題。舊 code 兩邊各自寫死一個 `<h1>`，
+ * 深連落地會出**兩個 h1**。
+ */
 type Props = {
   tenant: TenantForBioLink;
+  demoteHeading?: boolean;
 };
 
 type SocialLink = { platform: string; url: string };
@@ -31,7 +37,8 @@ function resolveSocialLinks(tenant: TenantForBioLink): SocialLink[] {
   return fallback;
 }
 
-export default function StudioHero({ tenant }: Props) {
+export default function StudioHero({ tenant, demoteHeading = false }: Props) {
+  const StoreNameHeading = demoteHeading ? "h2" : "h1";
   const cover = tenant.coverPhoto;
   const social = resolveSocialLinks(tenant);
   const fallback = getAvatarFallback(tenant);
@@ -90,13 +97,13 @@ export default function StudioHero({ tenant }: Props) {
 
             {/* Name + tagline */}
             <div className="min-w-0">
-              <h1
+              <StoreNameHeading
                 className={`font-wlx-display tracking-tight text-2xl sm:text-4xl leading-tight ${
                   cover ? "text-white" : "text-wlx-ink"
                 }`}
               >
                 {tenant.name}
-              </h1>
+              </StoreNameHeading>
               {tenant.description && (
                 <p
                   className={`mt-1.5 text-sm sm:text-base leading-relaxed line-clamp-2 sm:line-clamp-1 max-w-[28ch] sm:max-w-[44ch] ${

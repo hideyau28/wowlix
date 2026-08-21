@@ -5,8 +5,14 @@ import { getAvatarFallback } from "@/lib/biolink-helpers";
 import type { TenantForBioLink } from "@/lib/biolink-helpers";
 import { useTemplate } from "@/lib/template-context";
 
+/**
+ * `demoteHeading`：商品深連（`/{locale}/{slug}/product/{id}`）落地嗰陣，呢一頁
+ * 講緊件貨唔係間店 —— 店名要讓返個 `<h1>` 出嚟俾商品標題。由 BioLinkPage
+ * 按 `initialProductId` 決定，見嗰邊個 `productIsPageHeading`。
+ */
 type Props = {
   tenant: TenantForBioLink;
+  demoteHeading?: boolean;
 };
 
 type SocialLink = { platform: string; url: string };
@@ -96,7 +102,8 @@ function resolveSocialLinks(tenant: TenantForBioLink): SocialLink[] {
   return [];
 }
 
-export default function ProfileSection({ tenant }: Props) {
+export default function ProfileSection({ tenant, demoteHeading = false }: Props) {
+  const StoreNameHeading = demoteHeading ? "h2" : "h1";
   const tmpl = useTemplate();
   const fallbackLetter = getAvatarFallback(tenant);
   const color = tenant.brandColor || tmpl.accent;
@@ -128,7 +135,7 @@ export default function ProfileSection({ tenant }: Props) {
       </div>
 
       {/* Name */}
-      <h1 className="text-lg font-bold text-center" style={{ color: tmpl.text, fontFamily: tmpl.headingFont }}>{tenant.name}</h1>
+      <StoreNameHeading className="text-lg font-bold text-center" style={{ color: tmpl.text, fontFamily: tmpl.headingFont }}>{tenant.name}</StoreNameHeading>
 
       {/* Tagline */}
       {tenant.description && (
