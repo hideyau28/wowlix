@@ -4,7 +4,7 @@
 
 ---
 
-## 🚩 2026-08-21 — (customer) soft-404 修好咗（PR 待出）
+## 🚩 2026-08-21 — (customer) soft-404 修好咗，出咗 prod（#392）
 
 **未知／已刪商品同分類由 200 變真 404。** 根因就係 2026-07-25 查實嗰個（見下面 ②）：`loading.tsx` 編譯出嚟係 `<Suspense>`，坐喺 `notFound()` 之上 → shell flush 咗先掟 → status 鎖死 200 → Google 當死 URL 係正常頁 index。
 
@@ -23,7 +23,26 @@
 
 **新 build guard `scripts/assert-no-loading-above-notfound.mjs`**（落咗 prebuild）—— 公開 route 再有 `loading.tsx` 坐喺會 `notFound()` 嘅 page 之上就 build 紅。呢個 class 燒咗成三個 session（先誤判做 root layout 早 stream，四招 fix 全部無效）。正反兩面都驗過。`(admin)` 特登豁免：auth 後面兼 noindex，soft-404 淨係影響畫面，唔餵 Google 死 URL；`admin/orders/[id]` 而家就係咁。
 
-**驗證**：`ci:build` 綠（`/[locale]` 仍然 `ƒ`、landing/pricing 仍然 prerender = 冇倒退 #353）· e2e **146 passed**（2 條 a11y 中途紅 —— `platform FAQ dark-OS`（HANDOFF 已知 flake）同 `admin login`（dev server `_clientMiddlewareManifest.js` MIME race），**單獨重跑 7/7 全綠**）· **RED proof**：三條新／收緊嘅斷言喺舊 code 全部 `Received: 200`（3 failed / 6 passed），修完 9/9。
+**Live 驗證（prod `860d3f5`）17/17**
+
+| 應該 404 | |
+|---|---|
+| `/en/product/e2e-missing-product-id?tenant=maysshop` | 404 ✅（merge 前同一條 URL 實測 **200**） |
+| `/en/categories/e2e-no-such-category?tenant=maysshop` | 404 ✅ |
+| `/en/product/whatever?tenant=e2e-never-existed-xyz` | 404 ✅ |
+
+| 唔准誤殺（全部 200） | |
+|---|---|
+| 真商品 · 租戶首頁 · search · collections · biolink 店頁 | 200 ✅ ×5 |
+| landing · pricing · terms | 200 ✅ ×3 |
+
+| 唔准 500 | |
+|---|---|
+| `search` / `collections` / 首頁 + `?tenant=` 打錯 | 200 ✅ ×3，body 出到「呢間店唔存在」 |
+
+**#391 字體 scope 冇倒退**：租戶首頁 woff2 集 = biolink 店頁 woff2 集（8 = 8，差集空），`Fraunces` 出現 0 次。
+
+**驗證**：`ci:build` 綠（`/[locale]` 仍然 `ƒ`、landing/pricing 仍然 prerender = 冇倒退 #353）· CI e2e 4m16s 綠 · 本地 e2e **146 passed**（2 條 a11y 中途紅 —— `platform FAQ dark-OS`（HANDOFF 已知 flake）同 `admin login`（dev server `_clientMiddlewareManifest.js` MIME race），**單獨重跑 7/7 全綠**）· **RED proof**：三條新／收緊嘅斷言喺舊 code 全部 `Received: 200`（3 failed / 6 passed），修完 9/9。
 
 ### 仲欠（呢個 PR 冇做）
 
