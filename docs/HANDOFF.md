@@ -4,7 +4,7 @@
 
 ---
 
-## 🚩 2026-08-21 — 商品深連 h1 修好咗（PR 待出）
+## 🚩 2026-08-21 — 商品深連 h1 修好咗，出咗 prod（#393）
 
 `/{locale}/{slug}/product/{id}` 呢條 **canonical 商品 URL** 一直冇一個 heading 講得出「呢頁係邊件貨」。
 
@@ -21,7 +21,21 @@
 - **`initialProductId`** —— 喺店頁自己撳開個 sheet URL 冇變（仲係間店嗰版），`<h1>` 要留返俾店名。
 - **`sheetProduct`** —— 客人閂咗個 sheet 之後仲喺同一版度，`<h1>` 要返返去店名，唔可以變成成頁冇 h1。
 
-**驗證**：`ci:build` 綠 · e2e full suite **152 passed**（fresh DB，零 flake）· **RED proof** 兩條（舊 code：預設 template 出 `["E2E SEO …"]` = 店名；studio 出 `["E2E Studio …", "E2E Studio 花瓶"]` = 兩個 h1），修完 `product-page-seo.spec.ts` **10/10**，連跑 4 次全綠。另加兩條「唔准誤殺」守住店頁本身仍然係店名（兩個 template 各一條）。
+**Live 驗證（prod `0f7b284`）9/9**
+
+| URL | h1 |
+|---|---|
+| `/zh-HK/maysshop/product/cml4kq…` | `Nike Wmns Dunk Low 'Mint Chocolate'`（merge 前係 `May's Shop`） |
+| `/zh-HK/giftyouflora/product/cmovmq…` | `玫瑰花束配小玫瑰`（merge 前係 `花·禮 Giftyouflora`） |
+| `/zh-HK/giftyouflora/product/cmovmnt…` | `玫瑰花束 5枝` |
+| `/zh-HK/maysshop`（店頁） | `May's Shop` ✅ 冇誤殺 |
+| `/zh-HK/giftyouflora`（店頁） | `花·禮 Giftyouflora` ✅ 冇誤殺 |
+
+四條 URL 逐條數 `<h1>` 都 = **1**。
+
+⚠️ **studio 分支 prod 驗唔到** —— 而家 prod 冇租戶用緊 studio template（兩間店嘅商品頁 merge 前都只有一個 h1，即係行緊 `ProfileSection` 唔係 `StudioHero`）。嗰邊淨係得 e2e 覆蓋（專登 register 咗間 `templateId: "studio"` 測試店）。第日有真租戶轉 studio，值得補一次 live 驗。
+
+**驗證**：`ci:build` 綠 · CI e2e 4m4s 綠 · 本地 e2e full suite **152 passed**（fresh DB，零 flake）· **RED proof** 兩條（舊 code：預設 template 出 `["E2E SEO …"]` = 店名；studio 出 `["E2E Studio …", "E2E Studio 花瓶"]` = 兩個 h1），修完 `product-page-seo.spec.ts` **10/10**，連跑 4 次全綠。另加兩條「唔准誤殺」守住店頁本身仍然係店名（兩個 template 各一條）。
 
 ---
 
