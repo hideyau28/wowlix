@@ -24,6 +24,16 @@ import { APP, uid } from "./helpers";
  * SSR HTML 根本冇隻字 —— 已改為一直 render，摺疊行 CSS。
  */
 
+/**
+ * 抽出 HTML 入面所有 <h1> 嘅純文字。React SSR 會插 `<!-- -->` 同 nested
+ * span，所以要剝乾淨先比得。
+ */
+function h1Texts(html: string): string[] {
+  return [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/g)].map((m) =>
+    m[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(),
+  );
+}
+
 type Store = {
   ctx: APIRequestContext;
   slug: string;
@@ -123,5 +133,84 @@ test.describe("canonical 商品頁講得出件貨係乜", () => {
       match![1],
       "以前一律用店描述 → 同一間店所有商品頁 meta 一模一樣，當重複內容",
     ).toContain("280ml");
+  });
+
+  // ── heading hierarchy ────────────────────────────────────────────────
+  // 商品深連（/{locale}/{slug}/product/{id}）render 成個 biolink 店 + 自動
+  // 開咗 product sheet。但個 <h1> 一直係 ProfileSection 個店名，商品標題喺
+  // ProductSheet 入面係 <h3>。即係呢條 canonical 商品 URL 同店頁講緊同一句
+  // 「我係邊間店」，冇一個 heading 講「呢頁係邊件貨」。
+
+  test("商品深連個 h1 要係商品標題，唔係店名", () => {
+    expect(
+      h1Texts(html),
+      "舊 code 個 h1 係店名，商品標題淨係 <h3> —— canonical 商品頁冇 heading 講得出件貨",
+    ).toEqual(["E2E 陶瓷杯"]);
+  });
+
+  test("店頁本身個 h1 仍然係店名（唔准誤殺）", async () => {
+    const res = await store.ctx.get(`${APP}/zh-HK/${store.slug}`);
+    expect(res.status()).toBe(200);
+    expect(h1Texts(await res.text())).toEqual([`E2E SEO ${store.slug.replace("e2e-seo-", "")}`]);
+  });
+});
+
+/**
+ * studio template 行另一套 component（StudioHero + StudioProductSheet）——
+ * 兩邊各自寫死一個 <h1>，所以商品深連落地會出**兩個 h1**。同上面嗰組係同一
+ * 個 class，唔可以淨係修 default template 就當清。
+ */
+test.describe("studio template 商品深連 heading", () => {
+  let store: Store;
+  let productId: string;
+
+  test.beforeAll(async () => {
+    const run = uid();
+    const slug = `e2e-studio-${run}`;
+    const ctx = await apiRequest.newContext();
+    const reg = await ctx.post(`${APP}/api/tenant/register`, {
+      data: {
+        name: `E2E Studio ${run}`,
+        slug,
+        email: `${slug}@example.com`,
+        password: "E2e-passw0rd-1234",
+        whatsapp: "+85291234567",
+        paymentMethods: ["fps"],
+        fpsId: "91234567",
+        templateId: "studio",
+      },
+    });
+    expect(reg.status(), `register ${slug} 應該 200`).toBe(200);
+    store = { ctx, slug, tenantId: (await reg.json()).data?.tenantId as string };
+
+    const res = await ctx.post(`${APP}/api/admin/products`, {
+      headers: { "x-idempotency-key": `${slug}-studio-${uid()}` },
+      data: { title: "E2E Studio 花瓶", price: 288, stock: 3 },
+    });
+    expect(res.status(), "開產品應該 200").toBe(200);
+    productId = (await res.json()).data?.id as string;
+  });
+
+  test.afterAll(async () => {
+    await store?.ctx.dispose();
+  });
+
+  test("商品深連淨係一個 h1，而且係商品標題", async () => {
+    const res = await store.ctx.get(
+      `${APP}/zh-HK/${store.slug}/product/${productId}`,
+    );
+    expect(res.status()).toBe(200);
+    expect(
+      h1Texts(await res.text()),
+      "舊 code 出兩個 h1（StudioHero 店名 + StudioProductSheet 商品名）",
+    ).toEqual(["E2E Studio 花瓶"]);
+  });
+
+  test("studio 店頁本身個 h1 仍然係店名（唔准誤殺）", async () => {
+    const res = await store.ctx.get(`${APP}/zh-HK/${store.slug}`);
+    expect(res.status()).toBe(200);
+    expect(h1Texts(await res.text())).toEqual([
+      `E2E Studio ${store.slug.replace("e2e-studio-", "")}`,
+    ]);
   });
 });

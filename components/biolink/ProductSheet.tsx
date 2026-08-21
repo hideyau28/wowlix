@@ -29,6 +29,12 @@ type Props = {
   onSwitchProduct?: (product: ProductForBioLink) => void;
   wishlisted?: boolean;
   onToggleWishlist?: () => void;
+  /**
+   * 商品深連（`/{locale}/{slug}/product/{id}`）落地：呢一頁講緊件貨，商品
+   * 標題要做 `<h1>`。平時喺店頁撳開個 sheet URL 冇變（仲係間店嗰版），
+   * 標題就維持 `<h3>`，`<h1>` 留返俾店名。
+   */
+  titleAsPageHeading?: boolean;
 };
 
 export default function ProductSheet({
@@ -40,7 +46,9 @@ export default function ProductSheet({
   onSwitchProduct,
   wishlisted = false,
   onToggleWishlist,
+  titleAsPageHeading = false,
 }: Props) {
+  const TitleHeading = titleAsPageHeading ? "h1" : "h3";
   const tmpl = useTemplate();
   // Dialog a11y — focus 入 sheet / Tab trap / Escape 閂 / 閂咗 focus 還原
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -517,9 +525,9 @@ export default function ProductSheet({
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {/* 商品名稱 + 價格 */}
           <div>
-            <h3 id="product-sheet-title" className="text-xl font-bold mb-2" style={{ color: tmpl.text }}>
+            <TitleHeading id="product-sheet-title" className="text-xl font-bold mb-2" style={{ color: tmpl.text }}>
               {product.title}
-            </h3>
+            </TitleHeading>
             <div className="flex items-center gap-2">
               <span className="font-bold text-2xl" style={{ color: tmpl.text }}>
                 {formatPrice(product.price, currency)}

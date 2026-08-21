@@ -4,6 +4,27 @@
 
 ---
 
+## 🚩 2026-08-21 — 商品深連 h1 修好咗（PR 待出）
+
+`/{locale}/{slug}/product/{id}` 呢條 **canonical 商品 URL** 一直冇一個 heading 講得出「呢頁係邊件貨」。
+
+| | 舊 | 新 |
+|---|---|---|
+| 預設 template | `<h1>` = **店名**（`ProfileSection`），商品標題 = `<h3>` | `<h1>` = **商品標題**，店名降 `<h2>` |
+| studio template | **兩個 `<h1>`**（`StudioHero` 店名 + `StudioProductSheet` 商品名） | 一個 `<h1>` = 商品標題 |
+| 店頁本身（兩個 template） | `<h1>` = 店名 | 冇變 |
+
+**HANDOFF 原本冇寫嗰條**：studio template 個深連係**重複 h1**，唔淨係層級錯。淨係修預設 template 就會漏咗成個 studio 分支（`isStudio = tmpl.id === "studio"` 行另一套 component）。
+
+**點 thread**：`BioLinkPage` 一個位計 `productIsPageHeading = Boolean(initialProductId) && sheetProduct !== null`，再落 `ProfileSection` / `StudioHero`（`demoteHeading`）同 `ProductSheet` / `StudioProductSheet`（`titleAsPageHeading`）。兩個條件都要：
+
+- **`initialProductId`** —— 喺店頁自己撳開個 sheet URL 冇變（仲係間店嗰版），`<h1>` 要留返俾店名。
+- **`sheetProduct`** —— 客人閂咗個 sheet 之後仲喺同一版度，`<h1>` 要返返去店名，唔可以變成成頁冇 h1。
+
+**驗證**：`ci:build` 綠 · e2e full suite **152 passed**（fresh DB，零 flake）· **RED proof** 兩條（舊 code：預設 template 出 `["E2E SEO …"]` = 店名；studio 出 `["E2E Studio …", "E2E Studio 花瓶"]` = 兩個 h1），修完 `product-page-seo.spec.ts` **10/10**，連跑 4 次全綠。另加兩條「唔准誤殺」守住店頁本身仍然係店名（兩個 template 各一條）。
+
+---
+
 ## 🚩 2026-08-21 — (customer) soft-404 修好咗，出咗 prod（#392）
 
 **未知／已刪商品同分類由 200 變真 404。** 根因就係 2026-07-25 查實嗰個（見下面 ②）：`loading.tsx` 編譯出嚟係 `<Suspense>`，坐喺 `notFound()` 之上 → shell flush 咗先掟 → status 鎖死 200 → Google 當死 URL 係正常頁 index。
@@ -149,7 +170,7 @@ storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、Store
 
 - ~~**WS4**~~ —— ✅ **2026-08-20 #389 已 merge + prod**，見最頂。⚠️ 有一個位冇照呢粒 bullet 做：`payment/route.ts` reject **唔還貨**（還咗會超賣，原因見最頂）。
 - **租戶共用 route 仲食緊 145.6 KB Fraunces preload** —— (a) `(customer)/page` ✅ **2026-08-20 #391 出咗 prod**（396.1 → 250.6 KB，同純租戶 route 一樣）；(b) **五頁法律頁仲係 396.1 KB**，撞住 open PR #368 未郁，詳情見最頂。
-- **商品深連應該係商品做 h1** —— `[slug]/product/[id]` 落地時 `ProfileSection.tsx:131` 個店名仍然係 `<h1>`，商品標題喺 ProductSheet 入面唔係 heading。要由 BioLinkPage（收到 `initialProductId`）thread 個 flag 落 ProfileSection（降 h2）同 ProductSheet（升 h1）。純 SEO heading hierarchy。
+- ~~**商品深連應該係商品做 h1**~~ —— ✅ **2026-08-21 修好咗，見最頂嗰段**（順手修埋 studio template 嗰個重複 h1）。
 - **#368 平台文案** 仍然等 Yau sign-off（open PR）。
 
 ---
