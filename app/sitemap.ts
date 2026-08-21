@@ -68,6 +68,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.9,
     },
+    // 平台內容頁（WoWlix 自己版本，both locale）—— 呢啲 host 上一定係 WoWlix
+    // 內容（唔會 leak default 店），可以放心 index。about/faq 冇內部連結，
+    // 唔入 sitemap 就淨靠 footer discover。
+    ...["about", "faq", "contact"].flatMap((p) => [
+      {
+        url: `${baseUrl}/en/${p}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      },
+      {
+        url: `${baseUrl}/zh-HK/${p}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      },
+    ]),
   ];
 
   // Fetch active tenants for tenant-specific sitemaps

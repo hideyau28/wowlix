@@ -28,6 +28,29 @@ export function biolinkUrl(slug: string): string {
 }
 
 /**
+ * 平台頁嘅 per-locale self-canonical + hreflang cluster（landing/pricing 一路
+ * 用嘅同一套，#363 定咗）。about/faq/contact 平台版都要，唔可以淨得個 title
+ * 對，冇 canonical 就會俾 utm / 跨 locale 變體當 duplicate index。
+ * ⚠️ 只喺 platform mode 用 —— 租戶店唔可以攞呢個（會 canonical 去平台 URL）。
+ */
+export function platformAlternates(locale: string, path: string) {
+  // ⚠️ normalize 要同「頁面實際 render 邊種語言」一致：about/faq/contact 係
+  // dynamic route（冇 dynamicParams 鎖），/fr/about 呢類垃圾 locale 真係
+  // render 到 200，而佢哋內部係 `isZh = locale === "zh-HK"` → 非 zh-HK 一律
+  // 出英文。所以 fallback 要係 en，唔係 zh-HK，否則英文內容會 canonical 去
+  // 中文版（跨語言 canonical，Google 會照吞但當 signal 衝突）。
+  const l = locale === "zh-HK" ? "zh-HK" : "en";
+  return {
+    canonical: platformUrl(l, path),
+    languages: {
+      en: platformUrl("en", path),
+      "zh-HK": platformUrl("zh-HK", path),
+      "x-default": platformUrl("zh-HK", path),
+    },
+  };
+}
+
+/**
  * 商戶「攞出去用」嗰條店連結 —— copy-to-clipboard、WhatsApp 追單、
  * IG bio、QR。**呢個係人真係會撳嘅 URL，唔准出 redirect 或者死 host。**
  *

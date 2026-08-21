@@ -4,6 +4,8 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
+import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
+import { platformFaq } from "@/lib/platform-content";
 import { serializeJsonLd } from "@/lib/escape";
 
 export async function generateMetadata({
@@ -12,8 +14,11 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const storeName = await getStoreName();
   const isZh = locale === "zh-HK";
+  // 平台 host 唔好用 default 店個名（會出「FAQ - B」）—— 用 WoWlix。
+  const platform = await isPlatformMode();
+  const storeName = platform ? "WoWlix" : await getStoreName();
+  const alt = platform ? platformAlternates(locale, "/faq") : null;
   const title = isZh ? `常見問題 - ${storeName}` : `FAQ - ${storeName}`;
   const description = isZh
     ? `${storeName} 常見問題`
@@ -22,12 +27,17 @@ export async function generateMetadata({
   return {
     title,
     description,
+    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
       siteName: storeName,
       type: "website",
       locale: locale === "zh-HK" ? "zh_HK" : "en_US",
+      // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
+      // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
+      // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
+      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -43,15 +53,24 @@ export default async function FAQPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const storeName = await getStoreName();
-  const tenant = await getTenantInfo();
-  const faqs = getFAQContent(tenant.slug);
   const isZh = locale === "zh-HK";
 
   // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
-  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
-  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
+  //
+  // ⚠️ 呢個 `await import()` **唔會**幫到 font preload —— #391 實測推翻咗舊講法：
+  // Next 16 / turbopack 個 per-page font manifest 連 dynamic import() 都照計，
+  // 一入條 route 個 graph 就照 preload。唯一斷得開嘅界線係 route 邊界
+  //（見 components/marketing/fonts.ts）。呢五頁法律頁而家仍然食 396.1 KB，
+  // 要開 platform-only route 先斷到 —— 呢個 PR 埋咗身之後先做。
+  // lazy import 留返係因為佢起碼慳返 JS chunk，唔係因為佢慳到字體。
   const platform = await isPlatformMode();
+  // 平台 host：出 WoWlix 自己嘅雙語 FAQ + 用 WoWlix 做名；租戶店維持原狀
+  //（同一段 JSX，淨係換 data source，JSON-LD 都跟住出平台 Q&A）。
+  // ⚠️ getTenantInfo / getStoreName 只喺租戶 path 先 call（平台頁唔使查 DB）。
+  const storeName = platform ? "WoWlix" : await getStoreName();
+  const faqs = platform
+    ? platformFaq[isZh ? "zh" : "en"]
+    : getFAQContent((await getTenantInfo()).slug);
   const MarketingLegalShell = platform
     ? (await import("@/components/marketing/MarketingLegalShell")).default
     : null;
@@ -89,7 +108,10 @@ export default async function FAQPage({
       <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
         {isZh
           ? `以下係關於 ${storeName} 嘅常見問題。`
-          : `Common questions about shopping with ${storeName}.`}
+          : platform
+            ? // WoWlix 係開店工具，唔係俾人買嘢嘅店 —— 唔可以寫 shopping with
+              `Common questions about ${storeName}.`
+            : `Common questions about shopping with ${storeName}.`}
       </p>
 
       <div className="space-y-6">
