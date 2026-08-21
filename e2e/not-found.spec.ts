@@ -81,10 +81,40 @@ test("tenant deep 404 renders inside a real store", async ({
   ]);
   // 注意：/en/<亂嘢> 會俾 middleware 當成 slug（變咗 store-not-found 個 case），
   // 所以 deep 404 要行 reserved path（product/*）先真係落到租戶店內。
-  // notFound() 喺 streaming（loading.tsx）之下 HTTP status 係 200 —
-  // 呢度驗 UI，唔驗 status。
-  await page.goto(`${APP}/en/product/e2e-missing-product-id`);
+  const res = await page.goto(`${APP}/en/product/e2e-missing-product-id`);
+  // 未知商品一定要係真 404。舊 code 回 200（(customer)/loading.tsx 個 <Suspense>
+  // 坐喺 notFound() 之上 → shell flush 咗先掟 → status 鎖死喺 200），Google
+  // 就當佢係正常商品頁 index 落去。
+  expect(
+    res?.status(),
+    "未知商品要回真 404，唔准 soft 200 俾 Google index",
+  ).toBe(404);
   await expect(
     page.locator(".font-wlx-display", { hasText: "404" }),
   ).toBeVisible();
+});
+
+test("未知分類 slug 一樣要真 404", async ({ page, context }) => {
+  const tenant = loadSharedTenant();
+  await context.addCookies([
+    { name: "__dev_tenant", value: tenant.slug, domain: "localhost", path: "/" },
+  ]);
+  const res = await page.goto(`${APP}/en/categories/e2e-no-such-category`);
+  expect(
+    res?.status(),
+    "未知分類要回真 404（同商品頁同一個 Suspense 坑）",
+  ).toBe(404);
+});
+
+test("租戶認唔到嘅商品頁回 404，唔係 500", async ({ request }) => {
+  // 刪走 (customer)/loading.tsx 之後，本來俾 <Suspense> 食咗嘅
+  // getServerTenantId() throw 會浮返上嚟。「呢間店唔存在」係 404 唔係 server
+  // 死咗 —— 呢條斷言守住個回歸位。
+  const res = await request.get(
+    `${APP}/en/product/whatever?tenant=e2e-tenant-that-never-existed-xyz`,
+  );
+  expect(
+    res.status(),
+    "租戶唔存在應該 404，唔准 500",
+  ).toBe(404);
 });

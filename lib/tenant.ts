@@ -149,18 +149,29 @@ export async function isPlatformMode(): Promise<boolean> {
  * 嘅形狀。keyed by slug 之後，就算 cache scope 有咩意外，租戶 A 都攞唔到
  * 租戶 B 個 id —— key 對唔上。同 lib/biolink-data.ts 個 loadBioLinkData 一致。
  */
-const loadActiveTenantIdBySlug = cache(async (slug: string): Promise<string> => {
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, status: true },
-  });
+const loadActiveTenantIdBySlug = cache(
+  async (slug: string): Promise<string | null> => {
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true, status: true },
+    });
 
-  if (!tenant || tenant.status !== "active") {
-    throw new Error("Tenant not found or inactive");
-  }
+    // ⚠️ 「查到但唔 active／查唔到」= null。DB 撲街（timeout / pool 爆）由
+    // findUnique 自己掟上去 —— **唔准**喺呢度 catch 成 null，唔想 DB 死扮成
+    // 「間店唔存在」呃走 monitoring 同 Google。
+    if (!tenant || tenant.status !== "active") {
+      return null;
+    }
 
-  return tenant.id;
-});
+    return tenant.id;
+  },
+);
+
+async function resolveTenantSlugFromHeaders(): Promise<string> {
+  const { headers } = await import("next/headers");
+  const headersList = await headers();
+  return headersList.get("x-tenant-slug") || DEFAULT_SLUG;
+}
 
 /**
  * Get tenantId inside Next.js Server Components / Server Actions.
@@ -170,11 +181,30 @@ const loadActiveTenantIdBySlug = cache(async (slug: string): Promise<string> => 
  * generateMetadata、getStoreName、getTenantInfo…），以前每次都真係打一轉 DB。
  */
 export async function getServerTenantId(): Promise<string> {
-  const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const slug = headersList.get("x-tenant-slug") || DEFAULT_SLUG;
+  const tenantId = await loadActiveTenantIdBySlug(
+    await resolveTenantSlugFromHeaders(),
+  );
 
-  return loadActiveTenantIdBySlug(slug);
+  if (tenantId === null) {
+    throw new Error("Tenant not found or inactive");
+  }
+
+  return tenantId;
+}
+
+/**
+ * 同 getServerTenantId() 一樣，但「租戶唔存在／停用」return null 而唔係 throw。
+ *
+ * 點解要多一個：`(customer)/loading.tsx` 個 <Suspense> 刪走之後（soft-404
+ * 根因），page 掟出嚟嘅 error 唔再有人食走，會變成真 500。但 stale
+ * `__dev_tenant` cookie／`?tenant=` 打錯／店停用 =「呢間店唔存在」，係 404
+ * 唔係 server 死咗。caller 攞到 null 自己決定出 `notFound()` 定
+ * `<StoreNotFoundScreen />`。
+ *
+ * 同一個 cache()d loader，所以同 getServerTenantId() 撈埋用都係一 query。
+ */
+export async function getServerTenantIdOrNull(): Promise<string | null> {
+  return loadActiveTenantIdBySlug(await resolveTenantSlugFromHeaders());
 }
 
 /**

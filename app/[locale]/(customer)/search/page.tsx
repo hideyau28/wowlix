@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
-import { getServerTenantId } from "@/lib/tenant";
+import { getServerTenantIdOrNull } from "@/lib/tenant";
+import StoreNotFoundScreen from "@/components/StoreNotFoundScreen";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
 
@@ -34,7 +35,14 @@ export default async function SearchPage({
   const l = locale as Locale;
   const query = q?.trim() || "";
 
-  const tenantId = await getServerTenantId();
+  // 租戶認唔到（`?tenant=` 打錯、stale `__dev_tenant` cookie、店停用）。
+  // (customer)/loading.tsx 個 <Suspense> 刪走之後，本來俾佢食走嘅 throw 會變
+  // 真 500 —— 出返同首頁一模一樣嘅「呢間店唔存在」畫面（同一個 component）。
+  // ⚠️ 用 getServerTenantIdOrNull() 而唔係 try/catch：DB 撲街照掟上去出真 500。
+  const tenantId = await getServerTenantIdOrNull();
+  if (!tenantId) {
+    return <StoreNotFoundScreen />;
+  }
 
   // Build base filter
   const where: any = { active: true, hidden: false, tenantId, deletedAt: null };

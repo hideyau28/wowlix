@@ -4,6 +4,34 @@
 
 ---
 
+## 🚩 2026-08-21 — (customer) soft-404 修好咗（PR 待出）
+
+**未知／已刪商品同分類由 200 變真 404。** 根因就係 2026-07-25 查實嗰個（見下面 ②）：`loading.tsx` 編譯出嚟係 `<Suspense>`，坐喺 `notFound()` 之上 → shell flush 咗先掟 → status 鎖死 200 → Google 當死 URL 係正常頁 index。
+
+**點拆**（判斷準則：**呢頁會唔會 `notFound()`？**）
+
+| route | loading.tsx | 租戶認唔到 |
+|---|---|---|
+| `product/[id]` · `categories/[slug]` | ❌ 冇（刪走） | **真 404** |
+| `(home)`（新 route group，URL 冇變） · `search` · `collections` | ✅ 各自一個 | `<StoreNotFoundScreen />`（200，同 #391 一致） |
+| `products` | ✅ 原本就有（唔會 notFound()） | — |
+
+- group 級 `(customer)/loading.tsx` **刪咗** —— 佢一個人罩住成 21 頁，係整死 `notFound()` 嗰個。個 spinner 抽咗做 `components/RouteSpinner.tsx`，邊頁要就邊頁自己擺。
+- 首頁靠新 `(customer)/(home)/` route group 保住 skeleton —— route group 唔改 URL（`/[locale]` 照舊，build manifest 驗過），但個 Suspense 只罩住首頁。
+- 商品頁「相關商品」搬咗落 `notFound()` **之下**嘅 explicit `<Suspense>`（`RelatedProducts` async component + `RelatedProductsSkeleton`）。**Suspense 喺 throw 之下係安全嘅，之上先會出事。**
+- **新 `getServerTenantIdOrNull()`**（`lib/tenant.ts`）—— 刪走個 boundary 之後，本來俾佢食走嘅 `getServerTenantId()` throw 會變真 500。⚠️ 特登**唔用** `.catch(() => null)`：只有「查到但唔 active／查唔到」先 null，**DB timeout / pool 爆照掟上去出真 500**，唔想 DB 死扮成 404 呃走 monitoring 同 Google。
+
+**新 build guard `scripts/assert-no-loading-above-notfound.mjs`**（落咗 prebuild）—— 公開 route 再有 `loading.tsx` 坐喺會 `notFound()` 嘅 page 之上就 build 紅。呢個 class 燒咗成三個 session（先誤判做 root layout 早 stream，四招 fix 全部無效）。正反兩面都驗過。`(admin)` 特登豁免：auth 後面兼 noindex，soft-404 淨係影響畫面，唔餵 Google 死 URL；`admin/orders/[id]` 而家就係咁。
+
+**驗證**：`ci:build` 綠（`/[locale]` 仍然 `ƒ`、landing/pricing 仍然 prerender = 冇倒退 #353）· e2e **146 passed**（2 條 a11y 中途紅 —— `platform FAQ dark-OS`（HANDOFF 已知 flake）同 `admin login`（dev server `_clientMiddlewareManifest.js` MIME race），**單獨重跑 7/7 全綠**）· **RED proof**：三條新／收緊嘅斷言喺舊 code 全部 `Received: 200`（3 failed / 6 passed），修完 9/9。
+
+### 仲欠（呢個 PR 冇做）
+
+- **首頁 / search / collections 租戶認唔到仍然係 200** —— 出「呢間店唔存在」畫面而唔係 404（#391 訂落嘅形態，要保住 skeleton）。停用店嘅 custom domain 首頁理論上仍然係一個可以俾 index 嘅 soft-404。要真 404 就要將首頁嘅 tenant check 提到 explicit `<Suspense>` 之上（page 拆做 page + body component），獨立處理。
+- **真 404 個 body 冇品牌**（`__next_error__` 光板，hydrate 之後先出品牌）—— Next 16.2.4 嘅 404 shell 寫死，唔係呢個 PR 整出嚟，全站現有 404 一樣係咁。
+
+---
+
 ## 🚩 2026-08-20 — 租戶店首頁減 145.6 KB 字體（#391）
 
 `(customer)/page.tsx` 一直 preload 緊 marketing 嘅 Fraunces（normal + italic），即係每個租戶店客人入首頁都白落 **145.6 KB** 完全用唔著嘅字體。
@@ -162,7 +190,7 @@ storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、Store
 
 **另外兩條新掃到、未郁**：`POST /api/orders` 收 `paymentProof` 完全唔驗兼冇 auth（`route.ts:282-285`→`:677`，`(customer)` checkout 真正行嗰條）；`/api/upload` 零認證（任何人可以灌爆你個 Cloudinary）。仲有 `lib/email.ts` `renderReceiptHtml` **stored XSS**（`customerName`/`phone`/`email` 零 escape 插入 HTML 再用 `text/html` 喺自己 origin 送）—— 而家俾 `/tmp` 問題遮住，但如果將來改做 on-demand render 就會即刻解封，**escape 一定要喺嗰個改動之前或者同時落**。
 
-### ② ✅ soft-404 根因查實咗（3 個獨立調查 + 對照實驗，高信心）—— 但 fix 未落
+### ② ✅ soft-404 根因查實咗（3 個獨立調查 + 對照實驗，高信心）—— **fix 已落，見最頂 2026-08-21**
 
 **舊寫喺下面嗰個「shell 早 stream」假設係錯嘅，已推翻。** 對照組：`app/[locale]/[slug]/product/[id]` 同樣深度、同樣 `force-dynamic`、同一個 root layout —— 佢回**真 404**。
 
@@ -283,7 +311,7 @@ storefront query：**一次 render 13 條 → 8 條**（Tenant ×5→×3、Store
 1. **platform 內容頁文案（文案＋法律）** —— about/faq/terms/privacy/contact 五頁喺平台 host 上 title 全部「- B」+ body 係 maysshop 波鞋店文案（Phase D 上咗 marketing 殼，但內容仲係 default 店嘅）。⚠️ 唔好自己作 WoWlix 嘅 About/Terms/Privacy（法律敏感）。要 Yau：出 platform copy（然後 wire 一個 platform branch），**或者**話 redirect/隱藏佢哋（同 shipping/returns 一樣喺 middleware 做）。
 2. **`brandColor` schema default 仲係橙 `#FF9500`（DB migration）** —— `prisma/schema.prisma:325`。register 已寫 null，實際好少中，低優先。改 default = migration = 停低問。
 3. **(a) subdomain 復活（infra）** —— 要先搬 Namecheap email forwarding 先郁得 NS，見 2026-07-23 後半 section。
-4. **(customer) soft-404（chip `task_56cbe3eb`）** —— 根因 2026-07-25 已查實（`loading.tsx` = Suspense boundary，唔係 root layout stream），**見最頂 ②**。fix 未落，因為粗暴刪 `loading.tsx` 會令租戶店冇晒 skeleton。
+4. ~~**(customer) soft-404（chip `task_56cbe3eb`）**~~ —— ✅ **2026-08-21 修好咗，見最頂嗰段**。冇粗暴刪 `loading.tsx`：逐頁按「會唔會 notFound()」拆，skeleton 全部保住。
 
 ---
 
