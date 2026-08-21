@@ -173,9 +173,13 @@ export default function OrderConfirmation({
 
     try {
       // 1. Upload file to /api/upload
+      // 憑證 = order id + 落單電話（同下面 attach 一致）；server 驗過先接受上載，
+      // folder 綁返嗰張單自己個 tenantId。唔再由 client 指定 folder。
       const formData = new FormData();
       formData.append("file", proofFile);
-      formData.append("folder", "payments");
+      formData.append("intent", "payment-proof");
+      formData.append("orderId", order.orderId);
+      formData.append("phone", order.customer?.phone || "");
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -189,12 +193,18 @@ export default function OrderConfirmation({
       const url = uploadJson.data.url as string;
 
       // 2. Attach proof to order
+      // 帶埋落單嗰個電話 —— server 靠佢認人（order id 唔算憑證，見
+      // api/biolink/orders/[id]/payment-proof/route.ts）。CheckoutPage 落單前
+      // 一定驗過 8 位數字先送得出，所以呢度實有值。
       const proofRes = await fetch(
         `/api/biolink/orders/${order.orderId}/payment-proof`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentProof: url }),
+          body: JSON.stringify({
+            paymentProof: url,
+            phone: order.customer?.phone,
+          }),
         },
       );
       const proofJson = await proofRes.json();

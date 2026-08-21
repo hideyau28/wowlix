@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
-import { getServerTenantId } from "@/lib/tenant";
+import { getServerTenantIdOrNull } from "@/lib/tenant";
+import StoreNotFoundScreen from "@/components/StoreNotFoundScreen";
 import { getStoreName } from "@/lib/get-store-name";
 import { CollectionsClient } from "./collections-client";
 import { Metadata } from "next";
@@ -30,7 +31,12 @@ export default async function CollectionsPage({ params }: { params: Promise<{ lo
   const l = locale as Locale;
 
   // Fetch active products for this tenant (client will filter by wishlist IDs)
-  const tenantId = await getServerTenantId();
+  // 同 search 一樣：租戶認唔到係「呢間店唔存在」，唔係 server 死咗。
+  // 見 lib/tenant.ts getServerTenantIdOrNull() 註解。
+  const tenantId = await getServerTenantIdOrNull();
+  if (!tenantId) {
+    return <StoreNotFoundScreen />;
+  }
   const products = await prisma.product.findMany({
     where: { active: true, hidden: false, tenantId, deletedAt: null },
     orderBy: { createdAt: "desc" },

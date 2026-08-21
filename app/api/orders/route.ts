@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import crypto from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
+import { isUniqueConstraintError } from "@/lib/api/prisma-errors";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { saveReceiptHtml } from "@/lib/email";
@@ -17,6 +18,28 @@ const ROUTE = "/api/orders";
 const DEFAULT_SHIPPING_FEE = 40;
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 600;
 const OUTLYING_ISLANDS_SURCHARGE = 20;
+// 同 app/[locale]/(customer)/checkout/page.tsx 個 DEFAULT_SF_LOCKER_* 對齊 ——
+// 兩邊 default 一 drift，未夠免運門檻嘅順豐櫃單就會重算唔對數兼 400。
+const DEFAULT_SF_LOCKER_FEE = 35;
+const DEFAULT_SF_LOCKER_FREE_ABOVE = 600;
+
+/**
+ * HK checkout 呢兩個送貨方式嘅價由 StoreSettings 話事（client 都係讀嗰度），
+ * 唔可以行 tenant.deliveryOptions —— 兩個來源唔同就會重算唔對數。
+ */
+const STORE_SETTINGS_DELIVERY_METHODS = new Set(["sf-locker", "home-delivery"]);
+
+/**
+ * 離島判斷唔可以齋 match 中文 —— client 個 district 係跟 locale 出嘅
+ * （checkout/page.tsx DISTRICTS_ZH / DISTRICTS_EN）。英文版客人揀「離島」
+ * 會送 "Outlying Islands"，server 只認 "離島" 就會少收 $20 附加費，
+ * client 60 / server 40 一樣撞 400。
+ */
+const OUTLYING_ISLANDS_LABELS = new Set(["離島", "Outlying Islands"]);
+
+function isOutlyingIslandsRegion(region?: string): boolean {
+  return !!region && OUTLYING_ISLANDS_LABELS.has(region.trim());
+}
 
 // Order number: WX + YYMMDD + - + 6-char alphanumeric nanoid
 const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
@@ -301,7 +324,7 @@ type RepricedOrder = {
 
 // Calculate shipping fee using hardcoded defaults (legacy fallback for maysshop)
 function calculateShippingFeeLegacy(subtotal: number, region?: string): number {
-  const isOutlyingIslands = region === "離島";
+  const isOutlyingIslands = isOutlyingIslandsRegion(region);
   const qualifiesForFreeShipping = subtotal >= DEFAULT_FREE_SHIPPING_THRESHOLD;
   const baseShipping = qualifiesForFreeShipping ? 0 : DEFAULT_SHIPPING_FEE;
   const islandSurcharge = isOutlyingIslands ? OUTLYING_ISLANDS_SURCHARGE : 0;
@@ -321,7 +344,11 @@ async function resolveDeliveryFee(
     select: { deliveryOptions: true, freeShippingThreshold: true },
   });
 
-  if (deliveryMethod && tenant?.deliveryOptions) {
+  if (
+    deliveryMethod &&
+    !STORE_SETTINGS_DELIVERY_METHODS.has(deliveryMethod) &&
+    tenant?.deliveryOptions
+  ) {
     const options = tenant.deliveryOptions as DeliveryOption[];
     const matched = options.find((o) => o.id === deliveryMethod && o.enabled);
     if (matched) {
@@ -345,10 +372,21 @@ async function resolveDeliveryFee(
       homeDeliveryFee: true,
       homeDeliveryFreeAbove: true,
       homeDeliveryIslandExtra: true,
+      sfLockerFee: true,
+      sfLockerFreeAbove: true,
     },
   });
 
   if (ss) {
+    // 順豐智能櫃自己一套價（schema 有 sfLockerFee/sfLockerFreeAbove，client 一直
+    // 讀緊，server 以前完全冇睇 → 一律當上門收 homeDeliveryFee）。冇離島附加費：
+    // 櫃就係櫃，client 嗰邊都冇加（checkout/page.tsx calculatedSfFee）。
+    if (deliveryMethod === "sf-locker") {
+      const fee = ss.sfLockerFee ?? DEFAULT_SF_LOCKER_FEE;
+      const freeAbove = ss.sfLockerFreeAbove ?? DEFAULT_SF_LOCKER_FREE_ABOVE;
+      return subtotal >= freeAbove ? 0 : fee;
+    }
+
     const baseFee =
       ss.homeDeliveryFee ?? ss.shippingFee ?? DEFAULT_SHIPPING_FEE;
     const freeAbove =
@@ -357,12 +395,17 @@ async function resolveDeliveryFee(
       DEFAULT_FREE_SHIPPING_THRESHOLD;
     const islandExtra =
       ss.homeDeliveryIslandExtra ?? OUTLYING_ISLANDS_SURCHARGE;
-    const isOutlyingIslands = region === "離島";
     const free = subtotal >= freeAbove;
-    return (free ? 0 : baseFee) + (isOutlyingIslands ? islandExtra : 0);
+    return (
+      (free ? 0 : baseFee) + (isOutlyingIslandsRegion(region) ? islandExtra : 0)
+    );
   }
 
   // 3. Final fallback: legacy hardcoded constants (keeps maysshop unaffected)
+  // 冇 StoreSettings row 嘅店，順豐櫃一樣要行櫃嘅 default，唔可以跌落上門價。
+  if (deliveryMethod === "sf-locker") {
+    return subtotal >= DEFAULT_SF_LOCKER_FREE_ABOVE ? 0 : DEFAULT_SF_LOCKER_FEE;
+  }
   return calculateShippingFeeLegacy(subtotal, region);
 }
 
@@ -381,7 +424,20 @@ async function repriceOrder(
       hidden: false,
       deletedAt: null,
     },
-    select: { id: true, title: true, price: true, active: true },
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      active: true,
+      // 逐個 size / 款自己個價。以前呢個 select 冇攞 variants，unitPrice 齋用
+      // product.price —— 商戶標 $200 嘅碼，客人 client 顯示 $200（
+      // ProductDetailClient.tsx:79 displayPrice）但 server 重算 $128 →
+      // "subtotal mismatch (repriced)" 400，張單根本落唔到。
+      variants: {
+        where: { active: true },
+        select: { id: true, price: true },
+      },
+    },
   });
 
   const productMap = new Map(products.map((product) => [product.id, product]));
@@ -398,7 +454,13 @@ async function repriceOrder(
     if (product.active === false) {
       throw new ApiError(400, "BAD_REQUEST", "Product not available");
     }
-    const unitPrice = product.price;
+    // variant 冇自己個價（price null）就跌返 base price —— legacy variant 完全唔變。
+    // 認唔到嘅 variantId 一樣跌返 base：唔喺度做存在性 oracle，落單 transaction
+    // 個 updateMany(tenantId + productId) guard 會攔住（見 #375）。
+    const variant = item.variantId
+      ? product.variants.find((v) => v.id === item.variantId)
+      : undefined;
+    const unitPrice = variant?.price ?? product.price;
     const lineTotal = unitPrice * item.quantity;
     subtotal += lineTotal;
     return {
@@ -622,14 +684,42 @@ export const POST = withApi(async (req) => {
 
   const appliedCouponCode = (repriced.amounts as any)?.couponCode;
 
+  // 每件貨標明「扣邊度嘅貨」，跟住連 marker 一齊存落 Order.items —— 之後取消
+  // 張單要還返邊度，讀返個 marker 就得，唔使靠估（見 lib/orders/restock.ts）。
+  // 下面個扣庫存 loop 亦都係 branch 呢個 marker，兩邊唔會 drift。
+  const stockedItems = repriced.items.map((item) =>
+    item.variantId
+      ? { ...item, variantId: item.variantId, stockSource: "variant" as const }
+      : { ...item, stockSource: "product" as const },
+  );
+
+  // `$transaction` 經 `prisma as any` 出嚟係 any（driver adapter 令 overload
+  // 唔 resolve 到）—— 明寫個 union，落面 `outcome.replayed` 先至真係窄到，
+  // 唔會打錯字都靜靜雞過。
+  type CreateOutcome =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | { replayed: false; order: any }
+    | { replayed: true; response: Prisma.JsonValue };
+
   // Atomic transaction: stock deduction + order creation + coupon usage
+  //                     + idempotency 記錄（見 tx 尾嗰段註）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const order = await (prisma as any).$transaction(async (tx: any) => {
-    // Stock deduction — updateMany with gte guard prevents race conditions
-    for (const item of repriced.items) {
-      if (item.variantId) {
+  const outcome: CreateOutcome = await (prisma as any).$transaction(async (tx: any) => {
+    // Stock deduction — updateMany with gte guard prevents race conditions.
+    // ⚠️ 租戶隔離：variant 扣庫存嘅 where 一定要同時鎖 tenantId + productId ——
+    // repricing 只驗 productId 屬本店，唔 scope variantId 嘅話，攻擊者可用本店
+    // 真 productId 夾帶人哋店（或本店另一件貨）嘅 variantId 跨租戶／跨產品扣庫存。
+    // 加咗之後：mismatch → count===0 → 統一 400（同「庫存不足」同一句，唔做
+    // 存在性 oracle），原子 guard 一步過驗 ownership + stock，冇 TOCTOU。
+    for (const item of stockedItems) {
+      if (item.stockSource === "variant") {
         const result = await tx.productVariant.updateMany({
-          where: { id: item.variantId, stock: { gte: item.quantity } },
+          where: {
+            id: item.variantId,
+            tenantId,
+            productId: item.productId,
+            stock: { gte: item.quantity },
+          },
           data: { stock: { decrement: item.quantity } },
         });
         if (result.count === 0) {
@@ -641,7 +731,7 @@ export const POST = withApi(async (req) => {
         }
       } else {
         const result = await tx.product.updateMany({
-          where: { id: item.productId, stock: { gte: item.quantity } },
+          where: { id: item.productId, tenantId, stock: { gte: item.quantity } },
           data: { stock: { decrement: item.quantity } },
         });
         if (result.count === 0) {
@@ -663,7 +753,7 @@ export const POST = withApi(async (req) => {
         phone: payload.phone,
         email: payload.email ?? null,
         userId: payload.userId ?? null,
-        items: repriced.items,
+        items: stockedItems,
         amounts: repriced.amounts,
         fulfillmentType:
           payload.fulfillment.type === "pickup" ? "PICKUP" : "DELIVERY",
@@ -699,8 +789,56 @@ export const POST = withApi(async (req) => {
       }
     }
 
+    // Idempotency 記錄同張單喺同一個 tx。以前佢喺 tx **外面**：同一條 key 兩個
+    // request 同時入嚟，兩邊都過得上面個 findFirst（嗰陣仲未有 row），兩邊都扣
+    // 一次庫存、開一張單，輸嗰個先至喺最後食 P2002 掟 500 —— 客人見到出錯，
+    // 實際上兩張單兩份貨都已經落咗。而家輸嗰個成個 tx（連扣庫存連張單）
+    // rollback，落面 catch 回讀贏家嗰份 responseJson 交返同一個答案。
+    await tx.idempotencyKey.create({
+      data: {
+        tenantId,
+        key: idemKey,
+        route: ROUTE,
+        method: "POST",
+        requestHash,
+        status: 200,
+        responseJson: created,
+      },
+    });
+
     return created;
-  });
+  }).then(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (created: any) => ({ replayed: false as const, order: created }),
+    async (error: unknown) => {
+      if (!isUniqueConstraintError(error)) throw error;
+
+      // P2002 可以嚟自第二個 unique（例如 orderNumber 撞）—— 搵唔返同 key 嘅
+      // 記錄就唔好扮 idempotent replay，照掟返上去。
+      const winner = await prisma.idempotencyKey.findFirst({
+        where: { key: idemKey, route: ROUTE, method: "POST", tenantId },
+      });
+      if (!winner) throw error;
+
+      if (winner.requestHash !== requestHash) {
+        throw new ApiError(
+          409,
+          "CONFLICT",
+          "Idempotency key already used with different payload",
+        );
+      }
+
+      return { replayed: true as const, response: winner.responseJson };
+    },
+  );
+
+  // Replay：張單同收據／email 都係贏嗰個 request 做晒，落面嗰啲 side effect
+  // 唔可以再行一次。
+  if (outcome.replayed) {
+    return ok(req, outcome.response);
+  }
+
+  const order = outcome.order;
 
   await saveReceiptHtml({
     id: order.id,
@@ -740,18 +878,6 @@ export const POST = withApi(async (req) => {
       console.error("[order email] send failed:", error);
     });
   }
-
-  await prisma.idempotencyKey.create({
-    data: {
-      tenantId,
-      key: idemKey,
-      route: ROUTE,
-      method: "POST",
-      requestHash,
-      status: 200,
-      responseJson: order as any,
-    },
-  });
 
   return ok(req, order);
 });

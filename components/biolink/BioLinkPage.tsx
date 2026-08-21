@@ -94,6 +94,18 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
     // 商品獨立頁 share link 落地即開 sheet（SSR 都 render 埋，crawler 見到內容）
     () => products.find((p) => p.id === initialProductId) ?? null,
   );
+  // 商品深連（`/{locale}/{slug}/product/{id}`）落地：呢一頁講緊件貨，唔係
+  // 間店 —— 商品標題升做 <h1>，店名降做 <h2>。
+  //
+  // ⚠️ 兩個條件都要：
+  //  • `initialProductId` —— 喺店頁自己撳開個 sheet URL 冇變（仲係間店嗰版），
+  //    嗰陣 h1 要留返俾店名。淨係深連落地先算「呢頁講緊件貨」。
+  //  • `sheetProduct` —— 客人閂咗個 sheet 之後仲喺同一版度，h1 要返返去店名，
+  //    唔可以變成成頁冇 h1。
+  // （sheet 入面撳去第二件貨都照計 —— 條 URL 講緊「呢版係商品頁」，
+  //   邊件貨都好過將 h1 讓返俾店名。）
+  const productIsPageHeading = Boolean(initialProductId) && sheetProduct !== null;
+
   const [lightbox, setLightbox] = useState<{
     images: string[];
     startIndex: number;
@@ -164,15 +176,22 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
   const handleAddToCart = useCallback(
     (product: ProductForBioLink, variant: string | null, qty: number = 1) => {
       let variantId: string | undefined;
+      // 揀咗嘅款自己個價要跟得住 —— 以前齋用 product.price，商戶標 $200 嘅碼
+      // 客人由頭到尾見到同埋只係俾 $128。server 而家會用 variant price 重算，
+      // 呢度唔跟就會變成 total mismatch 400。price null = 冇獨立價，跌返 base。
+      let unitPrice = product.price;
       if (variant && product.variants) {
         const match = product.variants.find((v) => v.name === variant);
-        if (match) variantId = match.id;
+        if (match) {
+          variantId = match.id;
+          unitPrice = match.price ?? product.price;
+        }
       }
 
       const item: BioCartItem = {
         productId: product.id,
         name: product.title,
-        price: product.price,
+        price: unitPrice,
         image: product.imageUrl,
         variant: variant || undefined,
         variantLabel: variant ? variant.replace(/\|/g, " · ") : undefined,
@@ -285,11 +304,11 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
         )}
 
         {isStudio ? (
-          <StudioHero tenant={tenant} />
+          <StudioHero tenant={tenant} demoteHeading={productIsPageHeading} />
         ) : (
           <>
             <CoverPhoto url={tenant.coverPhoto} />
-            <ProfileSection tenant={tenant} />
+            <ProfileSection tenant={tenant} demoteHeading={productIsPageHeading} />
 
             {/* Wishlist button */}
             <div className="flex justify-center -mt-1 mb-3">
@@ -454,6 +473,7 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
               onAddToCart={handleSheetAdd}
               wishlisted={isWishlisted(wishlist, sheetProduct.id)}
               onToggleWishlist={() => handleToggleWishlist(sheetProduct.id)}
+              titleAsPageHeading={productIsPageHeading}
             />
           ) : (
             <ProductSheet
@@ -465,6 +485,7 @@ export default function BioLinkPage({ tenant, products, initialProductId }: Prop
               onSwitchProduct={setSheetProduct}
               wishlisted={isWishlisted(wishlist, sheetProduct.id)}
               onToggleWishlist={() => handleToggleWishlist(sheetProduct.id)}
+              titleAsPageHeading={productIsPageHeading}
             />
           ))}
 

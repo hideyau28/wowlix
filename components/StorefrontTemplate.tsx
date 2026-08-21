@@ -2,7 +2,6 @@
 
 import { useMemo, useEffect, type ReactNode } from "react";
 import { getCoverTemplate } from "@/lib/cover-templates";
-import { getFontVar } from "@/lib/fonts";
 import { TemplateProvider } from "@/lib/template-context";
 
 type Props = {
@@ -18,17 +17,14 @@ export default function StorefrontTemplate({ templateId, children }: Props) {
   const tmpl = useMemo(() => getCoverTemplate(templateId), [templateId]);
 
   // Set CSS variables for template design tokens
+  //
+  // 以前呢度仲會 set --tmpl-heading-font / --tmpl-body-font，但全 repo 冇一句
+  // CSS 或者 inline style 讀過佢哋（globals.css:37-38 得個 :root default，冇
+  // rule 用）—— 寫落 documentElement 一直係 no-op。剷咗佢：template font 嘅
+  // CSS variable 已經收窄到 storefront subtree（lib/storefront-fonts.ts），
+  // 喺 <html> 度砌一句指住 subtree 先解析得到嘅 var，留低只會呃下一個人。
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--tmpl-accent", tmpl.accent);
-    root.style.setProperty(
-      "--tmpl-heading-font",
-      `${getFontVar(tmpl.headingFont)}, sans-serif`,
-    );
-    root.style.setProperty(
-      "--tmpl-body-font",
-      `${getFontVar(tmpl.bodyFont)}, sans-serif`,
-    );
+    document.documentElement.style.setProperty("--tmpl-accent", tmpl.accent);
   }, [tmpl]);
 
   return <TemplateProvider value={tmpl}>{children}</TemplateProvider>;

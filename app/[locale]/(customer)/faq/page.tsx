@@ -6,6 +6,7 @@ import { getFAQContent } from "@/lib/tenant-content";
 import { isPlatformMode } from "@/lib/tenant";
 import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
 import { platformFaq } from "@/lib/platform-content";
+import { serializeJsonLd } from "@/lib/escape";
 
 export async function generateMetadata({
   params,
@@ -81,7 +82,7 @@ export default async function FAQPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "FAQPage",
             mainEntity: faqs.map((faq) => ({

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Camera, Plus, Eye, Copy, Check, Star, Edit, GripVertical, Loader2, ChevronRight, X } from "lucide-react";
 import { compressImage, isAcceptedImageType } from "@/lib/compress-image";
@@ -20,9 +21,15 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ProductEditSheet from "./ProductEditSheet";
 import { getCoverTemplate } from "@/lib/cover-templates";
 import { storeShareUrl } from "@/lib/site-url";
+
+// ProductEditSheet ~31 KB min，只有撳「編輯／新增商品」先用到 —— 拆走佢，
+// 唔好塞落 dashboard 初次載入。
+// ⚠️ module scope declare（同 products-table 一樣理由：body 入面 declare 會
+// 每次 re-render 造新 component type，個 sheet 會斷 state）。
+const loadProductEditSheet = () => import("./ProductEditSheet");
+const ProductEditSheet = dynamic(loadProductEditSheet, { ssr: false });
 
 type Product = {
   id: string;
@@ -312,6 +319,15 @@ export default function BioLinkDashboard({ locale, tenant, products: initialProd
     handleSheetClose();
     router.refresh();
   };
+
+  // Sheet 個 chunk 一 idle 就靜靜預載 —— 唔喺 critical path，但商戶撳落去
+  // 嗰刻通常已經 cache 咗，唔會「撳咗冇反應」。
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadProductEditSheet();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const enterEditMode = () => {
     setIsEditMode(true);
@@ -679,15 +695,24 @@ export default function BioLinkDashboard({ locale, tenant, products: initialProd
         </div>
       )}
 
-      {/* Product Edit Sheet */}
-      <ProductEditSheet
-        isOpen={isSheetOpen}
-        onClose={handleSheetClose}
-        onSave={handleSheetSave}
-        product={editingProduct}
-        isNew={isNewProduct}
-        locale={locale}
-      />
+      {/* Product Edit Sheet —— 開咗先 mount。
+          呢句 `isSheetOpen &&` 就係真正慳到 bytes 嗰句：next/dynamic 係
+          component **mount** 嗰陣先去攞 chunk，唔係個 prop 由 false 轉 true
+          嗰陣。以前佢一直 render（自己內部 `if (!isOpen) return null`），
+          咁樣包 dynamic() 一樣會每次入 dashboard 都照落個 chunk。
+          ⚠️ isOpen prop 一定要照傳：ProductEditSheet:206 個 effect 係
+          `if (isOpen)` 先做 form 初始化，冇咗佢張表會係空白，save 落去
+          會用空值覆蓋真實商品。 */}
+      {isSheetOpen && (
+        <ProductEditSheet
+          isOpen={isSheetOpen}
+          onClose={handleSheetClose}
+          onSave={handleSheetSave}
+          product={editingProduct}
+          isNew={isNewProduct}
+          locale={locale}
+        />
+      )}
     </div>
   );
 }

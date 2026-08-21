@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { getAccentForeground } from "@/lib/cover-templates";
 import {
   type ProductForBioLink,
   getAllImages,
@@ -283,9 +284,10 @@ export default function BioProductCard({
             }}
             onAnimationEnd={() => setBouncing(false)}
             aria-label={`加入購物車 ${product.title}`}
-            className="absolute bottom-2 right-2 w-11 h-11 rounded-full flex items-center justify-center shadow-md text-white"
+            className="absolute bottom-2 right-2 w-11 h-11 rounded-full flex items-center justify-center shadow-md"
             style={{
               backgroundColor: tmpl.accent,
+              color: getAccentForeground(tmpl.accent),
               animation: bouncing
                 ? "addBounce 0.42s cubic-bezier(0.36,0.07,0.19,0.97) forwards"
                 : undefined,

@@ -2,6 +2,25 @@ import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/site-url";
 
+/**
+ * 每個鐘重新產生一次。
+ *
+ * 以前完全冇 revalidate —— `.next/prerender-manifest.json` 個
+ * `initialRevalidateSeconds` 係 false，即係 sitemap.xml 個 body 係 **build 果刻
+ * 凍死**嘅。新開嘅店、新加嘅商品全部唔會入到份 sitemap，除非啱啱撞正有人
+ * deploy。只有 toggleFeatured / toggleHidden / updatePrice 嗰幾個 action 因為
+ * 順手 `revalidatePath("/", "layout")` 先會 purge 到，createProduct 同租戶
+ * 註冊都唔會。
+ *
+ * 3600 秒係「新店最遲一個鐘入到索引」同「唔好每次 crawler 嚟都掃全表」之間
+ * 嘅平衡；cold miss 會打一次 DB，query 本身已經有 try/catch。
+ */
+export const revalidate = 3600;
+
+// 單次 sitemap 最多出幾多條商品 URL —— 唔封頂嘅話商品一多，
+// 呢一 request 就會掃全表兼撐爆 response（sitemap 上限係 50,000 條）。
+const MAX_PRODUCT_URLS = 20000;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // www = 真 host（apex 全路徑 307 → www；Vercel domains 兩個都掛喺 project）。
   // 全份 sitemap 統一一個 host —— 混 host 會踩 sitemap cross-host rule，
@@ -124,6 +143,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         deletedAt: null,
       },
       select: { id: true, tenantId: true },
+      orderBy: { updatedAt: "desc" },
+      take: MAX_PRODUCT_URLS,
     });
     for (const product of products) {
       const tenant = tenantById.get(product.tenantId);

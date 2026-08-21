@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  LineChart,
-  Line,
-} from "recharts";
+import { TrendLine } from "./charts/LazyCharts";
 
 type OrdersPoint = { date: string; orders: number };
 type RevenuePoint = { date: string; revenue: number };
@@ -30,14 +21,14 @@ export default function DashboardCharts({ ordersLast30, revenueLast30, topProduc
       <div className="rounded-2xl border border-wlx-mist bg-white p-6 lg:col-span-2">
         <div className="mb-4 text-sm font-semibold text-wlx-ink">瀏覽量 (過去 7 日)</div>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={pageViewsLast7}>
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-              <Tooltip />
-              <Line type="monotone" dataKey="views" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <TrendLine
+            data={pageViewsLast7}
+            xKey="date"
+            yKey="views"
+            stroke="#3b82f6"
+            dot={{ fill: "#3b82f6", r: 4 }}
+            allowDecimals={false}
+          />
         </div>
       </div>
 
@@ -64,14 +55,13 @@ export default function DashboardCharts({ ordersLast30, revenueLast30, topProduc
       <div className="rounded-2xl border border-wlx-mist bg-white p-6 lg:col-span-2">
         <div className="mb-4 text-sm font-semibold text-wlx-ink">訂單趨勢 (過去 30 日)</div>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={ordersLast30}>
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-              <Tooltip />
-              <Line type="monotone" dataKey="orders" stroke="#4b5e3c" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          <TrendLine
+            data={ordersLast30}
+            xKey="date"
+            yKey="orders"
+            stroke="#4b5e3c"
+            allowDecimals={false}
+          />
         </div>
       </div>
 
@@ -79,14 +69,12 @@ export default function DashboardCharts({ ordersLast30, revenueLast30, topProduc
       <div className="rounded-2xl border border-wlx-mist bg-white p-6 lg:col-span-1">
         <div className="mb-4 text-sm font-semibold text-wlx-ink">收入趨勢 (30 日)</div>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={revenueLast30}>
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="revenue" stroke="#4b5e3c" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          <TrendLine
+            data={revenueLast30}
+            xKey="date"
+            yKey="revenue"
+            stroke="#4b5e3c"
+          />
         </div>
       </div>
     </div>

@@ -307,6 +307,16 @@ const DIAL_CODES = [
   { code: "other", label: "其他 / Other" },
 ];
 
+/** 讀一個 File 做 base64 data URL（俾 register server-side 上載 QR）。 */
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
 function nameToSlug(name: string): string {
   return name
     .toLowerCase()
@@ -407,32 +417,36 @@ function PaymentMethodCard({
 /* ─── QR code uploader (PayMe / AlipayHK) ─── */
 function QrUploader({
   currentUrl,
-  onUploaded,
+  onSelected,
   labels,
 }: {
   currentUrl: string;
-  onUploaded: (url: string) => void;
+  onSelected: (file: File, previewUrl: string) => void;
   labels: { uploadQr: string; uploadQrHint: string; uploading: string; uploadSuccess: string; uploadError: string };
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setError("");
+    // 客人喺 onboarding 未有 tenant / 未登入，冇任何可驗證身份 —— 唔再喺呢度匿名
+    // 上載去 Cloudinary（會俾人灌爆 quota）。改為揸住個檔案 + 本地 preview，等
+    // register 成功（= registration proof）之後喺 server-side 上載。真正驗檔
+    // （magic bytes）喺 register 度做。
+    if (!file.type.startsWith("image/")) {
+      setError(labels.uploadError);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError(labels.uploadError);
+      return;
+    }
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "payments/qr");
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const json = await res.json();
-      if (json.ok && json.data?.url) {
-        onUploaded(json.data.url);
-      } else {
-        setError(json.error?.message || labels.uploadError);
-      }
+      const previewUrl = URL.createObjectURL(file);
+      onSelected(file, previewUrl);
     } catch {
       setError(labels.uploadError);
     } finally {
@@ -508,6 +522,11 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
     templateId: "mochi",
     tagline: "",
   });
+  // QR 檔案揸喺 React state（唔落 sessionStorage —— 5MB base64 會爆 quota 令成個
+  // wizard 存唔到 state）。data.paymeQrUrl / alipayQrUrl 只擺個短 objectURL 做 preview。
+  // 頁面 reload 之後 File 冇咗，QR 要重新揀（見下面 restore 會清走 stale preview）。
+  const [paymeQrFile, setPaymeQrFile] = useState<File | null>(null);
+  const [alipayQrFile, setAlipayQrFile] = useState<File | null>(null);
   const [fpsMode, setFpsMode] = useState<"whatsapp" | "phone" | "id">("whatsapp");
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [slugReason, setSlugReason] = useState("");
@@ -527,7 +546,15 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.data) setData((prev) => ({ ...prev, ...parsed.data }));
+        if (parsed.data)
+          setData((prev) => ({
+            ...prev,
+            ...parsed.data,
+            // QR preview 係 objectURL，reload 後 File 冇咗 = dead reference；清走佢，
+            // 迫用戶重新揀（validateStep4 靠 File state，唔會誤以為已上載）。
+            paymeQrUrl: "",
+            alipayQrUrl: "",
+          }));
       }
     } catch (error) {
       console.error("Failed to restore onboarding state:", error);
@@ -737,10 +764,12 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
     if (data.selectedPayments.includes("fps") && fpsMode !== "whatsapp" && !data.fpsId.trim()) {
       newErrors.fpsId = labels.required;
     }
-    if (data.selectedPayments.includes("payme") && !data.paymeQrUrl) {
+    // 綁 File state（唔綁 data.paymeQrUrl）—— register 送嘅係 File 讀出嚟嘅 data URL，
+    // 兩者一致先唔會出現「preview 有但 File 冇」嘅 desync。
+    if (data.selectedPayments.includes("payme") && !paymeQrFile) {
       newErrors.paymeQr = labels.required;
     }
-    if (data.selectedPayments.includes("alipay_hk") && !data.alipayQrUrl) {
+    if (data.selectedPayments.includes("alipay_hk") && !alipayQrFile) {
       newErrors.alipayQr = labels.required;
     }
     setErrors(newErrors);
@@ -782,6 +811,16 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
     setGlobalError("");
 
     try {
+      // 讀 QR File 做 data URL，交俾 register server-side 上載（憑證 = 完成註冊）。
+      const paymeQrData =
+        data.selectedPayments.includes("payme") && paymeQrFile
+          ? await readFileAsDataUrl(paymeQrFile)
+          : undefined;
+      const alipayQrData =
+        data.selectedPayments.includes("alipay_hk") && alipayQrFile
+          ? await readFileAsDataUrl(alipayQrFile)
+          : undefined;
+
       const res = await fetch("/api/tenant/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -797,8 +836,8 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
             ? (fpsMode === "whatsapp" ? stripDialCode(data.whatsapp.trim(), effectiveDialCode) : data.fpsId.trim())
             : undefined,
           fpsAccountName: data.selectedPayments.includes("fps") ? (data.fpsAccountName.trim() || undefined) : undefined,
-          paymeQrUrl: data.selectedPayments.includes("payme") ? data.paymeQrUrl : undefined,
-          alipayQrUrl: data.selectedPayments.includes("alipay_hk") ? data.alipayQrUrl : undefined,
+          paymeQrUrl: paymeQrData,
+          alipayQrUrl: alipayQrData,
           templateId: data.templateId,
           tagline: data.tagline.trim() || undefined,
         }),
@@ -1542,8 +1581,9 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                       <div className="mt-3 pt-3 border-t border-wlx-mist">
                         <QrUploader
                           currentUrl={data.paymeQrUrl}
-                          onUploaded={(url) => {
-                            update("paymeQrUrl", url);
+                          onSelected={(file, previewUrl) => {
+                            setPaymeQrFile(file);
+                            update("paymeQrUrl", previewUrl);
                             setErrors((prev) => { const n = { ...prev }; delete n.paymeQr; return n; });
                           }}
                           labels={labels}
@@ -1572,8 +1612,9 @@ export default function OnboardingWizard({ locale, initialGoogleEmail }: Onboard
                       <div className="mt-3 pt-3 border-t border-wlx-mist">
                         <QrUploader
                           currentUrl={data.alipayQrUrl}
-                          onUploaded={(url) => {
-                            update("alipayQrUrl", url);
+                          onSelected={(file, previewUrl) => {
+                            setAlipayQrFile(file);
+                            update("alipayQrUrl", previewUrl);
                             setErrors((prev) => { const n = { ...prev }; delete n.alipayQr; return n; });
                           }}
                           labels={labels}

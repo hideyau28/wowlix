@@ -8,6 +8,7 @@ import {
   type DeliveryOption,
 } from "@/lib/biolink-helpers";
 import { useTemplate } from "@/lib/template-context";
+import { getAccentForeground } from "@/lib/cover-templates";
 import {
   Package,
   RefreshCw,
@@ -382,12 +383,15 @@ export default function CheckoutPage({
             <div className="space-y-3">
               <div>
                 <label
+                  htmlFor="checkout-name"
                   className="text-xs mb-1 block"
                   style={{ color: tmpl.subtext }}
                 >
                   姓名 *
                 </label>
                 <input
+                  id="checkout-name"
+                  autoComplete="name"
                   type="text"
                   placeholder="陳大文"
                   value={name}
@@ -411,12 +415,15 @@ export default function CheckoutPage({
               </div>
               <div>
                 <label
+                  htmlFor="checkout-phone"
                   className="text-xs mb-1 block"
                   style={{ color: tmpl.subtext }}
                 >
                   電話 *
                 </label>
                 <input
+                  id="checkout-phone"
+                  autoComplete="tel"
                   type="tel"
                   placeholder="9XXX XXXX"
                   value={phone}
@@ -441,12 +448,15 @@ export default function CheckoutPage({
               </div>
               <div>
                 <label
+                  htmlFor="checkout-email"
                   className="text-xs mb-1 block"
                   style={{ color: tmpl.subtext }}
                 >
                   Email（可選）
                 </label>
                 <input
+                  id="checkout-email"
+                  autoComplete="email"
                   type="email"
                   placeholder="hello@example.com"
                   value={email}
@@ -552,12 +562,15 @@ export default function CheckoutPage({
               </h3>
               <div>
                 <label
+                  htmlFor="checkout-address"
                   className="text-xs mb-1 block"
                   style={{ color: tmpl.subtext }}
                 >
                   地址 *
                 </label>
                 <textarea
+                  id="checkout-address"
+                  autoComplete="street-address"
                   placeholder="例：九龍觀塘成業街 10 號 xx 大廈 5 樓 A 室"
                   value={address}
                   onChange={(e) => {
@@ -591,6 +604,10 @@ export default function CheckoutPage({
               備註（可選）
             </h3>
             <textarea
+              id="checkout-note"
+              autoComplete="off"
+              // 個「備註（可選）」係 <h3> 唔係 <label>，關聯唔到 —— 用 aria-label 補
+              aria-label="備註（可選）"
               placeholder="星期六下午方便 / 刻字內容 / 過敏資料..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -621,6 +638,9 @@ export default function CheckoutPage({
               </h3>
               <div className="flex gap-2">
                 <input
+                  id="checkout-coupon"
+                  autoComplete="off"
+                  aria-label="優惠碼"
                   type="text"
                   placeholder="輸入優惠碼"
                   value={couponCode}
@@ -978,7 +998,11 @@ export default function CheckoutPage({
 
           {/* Error message */}
           {error && (
-            <div className="mt-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="mt-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20"
+            >
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
@@ -987,9 +1011,12 @@ export default function CheckoutPage({
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="mt-6 w-full py-4 rounded-none text-white font-bold text-base active:scale-[0.98] transition-transform disabled:active:scale-100"
+            className="mt-6 w-full py-4 rounded-none font-bold text-base active:scale-[0.98] transition-transform disabled:active:scale-100"
             style={{
               backgroundColor: tmpl.accent,
+              // 硬寫 text-white 喺 noir(#FF9500) 上面得 2.20:1 —— 呢粒係
+              // 「確認落單」最後一掣，唔可以要人估。
+              color: getAccentForeground(tmpl.accent),
               opacity: submitting ? 0.5 : 1,
             }}
           >

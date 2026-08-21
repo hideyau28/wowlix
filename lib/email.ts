@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { escapeHtml } from "./escape";
 
 type ReceiptItem = {
   name?: string;
@@ -34,16 +35,19 @@ function formatMoney(amount: number | undefined, currency: string) {
 }
 
 export function renderReceiptHtml(order: ReceiptOrder) {
-  const currency = order.amounts?.currency || "HKD";
-  const createdAt = new Date(order.createdAt).toLocaleString();
+  // currency 都可能係租戶/請求嚟嘅動態值 → escape 一次；formatMoney 只再拼數字，安全。
+  const currency = escapeHtml(order.amounts?.currency || "HKD");
+  const createdAt = escapeHtml(new Date(order.createdAt).toLocaleString());
 
   const rows = order.items
     .map((item) => {
-      const name = item.name || item.title || "Item";
+      const name = escapeHtml(item.name || item.title || "Item");
       const unitPrice = typeof item.unitPrice === "number" ? item.unitPrice : Number(item.price || 0);
       const quantity = typeof item.quantity === "number" ? item.quantity : Number(item.qty || 0);
       const lineTotal = unitPrice * quantity;
-      const sizeLabel = item.size ? `${item.sizeSystem ? `${item.sizeSystem} ` : ""}${item.size}` : "—";
+      const sizeLabel = item.size
+        ? `${item.sizeSystem ? `${escapeHtml(item.sizeSystem)} ` : ""}${escapeHtml(item.size)}`
+        : "—";
       return `
         <tr>
           <td>${name}</td>
@@ -81,15 +85,15 @@ export function renderReceiptHtml(order: ReceiptOrder) {
       <div class="container">
         <div class="header">
           <h1>HK•Market Receipt</h1>
-          <div>Order ID: ${order.id}</div>
+          <div>Order ID: ${escapeHtml(order.id)}</div>
           <div>Date: ${createdAt}</div>
         </div>
 
         <div class="section">
           <h3>Customer Details</h3>
-          <div>Name: ${order.customerName}</div>
-          <div>Phone: ${order.phone}</div>
-          ${order.email ? `<div>Email: ${order.email}</div>` : ""}
+          <div>Name: ${escapeHtml(order.customerName)}</div>
+          <div>Phone: ${escapeHtml(order.phone)}</div>
+          ${order.email ? `<div>Email: ${escapeHtml(order.email)}</div>` : ""}
         </div>
 
         <div class="section">

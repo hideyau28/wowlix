@@ -4,13 +4,15 @@ import { getStoreName } from "@/lib/get-store-name";
 import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getSEOContent } from "@/lib/tenant-content";
+import { serializeJsonLd } from "@/lib/escape";
 import {
   OG_DEFAULT_IMAGE,
-  ORGANIZATION_ID,
   SITE_URL,
   biolinkUrl,
   platformUrl,
 } from "@/lib/site-url";
+import { redirect } from "next/navigation";
+import StoreNotFoundScreen from "@/components/StoreNotFoundScreen";
 import HeroCarouselCMS from "@/components/home/HeroCarouselCMS";
 import RecommendedGrid from "@/components/home/RecommendedGrid";
 import FeaturedSneakers from "@/components/home/FeaturedSneakers";
@@ -21,12 +23,15 @@ import KidsSection from "@/components/home/KidsSection";
 import { Metadata } from "next";
 import TrustBar from "@/components/TrustBar";
 
-// LandingPage 一律 lazy import：static import 會將 marketing fonts（Fraunces 等）
-// 綁入成條 (customer) route graph，租戶店白食 preload/CSS（fonts.ts 註釋記低嘅
-// 污染）。正常 platform 流量已由 middleware rewrite 去靜態 /[locale]/landing，
-// 呢度兩個 branch 只係 middleware 冇捕到嘅 fallback（unknown tenant / 邊緣 case）。
-const loadLandingPage = () =>
-  import("@/components/marketing/WowlixLandingPage").then((m) => m.default);
+// ⚠️ 呢條 route **一個 marketing module 都唔准 import**（連 `await import()` 都
+// 唔准）。以前呢度用 lazy import 攞 WowlixLandingPage，以為咁就唔會拖 marketing
+// fonts 落嚟 —— 實測 Next 16 / turbopack 個 per-page font manifest 連 dynamic
+// import 都照計，租戶店首頁一直白食 **145.6 KB** Fraunces preload（量法：
+// `.next/server/next-font-manifest.json` 逐個檔對住 `.next/static/media` stat）。
+//
+// 唯一真正斷得開嘅界線係 **route 邊界**：platform landing 有佢自己嘅
+// /[locale]/landing（middleware 正常已經 rewrite 過去），unknown tenant 行
+// StoreNotFoundScreen（同 [slug]/not-found.tsx 同一份畫面同文案）。
 
 // Force dynamic rendering because we need headers() for tenant resolution
 export const dynamic = "force-dynamic";
@@ -212,50 +217,26 @@ export default async function Home({
   const t = getDict(l);
 
   // Platform bare domain → landing page
+  //
+  // 正常平台流量喺 middleware 已經 rewrite 咗去 /[locale]/landing（連 JSON-LD
+  // 都喺嗰邊），所以呢個 branch 實際上係 middleware 冇捕到嘅邊緣 case。行
+  // redirect 而唔係喺度 render：一 render 就要 import WowlixLandingPage，
+  // 成條租戶 route 又會揹返 145.6 KB Fraunces preload（見檔頭）。
   if (await isPlatformMode()) {
-    // Organization + SoftwareApplication JSON-LD — 平台首頁結構化資料
-    const platformJsonLd = {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "Organization",
-          "@id": ORGANIZATION_ID,
-          name: "WoWlix",
-          url: SITE_URL,
-          logo: OG_DEFAULT_IMAGE,
-        },
-        {
-          "@type": "SoftwareApplication",
-          name: "WoWlix",
-          applicationCategory: "BusinessApplication",
-          operatingSystem: "Web",
-          url: SITE_URL,
-          description:
-            "Instagram 小店嘅最強武器。2 分鐘開店，一條連結搞掂所有嘢。免費開始。",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "HKD" },
-        },
-      ],
-    };
-    const LandingPage = await loadLandingPage();
-    return (
-      <>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(platformJsonLd) }}
-        />
-        <LandingPage locale={l} />
-      </>
-    );
+    redirect(`/${l}/landing`);
   }
 
-  // Check if tenant exists; if not, show landing page
+  // Host 解到嘅租戶唔存在／已停用。
+  //
+  // ⚠️ 唔可以 redirect 去 /landing —— middleware 對非平台 host 嘅
+  // /{locale}/landing 會彈返 /{locale}（middleware.ts「/landing 收口」），
+  // 即刻變成無限 redirect loop。呢度出返同 [slug]/not-found.tsx 一模一樣嘅
+  // 「呢間店唔存在」畫面（同一個 component，唔會有兩份文案）。
   let tenantId: string;
   try {
     tenantId = await getServerTenantId();
-  } catch (error) {
-    // Tenant not found
-    const LandingPage = await loadLandingPage();
-    return <LandingPage locale={l} />;
+  } catch {
+    return <StoreNotFoundScreen />;
   }
 
   // Fetch tenant region for conditional UI (TrustBar etc.)
@@ -394,7 +375,7 @@ export default async function Home({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "Store",
             name: storeDisplayName,

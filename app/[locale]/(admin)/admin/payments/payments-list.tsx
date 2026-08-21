@@ -60,7 +60,8 @@ export default function PaymentMethodsList({ methods, locale }: PaymentMethodsLi
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "qr-codes");
+      // folder 由 server 按 intent 決定；admin intent 綁登入商戶自己個 tenantId。
+      formData.append("intent", "admin");
 
       const res = await fetch("/api/upload", {
         method: "POST",

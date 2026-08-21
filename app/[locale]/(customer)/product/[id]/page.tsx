@@ -1,9 +1,11 @@
+import { cache, Suspense } from "react";
 import { getDict, type Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getStoreName } from "@/lib/get-store-name";
-import { getServerTenantId } from "@/lib/tenant";
+import { getServerTenantIdOrNull } from "@/lib/tenant";
 import { productUrl } from "@/lib/biolink-data";
 import { platformUrl } from "@/lib/site-url";
+import { serializeJsonLd } from "@/lib/escape";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -12,6 +14,31 @@ import { ChevronRight } from "lucide-react";
 import ProductDetailClient from "@/components/ProductDetailClient";
 import ProductImageCarousel from "@/components/ProductImageCarousel";
 import CurrencyPrice from "@/components/CurrencyPrice";
+import RelatedProductsSkeleton from "@/components/RelatedProductsSkeleton";
+
+/**
+ * generateMetadata 同 page body 以前各自查一次同一件貨（一次冇 variants、
+ * 一次有），即係每次開商品頁都行兩轉 DB。而家共用呢個 cache()d loader，
+ * 一個 render pass 得一 query。
+ *
+ * cache key 含 tenantId —— 唔係淨靠 product id。呢條 route 靠 header 解析
+ * 租戶，key 冇租戶身份就正正係呢個 repo 出過嗰幾單跨租戶滲漏嘅形狀。
+ * where 本身照樣 tenant-scoped（雙重保險）。
+ *
+ * 用 variants 嗰個 superset：metadata 用唔着就由得佢，好過為咗慳一個 join
+ * 而保留兩條 query。
+ */
+const loadProduct = cache(async (tenantId: string, id: string) =>
+  prisma.product.findFirst({
+    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
+    include: {
+      variants: {
+        where: { active: true },
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+  }),
+);
 
 // Category translations for breadcrumb
 const categoryTranslations: Record<string, { en: string; "zh-HK": string }> = {
@@ -30,11 +57,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale, id } = await params;
   const storeName = await getStoreName();
 
-  const tenantId = await getServerTenantId();
+  // 租戶認唔到（`?tenant=` 打錯、stale `__dev_tenant` cookie、店停用）→ 出個
+  // 中性 title 算數。generateMetadata 唔可以 notFound()（佢靠 throw 傳遞），
+  // 同一個 request 個 body 會照出 404。
+  const tenantId = await getServerTenantIdOrNull();
+  if (!tenantId) {
+    return {
+      title: `Product Not Found - ${storeName}`,
+    };
+  }
 
-  const product = await prisma.product.findFirst({
-    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
-  });
+  const product = await loadProduct(tenantId, id);
 
   if (!product) {
     return {
@@ -86,21 +119,103 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
+/**
+ * 相關商品 —— 特登抽做獨立 async component，等佢個 findMany 落喺 `<Suspense>`
+ * 入面串流，唔好拖住主內容。⚠️ 呢個 boundary 一定要留喺 `notFound()` 之下：
+ * Suspense 坐喺 throw **之上**先會整出 soft-404（見 components/RouteSpinner）。
+ */
+async function RelatedProducts({
+  tenantId,
+  productId,
+  category,
+  locale,
+  heading,
+}: {
+  tenantId: string;
+  productId: string;
+  category: string;
+  locale: string;
+  heading: string;
+}) {
+  const rows = await prisma.product.findMany({
+    where: {
+      active: true,
+      hidden: false,
+      tenantId,
+      category,
+      id: { not: productId },
+      deletedAt: null,
+    },
+    take: 4,
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (rows.length === 0) return null;
+
+  const related = rows.map((rp) => ({
+    id: rp.id,
+    brand: rp.brand || "",
+    title: rp.title,
+    price: rp.price,
+    image: rp.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60",
+    stock: (rp as any).stock ?? 0,
+  }));
+
+  return (
+    <div className="mt-6 px-4">
+      <h2 className="text-xl font-semibold text-zinc-900 mb-4 dark:text-zinc-100">
+        {heading}
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {related.map((item) => (
+          <Link
+            key={item.id}
+            href={`/${locale}/product/${item.id}`}
+            className="group rounded-xl border border-zinc-200 bg-white overflow-hidden hover:border-zinc-300 transition-colors dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+          >
+            <div className="relative aspect-square overflow-hidden">
+              <Image
+                src={item.image}
+                alt={item.title}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+            </div>
+            <div className="p-2.5">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">{item.brand}</div>
+              <div className="mt-0.5 text-sm font-medium text-zinc-900 line-clamp-2 dark:text-zinc-100">{item.title}</div>
+              <div className="mt-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <CurrencyPrice amount={item.price} />
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function ProductPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
   const t = getDict(locale as Locale);
 
   // Fetch product from database with variants (scoped to current tenant)
-  const tenantId = await getServerTenantId();
-  const product = await prisma.product.findFirst({
-    where: { id, active: true, hidden: false, tenantId, deletedAt: null },
-    include: {
-      variants: {
-        where: { active: true },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
+  //
+  // ⚠️ 呢兩個 check 一定要企喺任何 <Suspense> 之上 —— 呢頁以前有
+  // `loading.tsx`（= group／segment 級 Suspense），令下面兩個 `notFound()`
+  // 喺 shell flush 之後先掟，HTTP status 鎖死喺 200（soft-404）。兩個
+  // loading.tsx 都刪咗，唔好再加返。
+  //
+  // 租戶認唔到唔係 500 —— 「呢間店唔存在」係 404。⚠️ 用
+  // getServerTenantIdOrNull() 而唔係 try/catch：DB 撲街要照掟上去出真 500，
+  // 唔好扮成 404 呃走 monitoring 同 Google。
+  const tenantId = await getServerTenantIdOrNull();
+  if (!tenantId) {
+    notFound();
+  }
+
+  const product = await loadProduct(tenantId, id);
 
   if (!product) {
     notFound();
@@ -164,31 +279,6 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
     ? categoryTranslations[p.category][locale as "en" | "zh-HK"] || p.category
     : p.category;
 
-  // Fetch related products (same category, same tenant, max 4)
-  const relatedProducts = product.category
-    ? await prisma.product.findMany({
-        where: {
-          active: true,
-          hidden: false,
-          tenantId,
-          category: product.category,
-          id: { not: product.id },
-          deletedAt: null,
-        },
-        take: 4,
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
-
-  const related = relatedProducts.map((rp) => ({
-    id: rp.id,
-    brand: rp.brand || "",
-    title: rp.title,
-    price: rp.price,
-    image: rp.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60",
-    stock: (rp as any).stock ?? 0,
-  }));
-
   return (
     <div className="pb-40 pt-4">
       <span className="sr-only" data-product-name={p.title} />
@@ -197,7 +287,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "Product",
             name: p.title,
@@ -221,7 +311,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
@@ -275,39 +365,18 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
         </div>
       </div>
 
-      {/* Related Products */}
-      {related.length > 0 && (
-        <div className="mt-6 px-4">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4 dark:text-zinc-100">
-            {t.product.relatedProducts}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {related.map((item) => (
-              <Link
-                key={item.id}
-                href={`/${locale}/product/${item.id}`}
-                className="group rounded-xl border border-zinc-200 bg-white overflow-hidden hover:border-zinc-300 transition-colors dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-              >
-                <div className="relative aspect-square overflow-hidden">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                  />
-                </div>
-                <div className="p-2.5">
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">{item.brand}</div>
-                  <div className="mt-0.5 text-sm font-medium text-zinc-900 line-clamp-2 dark:text-zinc-100">{item.title}</div>
-                  <div className="mt-1.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    <CurrencyPrice amount={item.price} />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+      {/* Related Products —— Suspense 喺 notFound() **之下**，所以安全。
+          主內容（圖／價／落單掣）唔使等呢轉 findMany 就出得到。 */}
+      {p.category && (
+        <Suspense fallback={<RelatedProductsSkeleton />}>
+          <RelatedProducts
+            tenantId={tenantId}
+            productId={p.id}
+            category={p.category}
+            locale={locale}
+            heading={t.product.relatedProducts}
+          />
+        </Suspense>
       )}
     </div>
   );

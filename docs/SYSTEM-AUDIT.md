@@ -139,7 +139,7 @@ app/
 - `POST /api/tenant/check-slug` — 檢查 slug
 - `GET /api/tenant/branding` — 品牌設定
 - `POST /api/tenant-admin/login` — 舊版 admin 登入
-- `POST /api/tenant-admin/register` — 舊版 admin 註冊
+- ~~`POST /api/tenant-admin/register`~~ — **已移除**（零認證孤兒 route，任何人用公開 tenantId 可建立 victim admin 接管商戶；正常 onboarding 行 `/api/tenant/register`）
 - `POST /api/tenant-admin/logout` — Admin 登出
 - `GET /api/tenant-admin/me` — 當前 admin
 - `GET|PATCH /api/tenant-admin/account` — Admin 帳號

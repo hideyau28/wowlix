@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
-import { resolveTenant } from "@/lib/tenant";
 import ProductCard from "@/components/ProductCard";
 import type { Metadata } from "next";
 
@@ -20,12 +20,63 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
+// Force dynamic rendering because we need headers() for tenant resolution
+// （(customer)/layout.tsx 已經 set 咗，呢度重申係因為本頁自己讀 headers()——
+// 第日 layout 嗰行俾人搬走，唔想呢頁靜靜雞變返 static。）
+export const dynamic = "force-dynamic";
+
+/**
+ * 解析「呢個 request 屬於邊間店」，順手攞埋出 <title> 要嘅店名。
+ *
+ * ⚠️ 以前呢頁兩個 call site 都係 `await resolveTenant()` —— 冇傳 req。
+ * lib/tenant.ts:59 冇 Request 就 skip 晒 host/header 解析，slug 永遠跌返
+ * DEFAULT_SLUG（maysshop），即係人人間店嘅 /{locale}/categories/{slug} 都出
+ * maysshop 嘅分類、產品同 badge。左手邊個 CategoryBrowseNav 行 /api/categories
+ * （用 getTenantId(req)，本身啱），出啱嘅店嘅分類 → 撳落去出人哋間店，肉眼見到。
+ *
+ * Server Component 攞唔到 Request object，所以要行 next/headers 讀 middleware
+ * set 嗰個 x-tenant-slug（middleware.ts:297-300 先剷走 inbound 同名 header 再
+ * set 可信值，client 偽造唔到）。
+ *
+ * 特登唔用 getServerTenantId()：
+ * 1. 佢淨係 return id，攞唔到 <title> 要嘅 tenant.name（要行多一 query）；
+ * 2. 佢租戶唔存在／停用就 throw —— 而家有 loading.tsx 個 <Suspense> 頂住睇落
+ *    冇事，但嗰個坑修好之後，stale __dev_tenant cookie / ?tenant=打錯 就會變真
+ *    500。「呢間店唔存在」係 404 唔係 server 死咗，所以呢度 return null 由
+ *    caller 決定出 404。
+ * 3. DB 出事（timeout / pool 爆）照樣 throw 上去 → 真 500，唔會扮 404 呃走
+ *    monitoring 同 Google。
+ */
+type CategoryTenant = { id: string; name: string };
+
+async function resolveCategoryTenant(): Promise<CategoryTenant | null> {
+  const tenantSlug = (await headers()).get("x-tenant-slug");
+  // 冇 header = 呢個 request 冇經過 middleware（matcher 剔走含「.」嘅 path）。
+  // 冇租戶 context 就唔好靠估跌落 default 店 —— 嗰個正正係要修嘅 bug。
+  if (!tenantSlug) return null;
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+    select: { id: true, name: true, status: true },
+  });
+
+  if (!tenant || tenant.status !== "active") return null;
+
+  return { id: tenant.id, name: tenant.name };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const isZh = locale === "zh-HK";
 
   try {
-    const tenant = await resolveTenant();
+    const tenant = await resolveCategoryTenant();
+    if (!tenant) {
+      // metadata 唔可以 call notFound()（佢靠 throw 傳遞，會俾下面個 catch 食咗）。
+      // 出個中性 title 算數 —— 同一個 request 個 body 會照出 404。
+      return { title: "Category" };
+    }
+
     const category = await prisma.category.findUnique({
       where: { tenantId_slug: { tenantId: tenant.id, slug } },
       select: { name: true },
@@ -59,7 +110,13 @@ export default async function CategoryPage({ params }: Props) {
   const l = locale as Locale;
   const isZh = l === "zh-HK";
 
-  const tenant = await resolveTenant();
+  // 同 generateMetadata 行同一個 resolver，兩邊唔會各講各話。
+  // 租戶認唔到（stale __dev_tenant cookie、?tenant= 打錯、店停用）→ 呢條 URL
+  // 根本冇內容，出 404，唔好 500。
+  const tenant = await resolveCategoryTenant();
+  if (!tenant) {
+    notFound();
+  }
 
   // Fetch category by slug + tenantId
   const category = await prisma.category.findUnique({
@@ -140,8 +197,13 @@ export default async function CategoryPage({ params }: Props) {
   // Find parent category for breadcrumb if this is a child category
   let parentCategory: { name: string; slug: string } | null = null;
   if (category.parentId) {
-    const parent = await prisma.category.findUnique({
-      where: { id: category.parentId },
+    // findFirst + tenantId，唔用 findUnique({ id })：bare-id lookup 冇租戶
+    // filter。admin API 而家開/改分類會驗 parent 同店（app/api/admin/categories
+    // /route.ts:67-73），但顯示層唔應該靠上游把關 —— 呢個 commit 就係修租戶
+    // 隔離，唔好留返最後一句 unscoped query 喺同一個檔。
+    // 正常資料行為完全一樣（id 本身已經唯一），純粹 defense in depth。
+    const parent = await prisma.category.findFirst({
+      where: { id: category.parentId, tenantId: tenant.id },
       select: { name: true, slug: true },
     });
     parentCategory = parent;

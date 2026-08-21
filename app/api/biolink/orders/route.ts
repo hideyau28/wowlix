@@ -3,6 +3,9 @@ export const runtime = "nodejs";
 import crypto from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { ApiError, ok, withApi } from "@/lib/api/route-helpers";
+import { isUniqueConstraintError } from "@/lib/api/prisma-errors";
+import type { Prisma } from "@prisma/client";
+import type { StockSource } from "@/lib/orders/restock";
 import { getProvider } from "@/lib/payments/registry";
 import { checkPlanLimit, hasFeature } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
@@ -230,32 +233,28 @@ export const POST = withApi(async (req) => {
   if (!idemKey) {
     throw new ApiError(400, "BAD_REQUEST", "Missing idempotency key");
   }
-  let requestHash: string | null = null;
+  const requestHash = sha256(
+    stableStringify({ route: ROUTE, method: "POST", body: payload }),
+  );
 
-  {
-    requestHash = sha256(
-      stableStringify({ route: ROUTE, method: "POST", body: payload }),
-    );
+  const existing = await prisma.idempotencyKey.findFirst({
+    where: {
+      key: idemKey,
+      route: ROUTE,
+      method: "POST",
+      tenantId: tenant.id,
+    },
+  });
 
-    const existing = await prisma.idempotencyKey.findFirst({
-      where: {
-        key: idemKey,
-        route: ROUTE,
-        method: "POST",
-        tenantId: tenant.id,
-      },
-    });
-
-    if (existing) {
-      if (existing.requestHash !== requestHash) {
-        throw new ApiError(
-          409,
-          "CONFLICT",
-          "Idempotency key already used with different payload",
-        );
-      }
-      return ok(req, existing.responseJson);
+  if (existing) {
+    if (existing.requestHash !== requestHash) {
+      throw new ApiError(
+        409,
+        "CONFLICT",
+        "Idempotency key already used with different payload",
+      );
     }
+    return ok(req, existing.responseJson);
   }
 
   // Get delivery options from tenant settings
@@ -281,7 +280,18 @@ export const POST = withApi(async (req) => {
       hidden: false,
       deletedAt: null,
     },
-    select: { id: true, title: true, price: true, sizes: true },
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      sizes: true,
+      // 逐個款自己個價 —— 以前重算齋用 product.price，商戶標 $200 嘅碼
+      // 實收 $128，冇任何錯誤提示（純蝕錢，唔會 400）。
+      variants: {
+        where: { active: true },
+        select: { id: true, price: true },
+      },
+    },
   });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -291,6 +301,12 @@ export const POST = withApi(async (req) => {
     name: string;
     unitPrice: number;
     quantity: number;
+    // 落單扣咗邊度嘅貨 —— 張單死咗要還返邊度，就係讀返呢幾個 field
+    // （見 lib/orders/restock.ts）。以前個 items snapshot 淨係留低個顯示名
+    // （`貨名 · 黑 · M`），variant 身份完全冇存低，即係就算想還都冇資料還。
+    stockSource: StockSource;
+    variantId?: string;
+    variantKey?: string;
   }> = [];
 
   for (const item of payload.items) {
@@ -301,16 +317,31 @@ export const POST = withApi(async (req) => {
         "BAD_REQUEST",
         `Product not found: ${item.productId}`,
       );
-    const lineTotal = product.price * item.qty;
+    // variant 冇自己個價（price null）就跌返 base price —— legacy variant 完全唔變。
+    const variant = item.variantId
+      ? product.variants.find((v) => v.id === item.variantId)
+      : undefined;
+    const unitPrice = variant?.price ?? product.price;
+    const lineTotal = unitPrice * item.qty;
     serverTotal += lineTotal;
     const variantDisplay = item.variant
       ? item.variant.replace(/\|/g, " · ")
       : null;
+    // 呢個 marker 就係下面扣庫存個 loop 嘅分流條件 —— 記低嘅同做嘅係同一句，
+    // 唔會 drift。冇 variant 又唔係雙維嘅普通貨本身就冇扣過，標明 "none"
+    // （唔係「唔知」—— 舊單先係唔知，見 restock.ts）。
+    const stock = item.variantId
+      ? { stockSource: "variant" as const, variantId: item.variantId }
+      : item.variant?.includes("|")
+        ? { stockSource: "combination" as const, variantKey: item.variant }
+        : { stockSource: "none" as const };
+
     repricedItems.push({
       productId: item.productId,
       name: `${product.title}${variantDisplay ? ` · ${variantDisplay}` : ""}`,
-      unitPrice: product.price,
+      unitPrice,
       quantity: item.qty,
+      ...stock,
     });
   }
 
@@ -357,12 +388,9 @@ export const POST = withApi(async (req) => {
           const maxDiscount = serverTotal + deliveryFee;
           if (couponDiscount > maxDiscount) couponDiscount = maxDiscount;
           validatedCouponCode = coupon.code;
-
-          // Increment usage count
-          await prisma.coupon.update({
-            where: { id: coupon.id },
-            data: { usageCount: { increment: 1 } },
-          });
+          // ⚠️ 唔喺度 increment usageCount —— 落單 transaction 未開，一件斷貨
+          // rollback 咗張單，個 usage 一樣照入數。真正 increment 喺 tx 入面，
+          // 用一句有 maxUsage / expiry guard 嘅原子 UPDATE（同 /api/orders 一致）。
         }
       }
     }
@@ -374,40 +402,138 @@ export const POST = withApi(async (req) => {
     serverTotal + deliveryFee - couponDiscount,
   );
 
-  // Atomic: stock deduction + order creation in a single transaction
-  const order = await (prisma as any).$transaction(async (tx: any) => {
-    // Single-variant stock deduction (updateMany with gte guard)
-    for (const item of payload.items) {
-      if (!item.variantId) continue;
+  // 商戶收款資料 —— 同張單冇關係，特登喺開 tx 之前攞。個 response（連 fpsInfo
+  // / paymeInfo）要喺 tx 入面砌好連 idempotency 記錄一齊寫，客人 retry 先至收到
+  // 同一份「過數去邊」嘅答案；擺喺 tx 之後砌就冇嘢好存。
+  const paymentMethodRecord =
+    payload.payment.method === "fps" || payload.payment.method === "payme"
+      ? await prisma.paymentMethod.findFirst({
+          where: {
+            tenantId: tenant.id,
+            type: payload.payment.method,
+            active: true,
+          },
+          select: { qrImage: true, accountInfo: true },
+        })
+      : null;
+
+  const buildResponse = (orderId: string, orderNo: string | null) => {
+    const hasPaymentProof = !!payload.paymentProof;
+    const response: Record<string, unknown> = {
+      orderId,
+      orderNumber: orderNo,
+      status: hasPaymentProof ? "pending_confirmation" : "pending_payment",
+      paymentProof: hasPaymentProof,
+    };
+
+    if (payload.payment.method === "fps") {
+      if (paymentMethodRecord) {
+        response.fpsInfo = {
+          accountName: null,
+          id: paymentMethodRecord.accountInfo,
+          qrCode: paymentMethodRecord.qrImage,
+        };
+      } else if (tenant.fpsEnabled) {
+        response.fpsInfo = {
+          accountName: tenant.fpsAccountName,
+          id: tenant.fpsAccountId,
+          qrCode: tenant.fpsQrCodeUrl,
+        };
+      }
+    }
+
+    if (payload.payment.method === "payme") {
+      if (paymentMethodRecord) {
+        response.paymeInfo = {
+          link: paymentMethodRecord.accountInfo,
+          qrCode: paymentMethodRecord.qrImage,
+        };
+      } else if (tenant.paymeEnabled) {
+        response.paymeInfo = {
+          link: tenant.paymeLink,
+          qrCode: tenant.paymeQrCodeUrl,
+        };
+      }
+    }
+
+    response.whatsapp = tenant.whatsapp;
+    response.storeName = tenant.name;
+    response.total = totalWithDelivery;
+
+    return response;
+  };
+
+  // `$transaction` 經 `prisma as any` 出嚟係 any（driver adapter 令 overload
+  // 唔 resolve 到）—— 明寫個 union，落面 `outcome.replayed` 先至真係窄到，
+  // 唔會打錯字都靜靜雞過。
+  type CreateOutcome =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | { replayed: false; order: any; response: Record<string, unknown> }
+    | { replayed: true; response: Prisma.JsonValue };
+
+  // Atomic: stock deduction + order creation + idempotency 記錄 in a single transaction
+  const outcome: CreateOutcome = await (prisma as any).$transaction(async (tx: any) => {
+    // Single-variant stock deduction (updateMany with gte guard).
+    // ⚠️ 租戶隔離：where 一定要同時鎖 tenantId + productId —— 只驗 productId
+    // 屬本店（repricing 嗰度）但唔 scope variantId 嘅話，攻擊者可用本店真
+    // productId 夾帶人哋店（或本店另一件貨）嘅 variantId 跨租戶／跨產品扣庫存。
+    // 加咗之後：任何 mismatch → count===0 → 統一 400（同「庫存不足」同一句，
+    // 唔做存在性 oracle），原子 guard 一步過驗 ownership + stock，冇 TOCTOU。
+    for (const item of repricedItems) {
+      if (item.stockSource !== "variant") continue;
 
       const result = await tx.productVariant.updateMany({
-        where: { id: item.variantId, stock: { gte: item.qty } },
-        data: { stock: { decrement: item.qty } },
+        where: {
+          id: item.variantId,
+          tenantId: tenant.id,
+          productId: item.productId,
+          stock: { gte: item.quantity },
+        },
+        data: { stock: { decrement: item.quantity } },
       });
       if (result.count === 0) {
         throw new ApiError(
           400,
           "BAD_REQUEST",
-          `INSUFFICIENT_STOCK: 庫存不足 — ${item.productName}`,
+          `INSUFFICIENT_STOCK: 庫存不足 — ${item.name}`,
         );
       }
 
-      // Deactivate variant if stock hits zero
+      // Deactivate variant if stock hits zero（同樣 scope tenantId + productId）
       await tx.productVariant.updateMany({
-        where: { id: item.variantId, stock: { lte: 0 } },
+        where: {
+          id: item.variantId,
+          tenantId: tenant.id,
+          productId: item.productId,
+          stock: { lte: 0 },
+        },
         data: { active: false },
       });
     }
 
-    // Dual-variant stock deduction (JSONB sizes, read-then-write inside tx)
-    for (const item of payload.items) {
-      if (item.variantId) continue;
-      if (!item.variant || !item.variant.includes("|")) continue;
+    // Dual-variant stock deduction（JSONB sizes）
+    //
+    // ⚠️ 舊 code 攞嘅 `product.sizes` 係 transaction 外面嗰個 findMany 讀返嚟嘅
+    // snapshot，喺 tx 入面 in-place mutate 再成舊 blob 寫返 —— 兩張同時嘅單
+    // 兩邊都讀到 qty 5，兩邊都寫 4，賣咗兩件淨係扣咗一件（lost update）。
+    // 而家：喺 tx 入面 SELECT ... FOR UPDATE 重讀，鎖住行到 commit 為止，
+    // immutable 砌一個新 blob 再寫。同一張單有多件同款貨時，第二次重讀會見到
+    // 自己 tx 未 commit 嘅寫入，扣數會累加，啱。
+    //
+    // 落鎖次序按 productId 排 —— 兩張單各自鎖唔同次序嘅話會死鎖。
+    const dualItems = repricedItems
+      .filter((i) => i.stockSource === "combination")
+      .slice()
+      .sort((a, b) => a.productId.localeCompare(b.productId));
 
-      const product = productMap.get(item.productId);
-      if (!product) continue;
+    for (const item of dualItems) {
+      const locked = (await tx.$queryRaw`
+        SELECT "sizes" FROM "Product"
+        WHERE "id" = ${item.productId} AND "tenantId" = ${tenant.id}
+        FOR UPDATE
+      `) as Array<{ sizes: unknown }>;
 
-      const sizes = product.sizes as Record<string, unknown> | null;
+      const sizes = locked[0]?.sizes as Record<string, unknown> | null;
       if (!sizes || !("dimensions" in sizes) || !("combinations" in sizes))
         continue;
 
@@ -416,21 +542,32 @@ export const POST = withApi(async (req) => {
           combinations: Record<string, { qty: number; status: string }>;
         }
       ).combinations;
-      const combo = combinations[item.variant];
-      if (!combo || combo.qty < item.qty) {
+      const combo = combinations[item.variantKey!];
+      if (!combo || combo.qty < item.quantity) {
         throw new ApiError(
           400,
           "BAD_REQUEST",
-          `INSUFFICIENT_STOCK: ${item.variant.replace(/\|/g, " · ")} 庫存不足`,
+          `INSUFFICIENT_STOCK: ${item.variantKey!.replace(/\|/g, " · ")} 庫存不足`,
         );
       }
 
-      combo.qty -= item.qty;
-      if (combo.qty === 0) combo.status = "hidden";
+      const nextQty = combo.qty - item.quantity;
+      const nextSizes = {
+        ...sizes,
+        combinations: {
+          ...combinations,
+          [item.variantKey!]: {
+            ...combo,
+            qty: nextQty,
+            status: nextQty === 0 ? "hidden" : combo.status,
+          },
+        },
+      };
 
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { sizes: sizes as object },
+      // where 加返 tenantId —— 唔好淨係靠上面個 findMany 嘅 scope（latent hole）。
+      await tx.product.updateMany({
+        where: { id: item.productId, tenantId: tenant.id },
+        data: { sizes: nextSizes as object },
       });
     }
 
@@ -469,8 +606,84 @@ export const POST = withApi(async (req) => {
       },
     });
 
-    return created;
-  });
+    // Coupon usage —— 喺 tx 入面用一句原子 UPDATE 收 maxUsage / expiry。
+    // 上面 validation 嗰度係 check-then-act：兩張單同時見到 usageCount 9 < 10，
+    // 兩張都用得，最後 count 變 11。呢句 WHERE 帶住 guard，超額嗰張會 count===0
+    // → 拒單兼連張單一齊 rollback（同 /api/orders 一致）。
+    if (validatedCouponCode) {
+      const updated = await tx.$executeRaw`
+        UPDATE "Coupon"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "code" = ${validatedCouponCode}
+          AND "tenantId" = ${tenant.id}
+          AND "active" = true
+          AND ("maxUsage" IS NULL OR "usageCount" < "maxUsage")
+          AND ("expiresAt" IS NULL OR "expiresAt" >= NOW())
+      `;
+      if (updated === 0) {
+        throw new ApiError(
+          400,
+          "BAD_REQUEST",
+          "Coupon is no longer valid (expired or usage limit reached)",
+        );
+      }
+    }
+
+    // Idempotency 記錄同張單喺同一個 tx。以前佢喺 tx **外面**：同一條 key 兩個
+    // request 同時入嚟，兩邊都過得上面個 findFirst（嗰陣仲未有 row），兩邊都扣
+    // 一次庫存、開一張單，輸嗰個先至喺最後食 P2002 掟 500 —— 客人見到出錯，
+    // 實際上兩張單兩份貨都已經落咗。而家輸嗰個成個 tx（連扣庫存連張單）
+    // rollback，落面 catch 回讀贏家嗰份 responseJson 交返同一個答案。
+    const response = buildResponse(created.id, created.orderNumber);
+
+    await tx.idempotencyKey.create({
+      data: {
+        tenantId: tenant.id,
+        key: idemKey,
+        route: ROUTE,
+        method: "POST",
+        requestHash,
+        status: 200,
+        responseJson: response,
+      },
+    });
+
+    return { order: created, response };
+  }).then(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (result: { order: any; response: Record<string, unknown> }) => ({
+      replayed: false as const,
+      ...result,
+    }),
+    async (error: unknown) => {
+      if (!isUniqueConstraintError(error)) throw error;
+
+      // P2002 可以嚟自第二個 unique（例如 orderNumber 撞）—— 搵唔返同 key 嘅
+      // 記錄就唔好扮 idempotent replay，照掟返上去。
+      const winner = await prisma.idempotencyKey.findFirst({
+        where: { key: idemKey, route: ROUTE, method: "POST", tenantId: tenant.id },
+      });
+      if (!winner) throw error;
+
+      if (winner.requestHash !== requestHash) {
+        throw new ApiError(
+          409,
+          "CONFLICT",
+          "Idempotency key already used with different payload",
+        );
+      }
+
+      return { replayed: true as const, response: winner.responseJson };
+    },
+  );
+
+  // Replay：張單同確認 email 都係贏嗰個 request 做晒，唔可以再行一次。
+  if (outcome.replayed) {
+    return ok(req, outcome.response);
+  }
+
+  const order = outcome.order;
+  const response = outcome.response;
 
   // Fire-and-forget order confirmation email. Skip silently when no email
   // captured. Tenant is already in scope so no extra DB hit needed.
@@ -490,77 +703,6 @@ export const POST = withApi(async (req) => {
       }),
     }).catch((error) => {
       console.error("[biolink order email] send failed:", error);
-    });
-  }
-
-  // Build response
-  const hasPaymentProof = !!payload.paymentProof;
-  const response: Record<string, unknown> = {
-    orderId: order.id,
-    orderNumber: order.orderNumber,
-    status: hasPaymentProof ? "pending_confirmation" : "pending_payment",
-    paymentProof: hasPaymentProof,
-  };
-
-  // Query PaymentMethod table for payment transfer info (new merchants)
-  const paymentMethodRecord =
-    payload.payment.method === "fps" || payload.payment.method === "payme"
-      ? await prisma.paymentMethod.findFirst({
-          where: {
-            tenantId: tenant.id,
-            type: payload.payment.method,
-            active: true,
-          },
-          select: { qrImage: true, accountInfo: true },
-        })
-      : null;
-
-  if (payload.payment.method === "fps") {
-    if (paymentMethodRecord) {
-      response.fpsInfo = {
-        accountName: null,
-        id: paymentMethodRecord.accountInfo,
-        qrCode: paymentMethodRecord.qrImage,
-      };
-    } else if (tenant.fpsEnabled) {
-      response.fpsInfo = {
-        accountName: tenant.fpsAccountName,
-        id: tenant.fpsAccountId,
-        qrCode: tenant.fpsQrCodeUrl,
-      };
-    }
-  }
-
-  if (payload.payment.method === "payme") {
-    if (paymentMethodRecord) {
-      response.paymeInfo = {
-        link: paymentMethodRecord.accountInfo,
-        qrCode: paymentMethodRecord.qrImage,
-      };
-    } else if (tenant.paymeEnabled) {
-      response.paymeInfo = {
-        link: tenant.paymeLink,
-        qrCode: tenant.paymeQrCodeUrl,
-      };
-    }
-  }
-
-  response.whatsapp = tenant.whatsapp;
-  response.storeName = tenant.name;
-  response.total = totalWithDelivery;
-
-  // Save idempotency record
-  if (requestHash) {
-    await prisma.idempotencyKey.create({
-      data: {
-        tenantId: tenant.id,
-        key: idemKey,
-        route: ROUTE,
-        method: "POST",
-        requestHash,
-        status: 200,
-        responseJson: response as any,
-      },
     });
   }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme-context";
 import LandingPage from "@/components/marketing/WowlixLandingPage";
 import type { Locale } from "@/lib/i18n";
+import { serializeJsonLd } from "@/lib/escape";
 import {
   OG_DEFAULT_IMAGE,
   ORGANIZATION_ID,
@@ -119,7 +120,7 @@ export default async function PlatformLandingPage({
       <main>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(platformJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(platformJsonLd) }}
         />
         <LandingPage locale={l} />
       </main>

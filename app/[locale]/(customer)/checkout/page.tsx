@@ -13,6 +13,7 @@ import CheckoutPaymentSelector, {
   type PaymentProviderOption,
 } from "@/components/CheckoutPaymentSelector";
 import ManualPaymentFlow from "@/components/ManualPaymentFlow";
+import { grantOrderAccessAfterCheckout } from "./../orders/[id]/actions";
 import {
   getRegionConfig,
   validatePhone as validatePhoneRegion,
@@ -31,6 +32,12 @@ type FulfillmentType = "delivery" | "sf-locker" | "pickup";
 type CheckoutFulfillment =
   | {
       type: "delivery";
+      /**
+       * 送貨方式 id —— server 重算運費靠佢分辨順豐櫃同上門。冇咗就一律當上門，
+       * 順豐櫃單會 client 收 sfLockerFee(35) / server 收 homeDeliveryFee(40)，
+       * subtotal 未夠免運嘅話 100% 撞 "deliveryFee mismatch" 400。
+       */
+      deliveryMethod?: string;
       address: {
         line1: string;
         district?: string;
@@ -464,6 +471,25 @@ export default function CheckoutPage({
     );
   };
 
+  /**
+   * 派 grant cookie，令啱啱俾完錢嘅客人喺確認頁見到全單（server 會自己核對
+   * 電話先簽，見 orders/[id]/actions.ts）。
+   *
+   * ⚠️ 一定要喺呢度包一層 try/catch。呢個 await 坐喺落單 handler 個 outer try
+   * 入面，而嗰個 catch 係出「訂單創建失敗」兼**唔跳頁**。server action 個
+   * invocation 失敗（deploy 之後舊 tab 個 action id 失效、5xx、斷線）會 reject
+   * 喺 client —— 即係單已經落咗、cart 已經清咗，客人卻見到「訂單創建失敗」
+   * 兼卡死喺 checkout 頁。派唔到 grant 最多係確認頁見 summary，
+   * **絕對唔可以連累跳頁**。（action 內部自己都有一層 catch，兜唔到呢種。）
+   */
+  const grantOrderAccess = async (orderId: string, phone: string) => {
+    try {
+      await grantOrderAccessAfterCheckout(orderId, phone);
+    } catch {
+      // 見上面：靜靜哋算數，唔可以阻住跳頁。
+    }
+  };
+
   const buildOrderPayload = (paymentProofUrl?: string) => {
     const recipientName = sameAsContact ? customerName : receiverName;
     const recipientPhone = sameAsContact ? phone : receiverPhone;
@@ -479,6 +505,7 @@ export default function CheckoutPage({
         if (fulfillmentType === "sf-locker") {
           return {
             type: "delivery",
+            deliveryMethod: "sf-locker",
             address: {
               line1: `SF Locker: ${sfLockerCode}`,
               district: locale === "zh-HK" ? "順豐智能櫃" : "SF Locker",
@@ -487,6 +514,7 @@ export default function CheckoutPage({
         }
         return {
           type: "delivery",
+          deliveryMethod: "home-delivery",
           address: {
             line1: addressLine,
             district: district || undefined,
@@ -580,25 +608,17 @@ export default function CheckoutPage({
     setProcessing(true);
 
     try {
-      // Manual flow: upload proof → create order
+      // Manual flow: order-first → 上載截圖（綁 orderId + 落單電話）→ attach。
+      // 以前係「先匿名上載截圖，再落單」，個上載零 auth / 零 ownership，任何人可以
+      // 灌爆 Cloudinary。而家倒轉次序：先落單攞 orderId，再用 orderId + 電話做憑證
+      // 上載（同 biolink OrderConfirmation 一致）。/api/orders 有 idempotency key，
+      // 上載／attach 失敗時重試唔會整多張單。
       if (selectedProvider.type === "manual") {
-        setUploadingProof(true);
+        // 落單電話（本地 8 位，去咗 dial code）—— payment-proof 憑證要呢個格式。
+        const recipientPhone = sameAsContact ? phone : receiverPhone;
 
-        const formData = new FormData();
-        formData.append("file", paymentProofFile!);
-        formData.append("folder", "payments");
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const uploadData = await uploadRes.json();
-
-        if (!uploadData.ok)
-          throw new Error(uploadData.error?.message || "上傳失敗");
-        setUploadingProof(false);
-
-        const payload = buildOrderPayload(uploadData.data.url);
+        // 1. 落單（唔帶截圖）→ PENDING
+        const payload = buildOrderPayload();
         const response = await fetch("/api/orders", {
           method: "POST",
           headers: {
@@ -610,20 +630,56 @@ export default function CheckoutPage({
 
         const result = await response.json();
 
-        if (result.ok) {
-          clearCart();
-          showToast(
-            locale === "zh-HK"
-              ? "訂單已提交！我們會盡快確認您的付款。"
-              : "Order submitted! We'll confirm your payment shortly.",
-          );
-          router.push(`/${locale}/orders/${result.data.id}`);
-        } else {
+        if (!result.ok) {
           alert(
             `${t.common.error}: ${result.error?.code || "ERROR"}: ${result.error?.message || t.common.unknownError}`,
           );
           setProcessing(false);
+          return;
         }
+
+        const orderId = result.data.id as string;
+
+        // 2. 上載付款截圖（憑證 = orderId + 落單電話；server 驗過先接受）
+        setUploadingProof(true);
+        const formData = new FormData();
+        formData.append("file", paymentProofFile!);
+        formData.append("intent", "payment-proof");
+        formData.append("orderId", orderId);
+        formData.append("phone", recipientPhone);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        setUploadingProof(false);
+        if (!uploadData.ok)
+          throw new Error(uploadData.error?.message || "上傳失敗");
+
+        // 3. Attach 截圖落單（flip → PENDING_CONFIRMATION）
+        const attachRes = await fetch(
+          `/api/biolink/orders/${orderId}/payment-proof`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentProof: uploadData.data.url,
+              phone: recipientPhone,
+            }),
+          },
+        );
+        const attachData = await attachRes.json();
+        if (!attachData.ok)
+          throw new Error(attachData.error?.message || "提交付款證明失敗");
+
+        clearCart();
+        showToast(
+          locale === "zh-HK"
+            ? "訂單已提交！我們會盡快確認您的付款。"
+            : "Order submitted! We'll confirm your payment shortly.",
+        );
+        await grantOrderAccess(orderId, payload.phone);
+        router.push(`/${locale}/orders/${orderId}`);
         return;
       }
 
@@ -659,6 +715,7 @@ export default function CheckoutPage({
 
       if (sessionData.ok && sessionData.data?.url) {
         clearCart();
+        await grantOrderAccess(result.data.id, payload.phone);
         window.location.href = sessionData.data.url;
       } else {
         alert(

@@ -1102,6 +1102,8 @@ function BannerModal({
     setUploadingIndex(index);
     const formData = new FormData();
     formData.append("file", file);
+    // folder 由 server 按 intent 決定；admin intent 綁登入商戶自己個 tenantId。
+    formData.append("intent", "admin");
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { Locale } from "@/lib/i18n";
 import { getDict } from "@/lib/i18n";
-import { getStoreName } from "@/lib/get-store-name";
+import { getStoreName, loadStoreSettings } from "@/lib/get-store-name";
 import { prisma } from "@/lib/prisma";
 import TopNav from "@/components/TopNav";
 import CategoryNavWrapper from "@/components/CategoryNavWrapper";
@@ -18,6 +18,7 @@ import WelcomePopup from "@/components/WelcomePopup";
 import CartFlyAnimation from "@/components/CartFlyAnimation";
 import AdminPreviewBanner from "@/components/AdminPreviewBanner";
 import StorefrontTemplate from "@/components/StorefrontTemplate";
+import { storefrontFontVars } from "@/lib/storefront-fonts";
 import ScrollToTop from "@/components/ScrollToTop";
 import { getServerTenantId, isPlatformMode } from "@/lib/tenant";
 
@@ -98,11 +99,9 @@ export default async function CustomerLayout({
         },
       })
       .catch(() => null),
-    prisma.storeSettings
-      .findFirst({
-        where: { tenantId },
-      })
-      .catch(() => null),
+    // 同 lib/get-store-name.ts 共用同一個 cache()d loader —— 以前呢度同
+    // page 個 generateMetadata（經 getStoreName）各查一次 storeSettings。
+    loadStoreSettings(tenantId).catch(() => null),
   ]);
 
   // Get store name with fallback
@@ -141,7 +140,13 @@ export default async function CustomerLayout({
         <CurrencyProvider>
           <FilterProvider>
             <AuthProvider>
-              <div className="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+              {/* storefrontFontVars：template font 嘅 CSS variable 以前喺
+                  [locale]/layout 個 <body>（=全站每頁 preload 192 KB），
+                  而家收窄到真正用得着嘅 storefront subtree。
+                  呢面嘅 consumer = HeroCarouselCMS 個 hero（Bebas + Montserrat）。 */}
+              <div
+                className={`${storefrontFontVars} min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100`}
+              >
                 <Analytics />
                 <AdminPreviewBanner locale={l} />
                 <TopNav
