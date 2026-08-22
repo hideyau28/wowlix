@@ -42,35 +42,35 @@ export const platformAbout: Record<
 > = {
   zh: {
     title: "關於 WoWlix",
-    intro: "香港每個 IG 小店，2 分鐘就有一個專業網店。",
-    body: "WoWlix 係為香港 Instagram 小店而做嘅開店工具。你唔使識砌網站、唔使請人 —— 揀模板、擺產品、set 收款，一條 link（wowlix.com/你個店名）就開得成，客人撳入嚟直接落單。我哋唔想做一個「乜都有但你揦手唔成勢」嘅大平台，只想做好一件事：幫你將 followers 變成生意。",
+    intro: "幫香港每間 IG 小店，2 分鐘 set 起專業網店。",
+    body: "WoWlix 係專為香港 IG 小店而設嘅開店工具。唔使識砌網頁、唔使請人 —— 揀模板、上架、set 收款，一條 link（wowlix.com/你個店名）搞掂，客人撳入去直接落單。我哋唔做嗰啲「乜都有但你揦手唔成勢」嘅大平台，淨係專心做好一件事：幫你將 followers 變成生意。",
     whyTitle: "點解揀 WoWlix",
     why: [
-      "0% 平台佣金 —— 你賣幾多全部係你嘅。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，錢唔經我哋手。",
-      "2 分鐘開店，免費開始，唔使信用卡。",
-      "一條 link 搞掂 —— 擺落 IG bio，商品、落單、收款、追蹤全部喺一頁。",
-      "廣東話 + 英文，為香港客人而設。",
+      "0% 平台佣金 —— 賣幾多賺幾多。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，啲錢唔會經我哋手。",
+      "2 分鐘極速開店，免費開始，唔使入信用卡。",
+      "一條 link 搞掂 —— 放落 IG bio，睇貨、落單、過數、追蹤狀態，一版做晒。",
+      "廣東話 + 英文，專為香港客而設。",
     ],
-    contactTitle: "搵我哋",
+    contactTitle: "聯絡我哋",
     contactBody:
-      `有問題想傾？WhatsApp ${PLATFORM_WHATSAPP_DISPLAY} 最快，或者 email ${PLATFORM_EMAIL}。`,
+      `有嘢想問？WhatsApp ${PLATFORM_WHATSAPP_DISPLAY} 最快，或者 email ${PLATFORM_EMAIL}。`,
     footer: "WoWlix 由 Flow Studio HK 營運。",
   },
   en: {
     title: "About WoWlix",
     intro:
-      "Give every Hong Kong Instagram shop a professional online store in 2 minutes.",
-    body: "WoWlix is a store builder made for Hong Kong Instagram sellers. No web-design skills, no hiring — pick a template, add your products, set up payment, and one link (wowlix.com/yourshop) is your store. Customers tap in and order directly. We're not trying to be an everything-platform you can never finish setting up; we do one thing well: turn your followers into customers.",
+      "Give every Hong Kong IG shop a professional online store in 2 minutes.",
+    body: "WoWlix is a store builder designed for Hong Kong IG shops. No web-design skills, no hiring — pick a template, add products, set up payment, and one link (wowlix.com/yourshop) is all you need. Customers click in and order directly. We're not trying to be an everything-platform you can never finish setting up; we just do one thing well: turn your followers into sales.",
     whyTitle: "Why WoWlix",
     why: [
-      "0% platform commission — every dollar you make is yours. Customers pay you directly via FPS, PayMe, AlipayHK or bank transfer; the money never passes through us.",
-      "Open in 2 minutes, free to start, no credit card.",
-      "One link does it all — put it in your IG bio: products, orders, payment and tracking, all on one page.",
+      "0% platform commission — you keep exactly what you earn. Customers pay you directly via FPS, PayMe, AlipayHK or bank transfer; the money never touches our hands.",
+      "Open in 2 minutes, free to start, no credit card required.",
+      "One link does it all — put it in your IG bio. Products, ordering, payment and order tracking, all on one page.",
       "Cantonese + English, built for Hong Kong shoppers.",
     ],
     contactTitle: "Get in touch",
     contactBody:
-      `Questions? WhatsApp ${PLATFORM_WHATSAPP_INTL} is fastest, or email ${PLATFORM_EMAIL}.`,
+      `Got questions? WhatsApp ${PLATFORM_WHATSAPP_INTL} is the fastest, or email ${PLATFORM_EMAIL}.`,
     footer: "WoWlix is operated by Flow Studio HK.",
   },
 };
@@ -81,36 +81,36 @@ export const platformFaq: Record<
 > = {
   zh: [
     {
-      question: "WoWlix 係咩？",
+      question: "WoWlix 係咩嚟？",
       answer:
-        "香港 IG 小店開店平台。揀模板、擺產品、set 收款，一條 link 就開到網店，客人直接落單。",
+        "專為香港 IG 小店而設嘅開店平台。揀模板、上架、set 收款，一條 link 搞掂，客人直接落單。",
     },
     {
-      question: "開店要幾錢？",
+      question: "收費點計？",
       answer:
-        "有免費計劃，另有 Lite（$78 一個月）同 Pro（$198 一個月）。",
+        "有免費計劃，另外有 Lite（$78／月）同 Pro（$198／月）。",
     },
     {
-      question: "係咪真係 0% 佣金？",
+      question: "係咪真係 0% 抽佣？",
       answer:
-        "係。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，錢唔經平台，我哋一蚊佣金都唔收。",
+        "係。客人用轉數快、PayMe、AlipayHK 或銀行轉帳直接過數俾你，錢唔經平台，我哋一毫子佣都唔抽。",
     },
     {
-      question: "我點收錢？",
+      question: "點樣收錢？",
       answer:
-        "而家支援轉數快、PayMe、AlipayHK 同銀行轉帳，全部客人直接過數俾你。信用卡收款我哋仲整緊，暫時未開放。",
+        "目前支援轉數快（FPS）、PayMe、AlipayHK 同銀行轉帳，全部由客人直接過數俾你。信用卡收款仲整緊，暫時未開放。",
     },
-    { question: "開店要幾耐？", answer: "大約 2 分鐘。" },
+    { question: "開舖要搞幾耐？", answer: "大約 2 分鐘。" },
     {
-      question: "使唔使識砌網站？",
-      answer: "唔使。揀模板、擺相、打字就得。",
+      question: "使唔使識寫 code 或者砌網頁？",
+      answer: "唔使。揀模板、upload 相、打字就搞掂。",
     },
     {
       question: "支唔支援廣東話？",
-      answer: "支援。後台同你間店都可以中英雙語。",
+      answer: "支援。管理後台同你嘅網店介面都可以中英雙語。",
     },
     {
-      question: "點聯絡你哋？",
+      question: "點樣搵你哋？",
       answer: `WhatsApp ${PLATFORM_WHATSAPP_DISPLAY}，或者 email ${PLATFORM_EMAIL}。`,
     },
   ],
@@ -118,32 +118,32 @@ export const platformFaq: Record<
     {
       question: "What is WoWlix?",
       answer:
-        "A store builder for Hong Kong Instagram shops. Pick a template, add products, set up payment — one link and your store is live, with customers ordering directly.",
+        "A store builder for Hong Kong IG shops. Pick a template, add products, set up payment — one link and your store is live for direct orders.",
     },
     {
       question: "How much does it cost?",
       answer:
-        "There's a free plan, plus Lite (HK$78/mo) and Pro (HK$198/mo).",
+        "We have a free plan, plus Lite (HK$78/mo) and Pro (HK$198/mo).",
     },
     {
       question: "Is it really 0% commission?",
       answer:
-        "Yes. Customers pay you directly via FPS, PayMe, AlipayHK or bank transfer. The money never touches our platform and we take zero commission.",
+        "Yes. Customers pay you directly via FPS, PayMe, AlipayHK or bank transfer. The money never touches our platform, and we take zero commission.",
     },
     {
       question: "How do I get paid?",
       answer:
-        "We currently support FPS, PayMe, AlipayHK and bank transfer — all paid directly to you. Credit-card checkout is still in the works and not available yet.",
+        "We currently support FPS, PayMe, AlipayHK and bank transfers — all paid directly to you. Credit card payment is still under development and not available yet.",
     },
     { question: "How long does setup take?", answer: "About 2 minutes." },
     {
-      question: "Do I need any web-design skills?",
-      answer: "No. Pick a template, add photos and text — that's it.",
+      question: "Do I need web design skills?",
+      answer: "No. Just pick a template, upload photos and add text.",
     },
     {
       question: "Do you support Cantonese?",
       answer:
-        "Yes. Both the dashboard and your storefront support Cantonese and English.",
+        "Yes. Both the admin dashboard and your storefront support English and Cantonese.",
     },
     {
       question: "How do I reach you?",
@@ -168,19 +168,19 @@ export const platformContact: Record<
 > = {
   zh: {
     title: "聯絡 WoWlix",
-    intro: "有問題想搵我哋？WhatsApp 最快。",
+    intro: "有嘢想問？搵我哋 WhatsApp 最快。",
     whatsappTitle: "WhatsApp",
-    whatsappBody: "撳掣直接同我哋傾。",
-    whatsappCta: "WhatsApp 聯絡我哋",
+    whatsappBody: "撳掣直接 WhatsApp 我哋。",
+    whatsappCta: "WhatsApp 搵我哋",
     emailTitle: "電郵",
-    emailBody: "想詳細啲？可以電郵我哋：",
+    emailBody: "想詳細啲講？可以 email 我哋：",
     footer: "WoWlix 由 Flow Studio HK 營運。",
   },
   en: {
     title: "Contact WoWlix",
     intro: "Got a question? WhatsApp is the fastest way to reach us.",
     whatsappTitle: "WhatsApp",
-    whatsappBody: "Message us directly.",
+    whatsappBody: "Tap to message us directly.",
     whatsappCta: "Chat on WhatsApp",
     emailTitle: "Email",
     emailBody: "Prefer email? Reach us at:",

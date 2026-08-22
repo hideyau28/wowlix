@@ -94,9 +94,17 @@ for (const locale of ["en", "zh-HK"]) {
 }
 
 // 信用卡老實話 —— 中英各驗一次（zh/en 係兩條唔同 data path + 唔同字串）
+//
+// ⚠️ q / a 係跟住 lib/platform-content.ts 嘅實際字串走 —— 潤稿改咗文案就要
+// 一齊改呢度。條 guard 守嘅係「唔准講到好似支援緊信用卡」，唔係守某句字，
+// 所以 a 用 regex 捉「未開放 / not available」嗰個意思位。
 for (const t of [
-  { locale: "en", q: "How do I get paid?", a: /credit-card checkout is still in the works/i },
-  { locale: "zh-HK", q: "我點收錢？", a: /暫時未開放/ },
+  {
+    locale: "en",
+    q: "How do I get paid?",
+    a: /still under development and not available yet/i,
+  },
+  { locale: "zh-HK", q: "點樣收錢？", a: /暫時未開放/ },
 ]) {
   test(`平台 FAQ (${t.locale}) 老實講信用卡未開放（唔好又賣未起好嘅嘢）`, async ({
     page,
