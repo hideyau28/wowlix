@@ -43,8 +43,15 @@ type Store = {
 const DESCRIPTION =
   "手工製作嘅日系陶瓷杯，容量 280ml，可以入微波爐同洗碗機。";
 const BRAND = "E2E Ceramics";
-// SKU 有 unique constraint —— 逐 run 唯一，否則第二次跑就 500
-const SKU = `E2E-SKU-${uid()}`;
+// SKU 有 unique constraint。
+//
+// ⚠️ 呢個**唔可以**喺 module top-level 計。Playwright retry 係喺同一個
+// worker 重跑 —— module 已經 load 咗，唔會再 evaluate 一次，即係 beforeAll
+// 第二次會攞返同一個 SKU 去開產品 → `Unique constraint failed on (sku)`
+// → 500 → 條 retry 實死，真正嗰個 failure 反而俾佢冚住。
+// （CI `retries: 2`，本地 0，所以呢個坑本地永遠踩唔到。）
+// 改為每次 beforeAll 自己生成。
+let SKU: string;
 
 async function registerStore(run: string): Promise<Store> {
   const slug = `e2e-seo-${run}`;
@@ -73,6 +80,7 @@ test.describe("canonical 商品頁講得出件貨係乜", () => {
   let html: string;
 
   test.beforeAll(async () => {
+    SKU = `E2E-SKU-${uid()}`;
     store = await registerStore(uid());
 
     const res = await store.ctx.post(`${APP}/api/admin/products`, {
