@@ -4,7 +4,7 @@
 
 ---
 
-## 🚩 2026-08-22 — 五頁法律／資訊頁減 145.5 KB 字體（PR 待出）
+## 🚩 2026-08-22 — 五頁法律／資訊頁減 145.5 KB 字體，出咗 prod（#395）
 
 `about / faq / contact / terms / privacy` 五頁一直同平台版共用 `(customer)/{page}`，入面 `await import("MarketingLegalShell")` 拉住 Fraunces。**per-page font manifest 連 dynamic `import()` 都照計**（#391 實測），即係每個租戶店客人開呢五頁都白食 **145.5 KB** 完全用唔著嘅字體。
 
@@ -29,6 +29,22 @@
 **⚠️ 做嘅時候差啲整返個滲漏出嚟（值得記）**：rewrite regex 最初寫死 `(en|zh-HK)`。但 `[locale]` 係 dynamic segment 冇鎖 `dynamicParams`，**`/fr/about` 呢類垃圾 locale 真係 render 到 200**（`platformAlternates` 特登為咗佢哋將 canonical fallback 落 en）。淨認兩個 locale 嘅話 `/fr/about` 就跌返落 `(customer)` 出 default 店波鞋文案 —— 即係 **#368 修好嗰單嘢翻兜**。改用同 `resolveSlugFromPath()` 一樣嘅 locale 形狀規則（2 字母 + 可選地區碼），`/maysshop/about`、`/bullkicks/faq` 唔會誤中。加咗 e2e 守住。
 
 **🔴 呢個 PR 冇修、亦唔應該喺呢度修**：`platform/terms` 同 `platform/privacy` **而家出緊 default 店嘅法律文字**，唔係 WoWlix 自己嘅。呢個 PR 純粹拆 route 斷字體，行為同拆之前一模一樣。真正嘅平台條款仍然等 Yau 俾①法律實體全名 ②data 清單。**唔准 AI 作住 ship。** 兩個檔頂都寫咗紅字 TODO —— 而家個坑擺喺明處，唔再埋喺共用檔入面。順帶：呢兩頁嘅平台版**未有** self-canonical + hreflang（about/faq/contact 由 #368 補咗），出真文案嗰陣一齊補。
+
+**Live 驗證（prod `30214bd`）19/19**
+
+| | |
+|---|---|
+| 租戶版五頁 woff2 對 `[slug]` 差集 | **0 隻** ×5（merge 前每頁多 2 隻 = 兩隻 Fraunces） |
+| 平台版五頁公開 URL | 200 ×5（rewrite，唔係 3xx） |
+| 平台版 woff2 集 vs `landing` | **完全一樣（4 隻）** —— marketing 字體冇被削走 |
+| 平台版 vs 租戶版 woff2 | 4 vs 8，兩套完全唔同 = 真係斷開咗 |
+| 平台文案 | 「揦手唔成勢」／「0% 抽佣」／「WhatsApp 搵我哋」全部仲喺 |
+| `/fr/about` | 200 · 出 WoWlix · 零波鞋殘留 · canonical `→ /en/about` |
+| 租戶版 `?tenant=maysshop` | about / terms 200 + 出租戶內容（冇誤殺） |
+
+⚠️ **量法陷阱（又踩多次）**：`grep "Fraunces"` 喺 HTML 度**永遠係 0** —— next/font 自 host 兼 hash 檔名，family 名根本唔會出現喺 HTML。一定要抽 `.woff2` 檔名做差集（e2e 嗰邊行 CSSOM 反查 family）。
+
+⚠️ **`/platform/*` 收口 prod 驗唔到**：條 guard 淨係喺**非平台 host** 先 fire，而 `www` 永遠係平台 host（`?tenant=` 只影響 tenantOverridden，唔影響 isPlatform）。要真租戶 custom domain 先驗到。e2e 有 5 條守住（localhost = 租戶 host）。
 
 **驗證**：`ci:build` 綠（landing / pricing 仍然 prerender）· `tsc` 0 條 · e2e full suite **181 passed**（1 條 `admin-upload-hardening` 紅 = HANDOFF 已知嗰個 DB-backed rate-limit flake，單獨重跑 10/10；另一 run 有條 `a11y start wizard` 中 `_clientMiddlewareManifest.js` MIME race，重跑 7/7）。**量度證據**：`.next/server/next-font-manifest.json` 逐檔對 `.next/static/media` stat，五頁 396.1 → 250.6 KB。新 e2e **13 條**：五頁 ×「租戶版唔准 preload Fraunces」、平台版 Fraunces control、五頁 ×「收口 307」、「rewrite 唔改公開 URL」、垃圾 locale guard。
 
