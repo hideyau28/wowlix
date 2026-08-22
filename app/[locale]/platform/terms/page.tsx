@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
+import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
+import TermsBody from "@/components/legal/TermsBody";
 import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
-import TermsBody from "@/components/legal/TermsBody";
 
 /**
- * 租戶店版 /terms。
+ * 平台版 /terms —— 公開 URL 仍然係 `/{locale}/terms`，middleware 喺平台 host
+ * 內部 rewrite 過嚟。拆 route 嘅原因見 `app/[locale]/platform/about/page.tsx`。
  *
- * ⚠️ 平台版搬咗去 `app/[locale]/platform/terms`（middleware 喺平台 host 內部
- * rewrite，公開 URL 唔變）。**唔好再喺呢個檔 import 任何
- * `components/marketing/*`** —— 一 import 返，每個租戶店客人開條款就即刻白食
- * 145.5 KB Fraunces（#391 實測：per-page font manifest 連 dynamic import()
- * 都照計，只有 route 邊界斷得開）。
+ * 🔴 **呢頁而家出緊 default 店（maysshop）嘅條款，唔係 WoWlix 自己嘅。**
+ * 呢個 PR 純粹拆 route 斷字體，**內容一個字冇改** —— 行為同拆之前一模一樣。
+ * 要出真正嘅平台條款，等 Yau 俾①法律實體全名 ②data 清單（見 HANDOFF「Yau
+ * 拍板位」）。⚠️ **唔准 AI 作住 ship 法律文字。** 屆時呢個檔就唔應該再
+ * import TermsBody / getTenantInfo，改為出平台自己嗰份。
  */
 export async function generateMetadata({
   params,
@@ -43,7 +45,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function TermsPage({
+export default async function PlatformTermsPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -54,6 +56,8 @@ export default async function TermsPage({
   const isZh = locale === "zh-HK";
 
   return (
-    <TermsBody tenantSlug={tenant.slug} storeName={storeName} isZh={isZh} />
+    <MarketingLegalShell locale={locale}>
+      <TermsBody tenantSlug={tenant.slug} storeName={storeName} isZh={isZh} />
+    </MarketingLegalShell>
   );
 }

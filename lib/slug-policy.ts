@@ -45,6 +45,8 @@ export const ROUTE_RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "track",
   "pricing",
   "landing",
+  // platform-only 法律／資訊 route（middleware rewrite 目標）
+  "platform",
 ]);
 
 /**

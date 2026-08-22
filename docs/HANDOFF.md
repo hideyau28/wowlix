@@ -4,6 +4,36 @@
 
 ---
 
+## 🚩 2026-08-22 — 五頁法律／資訊頁減 145.5 KB 字體（PR 待出）
+
+`about / faq / contact / terms / privacy` 五頁一直同平台版共用 `(customer)/{page}`，入面 `await import("MarketingLegalShell")` 拉住 Fraunces。**per-page font manifest 連 dynamic `import()` 都照計**（#391 實測），即係每個租戶店客人開呢五頁都白食 **145.5 KB** 完全用唔著嘅字體。
+
+| route | 前 | 後 |
+|---|---|---|
+| `(customer)/about` · `faq` · `contact` · `terms` · `privacy` | 396.1 KB（11 檔） | **250.6 KB（9 檔）** |
+| `[slug]`（純租戶對照） | 250.6 KB | 250.6 KB |
+| `platform/*` ×5（新） | — | 203.8 KB（同 landing / pricing 一樣） |
+
+**五頁三種形狀，唔係一刀切**
+- **about / contact** —— 本身已經有 `if (platform)` early return，原封搬去新 route。
+- **faq** —— 平台租戶共用同一段 JSX，抽咗 `components/FaqSection.tsx`（兩邊 import，零重複）。
+- **terms / privacy** —— 冇平台分支，抽咗 `components/legal/{Terms,Privacy}Body.tsx`，**內容一個字冇改**。
+
+順手抽埋 `components/WhatsAppIcon.tsx`（contact 兩邊共用）。⚠️ **呢啲共用 component 一律唔准 import `components/marketing/*`** —— 租戶 route 都 import 佢哋，一 pull 到就前功盡廢。每個檔頂都寫咗。
+
+**middleware 兩塊（照抄 `/landing`）**
+- 平台 host 五頁 → **rewrite**（唔係 redirect）去 `/{locale}/platform/{page}`。公開 URL 不變，sitemap / canonical / hreflang / e2e 全部照舊。
+- 🔴 **`/platform/*` 收口** —— 同 `/landing` 一模一樣嘅漏洞：static segment 贏 `[slug]`，rewrite gate 攔唔到直接 hit。唔收口每間租戶店都掛住一份 200 嘅平台法律頁。307 彈返店首頁。
+- `platform` 加咗入 `ROUTE_RESERVED_SLUGS`。
+
+**⚠️ 做嘅時候差啲整返個滲漏出嚟（值得記）**：rewrite regex 最初寫死 `(en|zh-HK)`。但 `[locale]` 係 dynamic segment 冇鎖 `dynamicParams`，**`/fr/about` 呢類垃圾 locale 真係 render 到 200**（`platformAlternates` 特登為咗佢哋將 canonical fallback 落 en）。淨認兩個 locale 嘅話 `/fr/about` 就跌返落 `(customer)` 出 default 店波鞋文案 —— 即係 **#368 修好嗰單嘢翻兜**。改用同 `resolveSlugFromPath()` 一樣嘅 locale 形狀規則（2 字母 + 可選地區碼），`/maysshop/about`、`/bullkicks/faq` 唔會誤中。加咗 e2e 守住。
+
+**🔴 呢個 PR 冇修、亦唔應該喺呢度修**：`platform/terms` 同 `platform/privacy` **而家出緊 default 店嘅法律文字**，唔係 WoWlix 自己嘅。呢個 PR 純粹拆 route 斷字體，行為同拆之前一模一樣。真正嘅平台條款仍然等 Yau 俾①法律實體全名 ②data 清單。**唔准 AI 作住 ship。** 兩個檔頂都寫咗紅字 TODO —— 而家個坑擺喺明處，唔再埋喺共用檔入面。順帶：呢兩頁嘅平台版**未有** self-canonical + hreflang（about/faq/contact 由 #368 補咗），出真文案嗰陣一齊補。
+
+**驗證**：`ci:build` 綠（landing / pricing 仍然 prerender）· `tsc` 0 條 · e2e full suite **181 passed**（1 條 `admin-upload-hardening` 紅 = HANDOFF 已知嗰個 DB-backed rate-limit flake，單獨重跑 10/10；另一 run 有條 `a11y start wizard` 中 `_clientMiddlewareManifest.js` MIME race，重跑 7/7）。**量度證據**：`.next/server/next-font-manifest.json` 逐檔對 `.next/static/media` stat，五頁 396.1 → 250.6 KB。新 e2e **13 條**：五頁 ×「租戶版唔准 preload Fraunces」、平台版 Fraunces control、五頁 ×「收口 307」、「rewrite 唔改公開 URL」、垃圾 locale guard。
+
+---
+
 ## 🚩 2026-08-22 — 平台文案過咗 Gemini 潤稿，出咗 prod（#394）
 
 #368 三頁文案交俾 Gemini 潤，返嚟逐條對紅線 audit，Yau 拍板收窄。
@@ -134,7 +164,7 @@
 
 **Live 驗證（prod `66e866c`）5/5**：租戶首頁（`?tenant=maysshop`）嘅 woff2 集**同 biolink 店頁一模一樣**（= 零 marketing 洩漏）· landing 仲有 Fraunces（control）· `?tenant=` 打錯 slug 出「呢間店唔存在」· `/zh-HK` `/pricing` `/maysshop` `/terms` `/en` 全 200。量法：直接 curl HTML 抽 `.woff2` 檔名做差集 —— **唔好淨數 `<link as=font>`**，dynamic route 行 React Flight `:HL[...]`，會誤判成「零字體」。
 
-### 仲欠：五頁法律頁
+### ✅ 五頁法律頁 —— 2026-08-22 修好咗（見最頂）
 
 terms/privacy/contact/faq/about（→ `MarketingLegalShell`）一樣係 **396.1 KB**。要開 platform-only route 先斷到（同 `/landing` 一樣：middleware rewrite 平台 host 過去），但 **about/faq/contact 撞住 open PR #368**（等緊 Yau 文案 sign-off），硬做會 conflict。**✅ #368 已經 merge（+ #394 潤稿），呢條解封咗，可以郁。** `components/marketing/fonts.ts` 記低咗新紀律同進度。
 

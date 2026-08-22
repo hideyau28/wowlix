@@ -147,3 +147,50 @@ test("biolink 店頁照樣 preload 到自己 template 嗰隻字", async ({ page 
       `storefrontFontVars 冇掛上去，租戶店個標題字會 FOUT。`,
   ).toBeGreaterThan(0);
 });
+
+/**
+ * 五頁法律／資訊頁（about / faq / contact / terms / privacy）。
+ *
+ * 修之前：呢五頁同平台版共用 `(customer)/{page}`，入面
+ * `await import("MarketingLegalShell")` 拉住 Fraunces。**per-page font
+ * manifest 連 dynamic import() 都照計**，所以每個租戶店客人開呢五頁都白食
+ * 145.5 KB（396.1 KB vs 純租戶 route 250.6 KB）。
+ *
+ * 修之後：平台版搬去 `/{locale}/platform/{page}`（middleware 喺平台 host
+ * rewrite，公開 URL 不變），租戶版淨返自己內容。
+ */
+const LEGAL_PAGES = ["about", "faq", "contact", "terms", "privacy"] as const;
+
+for (const p of LEGAL_PAGES) {
+  test(`租戶店 /${p} 唔會 preload marketing 嘅 Fraunces（145.5 KB）`, async ({
+    page,
+  }) => {
+    await page.goto(`${APP}/zh-HK/${p}`);
+    await page.waitForLoadState("networkidle");
+
+    const families = await preloadedFontFamilies(page);
+
+    expect(
+      families,
+      `租戶店 /${p} preload 咗 Fraunces（${families.join(", ")}）——` +
+        `(customer)/${p}/page.tsx 一定係 import 返 components/marketing/*。` +
+        `⚠️ 改成 \`await import()\` 都冇用，只有 route 邊界斷得開：平台版要` +
+        `留喺 app/[locale]/platform/${p}。`,
+    ).not.toContain("Fraunces");
+  });
+}
+
+test("平台版五頁仲要有 Fraunces（control —— 唔好連平台面都削走）", async ({
+  page,
+}) => {
+  // 公開 URL 唔變，middleware 喺平台 host rewrite 去 /{locale}/platform/about。
+  await page.goto(`${PLATFORM}/zh-HK/about`);
+  await page.waitForLoadState("networkidle");
+
+  const families = await preloadedFontFamilies(page);
+
+  expect(
+    families,
+    "平台版 /about 應該仲 preload 緊 Fraunces（marketing 殼就係用呢隻）",
+  ).toContain("Fraunces");
+});
