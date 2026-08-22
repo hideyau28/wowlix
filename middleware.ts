@@ -2,6 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ROUTE_RESERVED_SLUGS } from "@/lib/slug-policy";
 
+/**
+ * 平台 host 上要 rewrite 去 platform-only route 嘅法律／資訊頁。
+ *
+ * ⚠️ locale 段**唔可以**寫死 `(en|zh-HK)` —— `[locale]` 係 dynamic segment，
+ * `/fr/about` 呢類垃圾 locale 真係 render 到 200（`platformAlternates` 特登
+ * 為咗佢哋將 canonical fallback 落 en）。淨認 en|zh-HK 嘅話，`/fr/about` 就會
+ * 跌返落 (customer) 出 default 店內容 —— 即係重新整返 #368 修好嗰個滲漏。
+ *
+ * locale 形狀跟 `resolveSlugFromPath()` 同一條規則（2 個字母 + 可選地區碼），
+ * 所以 `/maysshop/about` 呢類真 slug 唔會誤中。
+ */
+const PLATFORM_LEGAL_REWRITE =
+  /^\/([a-z]{2}(?:-[a-z]{2,4})?)\/(about|faq|contact|terms|privacy)\/?$/i;
+
 const DEFAULT_SLUG = process.env.DEFAULT_TENANT_SLUG || "maysshop";
 const DEFAULT_HOSTS = new Set(["wowlix", "www", "localhost", "127.0.0.1"]);
 
@@ -177,6 +191,38 @@ export function middleware(request: NextRequest) {
     });
   }
 
+  // --- Platform 法律／資訊五頁 → platform-only route ---
+  // about / faq / contact / terms / privacy 以前同租戶版共用 (customer) route，
+  // 入面 `await import("MarketingLegalShell")` 拉住 marketing fonts。**Next 16
+  // 個 per-page font manifest 連 dynamic import() 都照計**（#391 實測），所以
+  // 每個租戶店客人開呢五頁都白食 145.5 KB Fraunces（396.1 KB vs 250.6 KB）。
+  // 唯一斷得開嘅界線係 route 邊界 —— 平台版搬去 /{locale}/platform/{page}，
+  // 呢度 rewrite 過去。
+  //
+  // 同 /landing 一樣用 **rewrite 唔係 redirect**：公開 URL 不變，
+  // sitemap / canonical / hreflang / e2e 全部照舊。
+  // `?tenant=` override（demo 預覽）會令 tenantOverridden=true，跌返落
+  // (customer) 動態 route，行為不變。
+  if (
+    isPlatform &&
+    !tenantOverridden &&
+    PLATFORM_LEGAL_REWRITE.test(pathname)
+  ) {
+    const rewriteUrl = request.nextUrl.clone();
+    const [, localePrefix, page] = pathname.replace(/\/$/, "").split("/");
+    rewriteUrl.pathname = `/${localePrefix}/platform/${page}`;
+    const legalHeaders = new Headers(request.headers);
+    legalHeaders.delete("x-is-platform");
+    legalHeaders.delete("x-tenant-slug");
+    legalHeaders.delete("x-tenant-path-slug");
+    legalHeaders.set("x-tenant-slug", tenantSlug);
+    legalHeaders.set("x-locale", pathLocale);
+    legalHeaders.set("x-is-platform", "true");
+    return NextResponse.rewrite(rewriteUrl, {
+      request: { headers: legalHeaders },
+    });
+  }
+
   // --- 平台 host 冇送貨/退貨政策（呢兩頁純租戶專屬）---
   // /{locale}/shipping | /{locale}/returns 喺平台 host 上會解做 default 店
   // （maysshop）→ render 咗人哋間店嘅政策（live 實測 title「Shipping Policy - B」）。
@@ -234,6 +280,18 @@ export function middleware(request: NextRequest) {
     const localePrefix = pathname.split("/")[1];
     return NextResponse.redirect(new URL(`/${localePrefix}`, request.url));
   }
+  // --- /platform/* 收口 ---
+  // 同 /landing 一模一樣嘅漏洞：static segment 贏 [slug]，middleware 個 rewrite
+  // gate 攔唔到直接 hit —— 唔收口的話，每間租戶店（連 hideBranding Pro 店）都
+  // 掛住一份 200 嘅平台版法律頁。彈返店首頁。
+  if (
+    !isPlatform &&
+    /^\/[a-z]{2}(?:-[a-z]{2,4})?\/platform(\/|$)/i.test(pathname)
+  ) {
+    const localePrefix = pathname.split("/")[1];
+    return NextResponse.redirect(new URL(`/${localePrefix}`, request.url));
+  }
+
   // 光板 /landing（"landing" 而家係 reserved，唔會再入 slug rewrite）——
   // 唔處理嘅話會以 locale="landing" 跌落 (customer) home（垃圾 canonical）。
   // 學 /start 咁 redirect 落 default locale；platform host 就係 landing 本尊，

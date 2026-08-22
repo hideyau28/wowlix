@@ -173,3 +173,57 @@ test("sitemap 唔准再叫 Google index 租戶個人化頁", async ({ request })
     );
   }
 });
+
+/**
+ * `/platform/*` 收口 —— 同 `/landing` 一模一樣嘅漏洞：static segment 贏
+ * `[slug]`，middleware 個 rewrite gate 攔唔到直接 hit。唔收口的話，每間租戶店
+ *（連 hideBranding Pro 店）都掛住一份 200 嘅平台版法律頁。
+ */
+for (const p of ["about", "faq", "contact", "terms", "privacy"]) {
+  test(`租戶 host 直接開 /zh-HK/platform/${p} → 彈返店首頁`, async ({
+    request,
+  }) => {
+    const res = await request.get(`${APP}/zh-HK/platform/${p}`, {
+      maxRedirects: 0,
+    });
+    expect(res.status(), "要 307 彈走，唔准 200 出平台頁").toBe(307);
+    expect(res.headers()["location"]).toContain("/zh-HK");
+  });
+}
+
+test("平台 host 五頁公開 URL 唔變（rewrite 唔係 redirect）", async ({
+  request,
+}) => {
+  for (const p of ["about", "faq", "contact", "terms", "privacy"]) {
+    const res = await request.get(`${PLATFORM}/zh-HK/${p}`, {
+      maxRedirects: 0,
+    });
+    expect(res.status(), `平台 /${p} 應該 200（rewrite），唔係 3xx`).toBe(200);
+  }
+});
+
+/**
+ * 垃圾 locale（`/fr/about`）—— `[locale]` 係 dynamic segment，冇鎖
+ * dynamicParams，所以呢類 URL 真係 render 到 200。
+ *
+ * 拆 platform route 嗰陣**差啲**整返個滲漏出嚟：如果 middleware 個 rewrite
+ * regex 淨認 `en|zh-HK`，`/fr/about` 就會跌返落 (customer) 出 default 店嘅波鞋
+ * 內容 —— 即係 #368 修好嗰單嘢翻兜。呢條守住 locale 形狀嗰個 regex。
+ */
+test("垃圾 locale /fr/about 喺平台 host 仍然出平台文案 + canonical 併軌去 /en", async ({
+  request,
+}) => {
+  const res = await request.get(`${PLATFORM}/fr/about`);
+  expect(res.status()).toBe(200);
+  const html = await res.text();
+
+  expect(html, "應該出 WoWlix 平台文案").toContain("WoWlix");
+  expect(
+    html,
+    "唔准跌返 default 店（波鞋店文案）",
+  ).not.toContain("正品保證");
+  expect(
+    html,
+    "非 zh-HK 一律出英文，所以 canonical 要併軌去 /en/about",
+  ).toContain('rel="canonical" href="https://www.wowlix.com/en/about"');
+});

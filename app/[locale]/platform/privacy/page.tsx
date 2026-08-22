@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { getStoreName } from "@/lib/get-store-name";
+import MarketingLegalShell from "@/components/marketing/MarketingLegalShell";
 import PrivacyBody from "@/components/legal/PrivacyBody";
+import { getStoreName } from "@/lib/get-store-name";
 
 /**
- * 租戶店版 /privacy。
+ * 平台版 /privacy —— 公開 URL 仍然係 `/{locale}/privacy`，middleware 喺平台
+ * host 內部 rewrite 過嚟。拆 route 嘅原因見 `app/[locale]/platform/about/page.tsx`。
  *
- * ⚠️ 平台版搬咗去 `app/[locale]/platform/privacy`（middleware 喺平台 host
- * 內部 rewrite，公開 URL 唔變）。**唔好再喺呢個檔 import 任何
- * `components/marketing/*`** —— 一 import 返，每個租戶店客人開私隱政策就即刻
- * 白食 145.5 KB Fraunces（只有 route 邊界斷得開，見 #391）。
+ * 🔴 **呢頁而家出緊 default 店嘅私隱政策，唔係 WoWlix 自己嘅。** 呢個 PR 純粹
+ * 拆 route 斷字體，**內容一個字冇改** —— 行為同拆之前一模一樣。要出真正嘅
+ * 平台私隱政策，等 Yau 俾①法律實體全名 ②data 清單（見 HANDOFF「Yau 拍板位」）。
+ * ⚠️ **唔准 AI 作住 ship 法律文字。**
  */
 export async function generateMetadata({
   params,
@@ -41,7 +43,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function PrivacyPage({
+export default async function PlatformPrivacyPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -49,5 +51,9 @@ export default async function PrivacyPage({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
 
-  return <PrivacyBody isZh={isZh} />;
+  return (
+    <MarketingLegalShell locale={locale}>
+      <PrivacyBody isZh={isZh} />
+    </MarketingLegalShell>
+  );
 }

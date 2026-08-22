@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { getStoreName } from "@/lib/get-store-name";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getContactContent } from "@/lib/tenant-content";
-import { isPlatformMode } from "@/lib/tenant";
-import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
-import {
-  PLATFORM_EMAIL,
-  PLATFORM_WHATSAPP,
-  platformContact,
-} from "@/lib/platform-content";
 
+/**
+ * 租戶店版 /contact。
+ *
+ * ⚠️ 平台版搬咗去 `app/[locale]/platform/contact`（middleware 喺平台 host
+ * 內部 rewrite，公開 URL 唔變）。**唔好再喺呢個檔 import 任何
+ * `components/marketing/*`** —— 一 import 返，每個租戶店客人就即刻白食
+ * 145.5 KB Fraunces（#391 實測：per-page font manifest 連 dynamic import()
+ * 都照計，只有 route 邊界斷得開）。
+ */
 export async function generateMetadata({
   params,
 }: {
@@ -19,9 +21,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
   // 平台 host 唔好用 default 店個名（會出「Contact Us - B」）—— 用 WoWlix。
-  const platform = await isPlatformMode();
-  const storeName = platform ? "WoWlix" : await getStoreName();
-  const alt = platform ? platformAlternates(locale, "/contact") : null;
+  const storeName = await getStoreName();
   const title = isZh ? `聯絡我們 - ${storeName}` : `Contact Us - ${storeName}`;
   const description = isZh
     ? `聯絡 ${storeName}，WhatsApp 或電郵查詢`
@@ -30,7 +30,6 @@ export async function generateMetadata({
   return {
     title,
     description,
-    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
@@ -40,7 +39,6 @@ export async function generateMetadata({
       // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
       // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
       // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
-      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -50,11 +48,6 @@ export async function generateMetadata({
   };
 }
 
-const WhatsAppIcon = () => (
-  <svg viewBox="0 0 32 32" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-    <path d="M16 2.4c-7.5 0-13.6 6.1-13.6 13.6 0 2.4.6 4.8 1.8 6.9L2 30l7.3-2.1c2 1.1 4.3 1.7 6.7 1.7 7.5 0 13.6-6.1 13.6-13.6S23.5 2.4 16 2.4zm7.9 19.1c-.3.9-1.5 1.6-2.5 1.8-.7.1-1.6.2-4.7-.9-4.2-1.5-6.8-5.2-7-5.5-.2-.3-1.7-2.2-1.7-4.2s1-3 1.3-3.4c.3-.4.7-.5 1-.5h.7c.2 0 .5 0 .7.6.3.7.9 2.4 1 2.6.1.2.1.4 0 .6-.1.2-.2.4-.4.6-.2.2-.4.4-.5.5-.2.2-.4.4-.2.7.2.3.9 1.5 1.9 2.4 1.3 1.2 2.5 1.6 2.9 1.8.4.2.6.2.8 0 .2-.2 1-1.1 1.3-1.5.3-.4.5-.3.9-.2.4.1 2.5 1.2 2.9 1.4.4.2.7.3.8.5.1.2.1.9-.2 1.8z" />
-  </svg>
-);
 
 export default async function ContactPage({
   params,
@@ -64,78 +57,8 @@ export default async function ContactPage({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
 
-  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
-  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
-  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
-  const platform = await isPlatformMode();
-  const MarketingLegalShell = platform
-    ? (await import("@/components/marketing/MarketingLegalShell")).default
-    : null;
-  const shell = (node: ReactNode) =>
-    MarketingLegalShell ? (
-      <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell>
-    ) : (
-      node
-    );
-  // WhatsApp 掣：platform 面行單色 pill（WhatsApp 綠係租戶店先用）
-  const waBtnClass = platform
-    ? "wlx-cta inline-flex items-center gap-2 rounded-full bg-wlx-ink px-5 py-2.5 text-sm font-medium hover:bg-wlx-ink/90 transition-colors"
-    : "inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors";
-
-  // 平台 host：出 WoWlix 自己嘅聯絡（唔好跌落 default 店文案）。租戶店嗰邊
-  // 完全唔行呢個 branch，維持原狀。
-  if (platform) {
-    const c = platformContact[isZh ? "zh" : "en"];
-    return shell(
-      <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
-          {c.title}
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-          {c.intro}
-        </p>
-
-        <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none space-y-6">
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              {c.whatsappTitle}
-            </h2>
-            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {c.whatsappBody}
-            </p>
-            <a
-              href={`https://wa.me/${PLATFORM_WHATSAPP}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={waBtnClass}
-            >
-              <WhatsAppIcon />
-              {c.whatsappCta}
-            </a>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              {c.emailTitle}
-            </h2>
-            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {c.emailBody}
-            </p>
-            <a
-              href={`mailto:${PLATFORM_EMAIL}`}
-              className="text-zinc-900 dark:text-zinc-100 underline hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
-            >
-              {PLATFORM_EMAIL}
-            </a>
-          </section>
-
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-            {c.footer}
-          </p>
-        </div>
-      </div>,
-    );
-  }
+  const waBtnClass =
+    "inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1da851] transition-colors";
 
   // 非平台（租戶店）先至查 DB —— 平台頁上面已經 return。
   // （呢度冇 getStoreName()：租戶 contact 兩個 branch 都唔用 storeName，
@@ -148,7 +71,7 @@ export default async function ContactPage({
 
   if (!showEnglish) {
     // Original maysshop zh-HK content
-    return shell(
+    return (
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           聯絡我們
@@ -209,7 +132,7 @@ export default async function ContactPage({
   }
 
   // English content — tenant-specific
-  return shell(
+  return (
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         Contact Us

@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { getStoreName } from "@/lib/get-store-name";
 import { getTenantInfo } from "@/lib/get-tenant-info";
 import { getAboutContent } from "@/lib/tenant-content";
-import { isPlatformMode } from "@/lib/tenant";
-import { OG_DEFAULT_IMAGE, platformAlternates } from "@/lib/site-url";
-import {
-  PLATFORM_EMAIL,
-  PLATFORM_WHATSAPP,
-  PLATFORM_WHATSAPP_DISPLAY,
-  PLATFORM_WHATSAPP_INTL,
-  platformAbout,
-} from "@/lib/platform-content";
+
+/**
+ * 租戶店版 /about。
+ *
+ * ⚠️ 平台版搬咗去 `app/[locale]/platform/about`（middleware 喺平台 host
+ * 內部 rewrite，公開 URL 唔變）。**唔好再喺呢個檔 import
+ * MarketingLegalShell 或者任何 `components/marketing/*`** —— 佢哋拉住
+ * marketing fonts，而 per-page font manifest 連 dynamic `import()` 都照計
+ *（#391 實測）。呢頁一 import 返，每個租戶店客人就即刻白食 145.5 KB。
+ * 界線只有 route 邊界斷得開。
+ */
 
 export async function generateMetadata({
   params,
@@ -20,10 +21,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const isZh = locale === "zh-HK";
-  // 平台 host 唔好用 default 店個名（會出「About Us - B」）—— 用 WoWlix。
-  const platform = await isPlatformMode();
-  const storeName = platform ? "WoWlix" : await getStoreName();
-  const alt = platform ? platformAlternates(locale, "/about") : null;
+  const storeName = await getStoreName();
   const title = isZh ? `關於我們 - ${storeName}` : `About Us - ${storeName}`;
   const description = isZh
     ? `了解更多關於 ${storeName}`
@@ -32,19 +30,12 @@ export async function generateMetadata({
   return {
     title,
     description,
-    // 平台版先加 self-canonical + hreflang（同 landing/pricing 一致）。租戶店
-    // 唔加，維持 byte-identical metadata。
-    ...(alt ? { alternates: alt } : {}),
     openGraph: {
       title,
       description,
       siteName: storeName,
       type: "website",
       locale: locale === "zh-HK" ? "zh_HK" : "en_US",
-      // Next 每個 segment 係成個 openGraph object 覆蓋（唔會同 root layout
-      // deep-merge），唔喺度補就連分享圖都冇 —— 呢三頁正正係 WhatsApp／IG
-      // 分享面。og:url 直接食 canonical，保證兩者永遠一致。
-      ...(alt ? { url: alt.canonical, images: [OG_DEFAULT_IMAGE] } : {}),
     },
     twitter: {
       card: "summary",
@@ -62,88 +53,6 @@ export default async function AboutPage({
   const { locale } = await params;
   const isZh = locale === "zh-HK";
 
-  // Platform mode 先包 marketing 殼（Ink & Bone）；租戶店行原本 zinc 版。
-  // lazy import：static import 會將 marketing fonts（preload:true）綁入呢條
-  // 租戶共用 route（見 components/marketing/fonts.ts 註釋）
-  const platform = await isPlatformMode();
-  const MarketingLegalShell = platform
-    ? (await import("@/components/marketing/MarketingLegalShell")).default
-    : null;
-  const shell = (node: ReactNode) =>
-    MarketingLegalShell ? (
-      <MarketingLegalShell locale={locale}>{node}</MarketingLegalShell>
-    ) : (
-      node
-    );
-
-  // 平台 host：出 WoWlix 自己嘅 About（唔好跌落 default 店文案）。租戶店嗰邊
-  // 完全唔行呢個 branch，維持原狀。
-  // ⚠️ 喺 tenant DB query 之前 early-return —— 平台頁唔使 getStoreName /
-  // getTenantInfo（4 條 Postgres query），慳返 TTFB。
-  if (platform) {
-    const c = platformAbout[isZh ? "zh" : "en"];
-    return shell(
-      <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-          {c.title}
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-          {c.intro}
-        </p>
-
-        <div className="prose prose-zinc dark:prose-invert prose-sm max-w-none space-y-6">
-          <section>
-            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {c.body}
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              {c.whyTitle}
-            </h2>
-            <ul className="list-disc pl-5 text-zinc-700 dark:text-zinc-300 space-y-1">
-              {c.why.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              {c.contactTitle}
-            </h2>
-            <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {c.contactBody}
-            </p>
-            <ul className="list-disc pl-5 text-zinc-700 dark:text-zinc-300 space-y-1 mt-2">
-              <li>
-                WhatsApp:{" "}
-                <a
-                  href={`https://wa.me/${PLATFORM_WHATSAPP}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  {isZh ? PLATFORM_WHATSAPP_DISPLAY : PLATFORM_WHATSAPP_INTL}
-                </a>
-              </li>
-              <li>
-                Email:{" "}
-                <a href={`mailto:${PLATFORM_EMAIL}`} className="underline">
-                  {PLATFORM_EMAIL}
-                </a>
-              </li>
-            </ul>
-          </section>
-
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-            {c.footer}
-          </p>
-        </div>
-      </div>,
-    );
-  }
 
   // 非平台（租戶店）先至查 DB —— 平台頁上面已經 return，唔會行到呢度。
   const storeName = await getStoreName();
@@ -155,7 +64,7 @@ export default async function AboutPage({
 
   if (!showEnglish) {
     // Original maysshop zh-HK content
-    return shell(
+    return (
       <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
           關於我們
@@ -226,7 +135,7 @@ export default async function AboutPage({
   // English content — tenant-specific via content config
   const body = content.missionBody.replace("{storeName}", storeName);
 
-  return shell(
+  return (
     <div className="mx-auto max-w-3xl px-4 py-10 pb-32">
       <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         About Us
