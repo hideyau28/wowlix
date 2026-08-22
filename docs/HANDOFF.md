@@ -4,6 +4,26 @@
 
 ---
 
+## 🚩 2026-08-22 — 平台文案過咗 Gemini 潤稿，出咗 prod（#394）
+
+#368 三頁文案交俾 Gemini 潤，返嚟逐條對紅線 audit，Yau 拍板收窄。
+
+**🔴 攔咗一個真陷阱**：Gemini 喺 `about.body` **中英兩邊**都塞咗 markdown link，href 指住 `google.com/search`。`platform-content.ts` 存嘅係純文字，照抄落去 about 頁會原字打晒 `[...](https://google.com/search?...)`。剷走還原 plain text。**以後接第三方潤稿一定要 grep `](http`。**
+
+**Yau 兩個決定**
+- **「揦手唔成勢」留返成語** —— Gemini 改咗做「多功能但難上手」，讀落似 product spec，同成句口語格格不入。英文同一句嘅 idiom 亦都還返（`an everything-platform you can never finish setting up`，Gemini 削到淨返 `an overcomplicated platform`）。中英要對得返。
+- **`faq[2]` 統一「抽佣」** —— ⚠️ **特登否決咗「服務費」**：上一條 FAQ 就寫住 Lite $78/月、Pro $198/月，嗰啲正正就係服務費，寫「0% 服務費」即刻同自己上一句撞。抽佣／佣金／抽成三個都係真（客人直接過數），「抽佣」最香港。
+
+**兩條 e2e 修正（同文案分得開）**
+- `platform-surface.spec.ts` 條「信用卡老實話」guard 寫死咗撳「我點收錢？」，Gemini 改咗做「點樣收錢？」→ 撳唔中 timeout。assertion 跟返新字串 + 寫低咗「條 guard 守嘅係意思唔係某句字」。
+- 🔴 **`product-page-seo.spec.ts` 個 SKU 唔可以喺 module top-level 計** —— Playwright retry 喺同一個 worker 重跑，module 唔會再 evaluate，`beforeAll` 第二次攞返同一個 SKU → `Unique constraint failed on (sku)` → 500 → **條 retry 實死，仲會冚住真正嗰個 failure**。CI `retries: 2`、本地 `0`，所以本地永遠踩唔到（#394 CI 就係咁紅，本地 169/169 綠）。搬入 `beforeAll`。
+
+**Live 驗證（prod `6889589`）16/16**：成語出咗街／Gemini 版消失／en idiom 還返／「0% 抽佣？」＋「一毫子佣都唔抽」／「賣幾多賺幾多」／contact「WhatsApp 搵我哋」／forever・服務費・markdown link・回覆時間承諾 **全部 0**／信用卡未開放 zh+en／價錢 `$78／月`+`$198／月`（en `HK$78/mo`+`HK$198/mo`）／`wa.me/85254323686` ×2／租戶店 about 仍然出波鞋文案（冇誤殺）。
+
+**仲未郁（等 Yau）**：`contact/page.tsx` 個 `<title>` 同 `MarketingLegalShell` 個 nav link 仲寫住「聯絡我**們**」—— 兩處都溢出咗 sign-off 範圍（title 同一行租戶版都用緊；nav 全部 marketing 頁共用）。
+
+---
+
 ## 🚩 2026-08-21 — 商品深連 h1 修好咗，出咗 prod（#393）
 
 `/{locale}/{slug}/product/{id}` 呢條 **canonical 商品 URL** 一直冇一個 heading 講得出「呢頁係邊件貨」。
@@ -116,7 +136,7 @@
 
 ### 仲欠：五頁法律頁
 
-terms/privacy/contact/faq/about（→ `MarketingLegalShell`）一樣係 **396.1 KB**。要開 platform-only route 先斷到（同 `/landing` 一樣：middleware rewrite 平台 host 過去），但 **about/faq/contact 撞住 open PR #368**（等緊 Yau 文案 sign-off），硬做會 conflict。**等 #368 埋咗身先郁。** `components/marketing/fonts.ts` 記低咗新紀律同進度。
+terms/privacy/contact/faq/about（→ `MarketingLegalShell`）一樣係 **396.1 KB**。要開 platform-only route 先斷到（同 `/landing` 一樣：middleware rewrite 平台 host 過去），但 **about/faq/contact 撞住 open PR #368**（等緊 Yau 文案 sign-off），硬做會 conflict。**✅ #368 已經 merge（+ #394 潤稿），呢條解封咗，可以郁。** `components/marketing/fonts.ts` 記低咗新紀律同進度。
 
 ⚠️ 本地連跑幾次之後，DB-backed rate-limit spec（`auth-rate-limit` / `payment-proof-ownership` / `upload-proof-coarse-limit`）會間唔中紅，每次紅唔同條。呢次特登對住**乾淨 main tree** 跑過同一個 full suite 確認同樣會發生 —— 唔關改動事，reset DB 就綠。CI 有 `retries: 2`，冇中過。
 
